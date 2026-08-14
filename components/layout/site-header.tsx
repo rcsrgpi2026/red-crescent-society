@@ -93,17 +93,18 @@ export function SiteHeader() {
         )}
       >
         <div className="container-site flex h-16 items-center justify-between gap-4 lg:h-[4.5rem]">
-          {/* Identity */}
-          <Link href="/" className="flex items-center gap-3" aria-label={t.nav.home}>
-            <SiteLogo variant="institute" className="w-10" />
+          {/* Identity — min-w-0 + truncate so the title can shrink instead of
+              forcing the header wider than the viewport on small phones. */}
+          <Link href="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label={t.nav.home}>
+            <SiteLogo variant="institute" className="hidden w-10 shrink-0 sm:block" />
             <span className="hidden h-9 w-px bg-line md:block" aria-hidden />
-            <span className="flex items-center gap-2.5">
-              <SiteLogo variant="society" className="w-9" />
-              <span className="leading-tight">
-                <span className="block whitespace-nowrap text-sm font-bold text-brand-dark sm:text-base">
+            <span className="flex min-w-0 items-center gap-2">
+              <SiteLogo variant="society" className="w-8 shrink-0 sm:w-9" />
+              <span className="min-w-0 leading-tight">
+                <span className="block truncate text-[13px] font-bold text-brand-dark sm:text-base">
                   {t.nav.redCrescentSociety}
                 </span>
-                <span className="hidden whitespace-nowrap text-[11px] font-medium text-muted-foreground sm:block">
+                <span className="hidden truncate text-[11px] font-medium text-muted-foreground sm:block">
                   {t.nav.rajshahiPolytechnic}
                 </span>
               </span>

@@ -111,7 +111,7 @@ export default async function ActivityDetailPage({
               <div className="rounded-2xl border border-line bg-mist/50 p-6 text-sm text-muted-foreground">
                 <p className="font-semibold text-foreground">{t.activities.wantToJoin}</p>
                 <p className="mt-1.5 leading-relaxed">{t.activities.wantToJoinText}</p>
-                <Link href="/join" className="mt-3 inline-block text-sm font-semibold text-brand hover:underline">
+                <Link href="/volunteer/login" className="mt-3 inline-block text-sm font-semibold text-brand hover:underline">
                   {t.activities.becomeVolunteer}
                 </Link>
               </div>

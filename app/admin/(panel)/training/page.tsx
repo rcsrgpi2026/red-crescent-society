@@ -1,17 +1,14 @@
-import { Plus, Pencil } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Plus, Pencil, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { AdminFormDialog, FieldError } from "@/components/admin/admin-form-dialog";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
+import { AdminPageHeader } from "@/components/admin/page-header";
+import {
+  ResponsiveTable,
+  type Column,
+} from "@/components/admin/responsive-table";
 import { adminGetTrainings } from "@/lib/queries";
 import { saveTraining, deleteTraining } from "@/lib/admin-actions";
 import { TRAINING_CATEGORIES, formatDate } from "@/lib/constants";
@@ -26,94 +23,113 @@ const TRAINING_STATUS = [
 export default async function AdminTrainingPage() {
   const trainings = await adminGetTrainings();
 
+  const columns: Column<(typeof trainings)[number]>[] = [
+    {
+      header: "Program",
+      render: (training) => (
+        <div>
+          <p className="font-medium text-foreground">{training.title}</p>
+          <p className="text-xs text-muted-foreground">{training.category ?? "—"}</p>
+        </div>
+      ),
+    },
+    {
+      header: "Date",
+      render: (training) => (
+        <span className="text-xs text-muted-foreground">
+          {formatDate(training.date)}
+        </span>
+      ),
+    },
+    {
+      header: "Trainer",
+      render: (training) => (
+        <span className="text-xs text-muted-foreground">
+          {training.trainer ?? "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Location",
+      render: (training) => (
+        <span className="text-xs text-muted-foreground">
+          {training.location ?? "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      render: (training) => (
+        <StatusBadge label={training.status} tone={statusTone(training.status)} />
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Training</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage first aid, CPR and disaster training programs.
-          </p>
-        </div>
-        <AdminFormDialog
-          trigger={
-            <Button>
-              <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-              New training
-            </Button>
-          }
-          title="Create training program"
-          action={saveTraining}
-          submitLabel="Create training"
-        >
-          {(errors) => <TrainingFields errors={errors} />}
-        </AdminFormDialog>
-      </div>
+      <AdminPageHeader
+        icon={GraduationCap}
+        title="Training"
+        description="Manage first aid, CPR and disaster training programs."
+        tone="bg-gradient-to-br from-cyan-600 to-blue-700"
+        actions={
+          <AdminFormDialog
+            trigger={
+              <Button>
+                <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+                New training
+              </Button>
+            }
+            title="Create training program"
+            action={saveTraining}
+            submitLabel="Create training"
+          >
+            <TrainingFields />
+          </AdminFormDialog>
+        }
+      />
 
-      {trainings.length > 0 ? (
-        <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-mist/60">
-                <TableHead>Program</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Trainer</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {trainings.map((training) => (
-                <TableRow key={training.id}>
-                  <TableCell>
-                    <p className="font-medium text-foreground">{training.title}</p>
-                    <p className="text-xs text-muted-foreground">{training.category ?? "—"}</p>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{formatDate(training.date)}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{training.trainer ?? "—"}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{training.location ?? "—"}</TableCell>
-                  <TableCell>
-                    <StatusBadge label={training.status} tone={statusTone(training.status)} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <AdminFormDialog
-                        trigger={
-                          <Button variant="ghost" size="sm">
-                            <Pencil className="h-3.5 w-3.5" aria-hidden />
-                          </Button>
-                        }
-                        title={`Edit ${training.title}`}
-                        action={saveTraining}
-                        submitLabel="Save changes"
-                      >
-                        {(errors) => <TrainingFields errors={errors} training={training} />}
-                      </AdminFormDialog>
-                      <ConfirmDelete
-                        action={deleteTraining}
-                        id={training.id}
-                        description={`Delete "${training.title}"?`}
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <EmptyState title="No training programs yet" description="Schedule the first session." />
-      )}
+      <ResponsiveTable
+        columns={columns}
+        rows={trainings}
+        keyFor={(training) => training.id}
+        minWidth="min-w-[680px]"
+        actions={(training) => (
+          <>
+            <AdminFormDialog
+              trigger={
+                <Button variant="ghost" size="sm" aria-label={`Edit ${training.title}`}>
+                  <Pencil className="h-3.5 w-3.5" aria-hidden />
+                </Button>
+              }
+              title={`Edit ${training.title}`}
+              action={saveTraining}
+              submitLabel="Save changes"
+            >
+              <TrainingFields training={training} />
+            </AdminFormDialog>
+            <ConfirmDelete
+              action={deleteTraining}
+              id={training.id}
+              description={`Delete "${training.title}"?`}
+            />
+          </>
+        )}
+        empty={
+          <EmptyState
+            icon={GraduationCap}
+            title="No training programs yet"
+            description="Schedule the first session."
+          />
+        }
+      />
     </div>
   );
 }
 
 function TrainingFields({
-  errors,
   training,
 }: {
-  errors?: Record<string, string[]>;
   training?: {
     id: string;
     title: string;
@@ -132,7 +148,7 @@ function TrainingFields({
       <div>
         <Label htmlFor="tr-title">Title</Label>
         <Input id="tr-title" name="title" defaultValue={training?.title} placeholder="e.g. First Aid & CPR Certification" className="mt-1.5" />
-        <FieldError errors={errors} name="title" />
+        <FieldError name="title" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>

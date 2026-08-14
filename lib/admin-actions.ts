@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { logAudit } from "@/lib/auth";
@@ -16,6 +16,15 @@ function guard() {
 // ---------------------------------------------------------------------------
 // Volunteers
 // ---------------------------------------------------------------------------
+
+/**
+ * Server-action wrapper for the volunteer detail page's plain <form> buttons.
+ * Keeps `updateVolunteerStatus` returning ActionResult (used by InlineStatus),
+ * while this one satisfies the form action's `Promise<void>` contract.
+ */
+export async function submitVolunteerStatus(formData: FormData): Promise<void> {
+  await updateVolunteerStatus(formData);
+}
 
 export async function updateVolunteerStatus(formData: FormData): Promise<ActionResult> {
   guard();
@@ -46,6 +55,7 @@ export async function updateVolunteerStatus(formData: FormData): Promise<ActionR
   await logAudit(`volunteer_${status.toLowerCase()}`, "volunteer", id);
   revalidatePath("/admin/volunteers");
   revalidatePath("/volunteers");
+  revalidateTag("volunteers", "max");
   return { success: true, message: `Volunteer ${status.toLowerCase()}.` };
 }
 
@@ -56,6 +66,7 @@ export async function deleteVolunteer(id: string): Promise<ActionResult> {
   if (error) return { success: false, message: "Could not delete the volunteer." };
   await logAudit("volunteer_deleted", "volunteer", id);
   revalidatePath("/admin/volunteers");
+  revalidateTag("volunteers", "max");
   return { success: true, message: "Volunteer deleted." };
 }
 
@@ -88,6 +99,7 @@ export async function addPoints(formData: FormData): Promise<ActionResult> {
 
   await logAudit("points_added", "volunteer", volunteerId, { points, reason });
   revalidatePath("/admin/volunteers");
+  revalidateTag("volunteers", "max");
   return { success: true, message: `Added ${points} points.` };
 }
 
@@ -107,6 +119,7 @@ export async function updateVolunteerPhoto(formData: FormData): Promise<ActionRe
   revalidatePath(`/admin/volunteers/${id}`);
   revalidatePath("/volunteers");
   revalidatePath(`/volunteers/${id}`);
+  revalidateTag("volunteers", "max");
   return { success: true, message: "Photo updated." };
 }
 
@@ -144,6 +157,7 @@ export async function saveTeamMember(formData: FormData): Promise<ActionResult> 
   }
   revalidatePath("/admin/team");
   revalidatePath("/about");
+  revalidateTag("team", "max");
   return { success: true, message: "Team member saved." };
 }
 
@@ -155,6 +169,7 @@ export async function deleteTeamMember(id: string): Promise<ActionResult> {
   await logAudit("team_deleted", "team_member", id);
   revalidatePath("/admin/team");
   revalidatePath("/about");
+  revalidateTag("team", "max");
   return { success: true, message: "Team member deleted." };
 }
 
@@ -194,6 +209,7 @@ export async function saveFounder(formData: FormData): Promise<ActionResult> {
   }
   revalidatePath("/admin/founders");
   revalidatePath("/about");
+  revalidateTag("founders", "max");
   return { success: true, message: "Founder saved." };
 }
 
@@ -205,6 +221,7 @@ export async function deleteFounder(id: string): Promise<ActionResult> {
   await logAudit("founder_deleted", "founder", id);
   revalidatePath("/admin/founders");
   revalidatePath("/about");
+  revalidateTag("founders", "max");
   return { success: true, message: "Founder deleted." };
 }
 
@@ -251,6 +268,7 @@ export async function saveCommunityMember(formData: FormData): Promise<ActionRes
   }
   revalidatePath("/admin/community");
   revalidatePath("/community");
+  revalidateTag("community", "max");
   return { success: true, message: "Community member saved." };
 }
 
@@ -262,6 +280,7 @@ export async function deleteCommunityMember(id: string): Promise<ActionResult> {
   await logAudit("community_deleted", "community_member", id);
   revalidatePath("/admin/community");
   revalidatePath("/community");
+  revalidateTag("community", "max");
   return { success: true, message: "Community member deleted." };
 }
 
@@ -284,6 +303,7 @@ export async function updateDonor(formData: FormData): Promise<ActionResult> {
   await logAudit("donor_updated", "blood_donor", id);
   revalidatePath("/admin/donors");
   revalidatePath("/blood-support");
+  revalidateTag("blood", "max");
   return { success: true, message: "Donor updated." };
 }
 
@@ -294,6 +314,7 @@ export async function deleteDonor(id: string): Promise<ActionResult> {
   if (error) return { success: false, message: "Could not delete the donor." };
   await logAudit("donor_deleted", "blood_donor", id);
   revalidatePath("/admin/donors");
+  revalidateTag("blood", "max");
   return { success: true, message: "Donor deleted." };
 }
 
@@ -306,6 +327,7 @@ export async function updateContactRequestStatus(formData: FormData): Promise<Ac
   if (error) return { success: false, message: "Could not update the request." };
   await logAudit("contact_request_status", "blood_contact_request", id, { status });
   revalidatePath("/admin/donors");
+  revalidateTag("blood", "max");
   return { success: true, message: "Contact request updated." };
 }
 
@@ -323,6 +345,7 @@ export async function updateBloodRequestStatus(formData: FormData): Promise<Acti
   await logAudit("blood_request_status", "blood_request", id, { status });
   revalidatePath("/admin/blood-requests");
   revalidatePath("/blood-support");
+  revalidateTag("blood", "max");
   return { success: true, message: "Request status updated." };
 }
 
@@ -364,6 +387,7 @@ export async function saveEvent(formData: FormData): Promise<ActionResult> {
   }
   revalidatePath("/admin/events");
   revalidatePath("/events");
+  revalidateTag("events", "max");
   return { success: true, message: "Event saved." };
 }
 
@@ -375,6 +399,7 @@ export async function deleteEvent(id: string): Promise<ActionResult> {
   await logAudit("event_deleted", "event", id);
   revalidatePath("/admin/events");
   revalidatePath("/events");
+  revalidateTag("events", "max");
   return { success: true, message: "Event deleted." };
 }
 
@@ -416,6 +441,7 @@ export async function saveActivity(formData: FormData): Promise<ActionResult> {
   }
   revalidatePath("/admin/activities");
   revalidatePath("/activities");
+  revalidateTag("activities", "max");
   return { success: true, message: "Activity saved." };
 }
 
@@ -427,6 +453,7 @@ export async function deleteActivity(id: string): Promise<ActionResult> {
   await logAudit("activity_deleted", "activity", id);
   revalidatePath("/admin/activities");
   revalidatePath("/activities");
+  revalidateTag("activities", "max");
   return { success: true, message: "Activity deleted." };
 }
 
@@ -489,6 +516,7 @@ export async function saveNotice(formData: FormData): Promise<ActionResult> {
   revalidatePath("/admin/notices");
   revalidatePath("/notices");
   revalidatePath("/notices/[slug]");
+  revalidateTag("notices", "max");
   return { success: true, message: "Notice saved." };
 }
 
@@ -500,6 +528,7 @@ export async function deleteNotice(id: string): Promise<ActionResult> {
   await logAudit("notice_deleted", "notice", id);
   revalidatePath("/admin/notices");
   revalidatePath("/notices");
+  revalidateTag("notices", "max");
   return { success: true, message: "Notice deleted." };
 }
 
@@ -536,6 +565,7 @@ export async function saveTraining(formData: FormData): Promise<ActionResult> {
   }
   revalidatePath("/admin/training");
   revalidatePath("/training");
+  revalidateTag("training", "max");
   return { success: true, message: "Training saved." };
 }
 
@@ -547,6 +577,7 @@ export async function deleteTraining(id: string): Promise<ActionResult> {
   await logAudit("training_deleted", "training", id);
   revalidatePath("/admin/training");
   revalidatePath("/training");
+  revalidateTag("training", "max");
   return { success: true, message: "Training deleted." };
 }
 
@@ -598,6 +629,7 @@ export async function saveAlbum(formData: FormData): Promise<ActionResult> {
   await logAudit(id ? "album_updated" : "album_created", "gallery_album", albumId);
   revalidatePath("/admin/gallery");
   revalidatePath("/gallery");
+  revalidateTag("gallery", "max");
   return { success: true, message: "Album saved." };
 }
 
@@ -609,6 +641,7 @@ export async function deleteAlbum(id: string): Promise<ActionResult> {
   await logAudit("album_deleted", "gallery_album", id);
   revalidatePath("/admin/gallery");
   revalidatePath("/gallery");
+  revalidateTag("gallery", "max");
   return { success: true, message: "Album deleted." };
 }
 
@@ -638,6 +671,7 @@ export async function issueCertificate(formData: FormData): Promise<ActionResult
   if (error) return { success: false, message: "Could not issue the certificate." };
   await logAudit("certificate_issued", "certificate", volunteerId, { title });
   revalidatePath("/admin/certificates");
+  revalidateTag("certificates", "max");
   return {
     success: true,
     message: `Certificate issued. Verify URL: /verify/certificate/${token}`,
@@ -651,6 +685,7 @@ export async function deleteCertificate(id: string): Promise<ActionResult> {
   if (error) return { success: false, message: "Could not delete the certificate." };
   await logAudit("certificate_deleted", "certificate", id);
   revalidatePath("/admin/certificates");
+  revalidateTag("certificates", "max");
   return { success: true, message: "Certificate deleted." };
 }
 
@@ -710,5 +745,6 @@ export async function saveSettings(
   if (error) return { success: false, message: "Could not save settings." };
   await logAudit("settings_updated", "website_settings", key);
   revalidatePath("/admin/settings");
+  revalidateTag("settings", "max");
   return { success: true, message: "Settings saved." };
 }

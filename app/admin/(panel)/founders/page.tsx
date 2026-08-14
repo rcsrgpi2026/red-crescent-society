@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Handshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { adminGetFounders } from "@/lib/queries";
 import { saveFounder, deleteFounder } from "@/lib/admin-actions";
@@ -7,6 +7,9 @@ import { AdminFormDialog, FieldError } from "@/components/admin/admin-form-dialo
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { AdminPageHeader } from "@/components/admin/page-header";
+import { Reveal } from "@/components/shared/reveal";
+import { EmptyState } from "@/components/shared/empty-state";
 import { Input, Label, Textarea, Checkbox } from "@/components/ui";
 import { FOUNDER_CATEGORIES, FOUNDER_CATEGORY_LABELS } from "@/lib/constants";
 
@@ -15,37 +18,34 @@ export default async function AdminFoundersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Founders & Principal</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            The founders of the society and the institute principal, shown in the About page
-            section. Add the principal with the &ldquo;Principal&rdquo; category to feature
-            their photo prominently.
-          </p>
-        </div>
-        <AdminFormDialog
-          trigger={
-            <Button>
-              <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-              Add person
-            </Button>
-          }
-          title="Add founder / principal"
-          description="This person appears on the About page in display order."
-          action={saveFounder}
-          submitLabel="Add person"
-        >
-          {(errors) => (
-            <FounderFields errors={errors} />
-          )}
-        </AdminFormDialog>
-      </div>
+      <AdminPageHeader
+        icon={Handshake}
+        title="Founders & Principal"
+        description="The founders of the society and the institute principal, shown in the About page section. Add the principal with the “Principal” category to feature their photo prominently."
+        tone="bg-gradient-to-br from-amber-500 to-orange-600"
+        actions={
+          <AdminFormDialog
+            trigger={
+              <Button>
+                <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+                Add person
+              </Button>
+            }
+            title="Add founder / principal"
+            description="This person appears on the About page in display order."
+            action={saveFounder}
+            submitLabel="Add person"
+          >
+            <FounderFields />
+          </AdminFormDialog>
+        }
+      />
 
       {founders.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {founders.map((person) => (
-            <div key={person.id} className="rounded-2xl border border-line bg-white p-5">
+          {founders.map((person, index) => (
+            <Reveal key={person.id} delay={Math.min(index * 0.05, 0.3)} className="h-full">
+            <div className="h-full rounded-2xl border border-line bg-white p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md hover:shadow-brand/10">
               <div className="flex items-start gap-3">
                 <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-brand-soft">
                   {person.photo_url ? (
@@ -85,7 +85,7 @@ export default async function AdminFoundersPage() {
                     action={saveFounder}
                     submitLabel="Save changes"
                   >
-                    {(errors) => <FounderFields errors={errors} person={person} />}
+                    <FounderFields person={person} />
                   </AdminFormDialog>
                   <ConfirmDelete
                     action={deleteFounder}
@@ -95,25 +95,23 @@ export default async function AdminFoundersPage() {
                 </div>
               </div>
             </div>
+            </Reveal>
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-line bg-mist/50 p-12 text-center">
-          <p className="font-medium text-foreground">No founders or principal added yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Add the people who founded the society and the principal of the institute.
-          </p>
-        </div>
+        <EmptyState
+          icon={Handshake}
+          title="No founders or principal added yet"
+          description="Add the people who founded the society and the principal of the institute."
+        />
       )}
     </div>
   );
 }
 
 function FounderFields({
-  errors,
   person,
 }: {
-  errors?: Record<string, string[]>;
   person?: {
     id: string;
     name: string;
@@ -131,7 +129,7 @@ function FounderFields({
       <div>
         <Label htmlFor="f-name">Full name</Label>
         <Input id="f-name" name="name" defaultValue={person?.name} placeholder="e.g. Md. Rafiqul Islam" className="mt-1.5" />
-        <FieldError errors={errors} name="name" />
+        <FieldError name="name" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -148,7 +146,7 @@ function FounderFields({
               </option>
             ))}
           </select>
-          <FieldError errors={errors} name="category" />
+          <FieldError name="category" />
         </div>
         <div>
           <Label htmlFor="f-title">Title / role</Label>

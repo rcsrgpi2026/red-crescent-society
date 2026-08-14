@@ -158,6 +158,8 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   EVENT_MANAGER: "Event Manager",
   CONTENT_MANAGER: "Content Manager",
   USER: "User",
+  STUDENT: "Student",
+  VOLUNTEER: "Volunteer",
 };
 
 export const POINT_CATEGORIES = {

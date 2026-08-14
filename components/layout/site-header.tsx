@@ -46,6 +46,7 @@ const MORE_LINKS: { key: NavKey; href: string }[] = [
 
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
   const { t } = useLocale();
 
@@ -143,12 +144,26 @@ export function SiteHeader() {
 
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
+            <DropdownMenu>
+              <DropdownMenuTrigger className="hidden items-center gap-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-mist hover:text-brand-dark sm:inline-flex">
+                {t.nav.login}
+                <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem asChild>
+                  <Link href="/student/login">{t.nav.studentPortal}</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/volunteer/login">{t.nav.volunteerPortal}</Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button asChild size="sm" className="hidden sm:inline-flex">
-              <Link href="/join">{t.nav.joinUs}</Link>
+              <Link href="/volunteer/login">{t.nav.joinUs}</Link>
             </Button>
 
             {/* Mobile menu */}
-            <Sheet>
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
                 <Button
                   variant="outline"
@@ -172,7 +187,12 @@ export function SiteHeader() {
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="flex flex-col gap-1 p-4" aria-label="Mobile navigation">
-                  <MobileLink href="/" label={t.nav.home} onActive={isActive("/")} />
+                  <MobileLink
+                    href="/"
+                    label={t.nav.home}
+                    onActive={isActive("/")}
+                    onClick={() => setMenuOpen(false)}
+                  />
                   {NAV_LINKS.map((item) => (
                     <MobileLink
                       key={item.href}
@@ -180,6 +200,7 @@ export function SiteHeader() {
                       label={t.nav[item.key]}
                       onActive={isActive(item.href)}
                       highlight={item.highlight}
+                      onClick={() => setMenuOpen(false)}
                     />
                   ))}
                   {MORE_LINKS.map((item) => (
@@ -188,16 +209,33 @@ export function SiteHeader() {
                       href={item.href}
                       label={t.nav[item.key]}
                       onActive={isActive(item.href)}
+                      onClick={() => setMenuOpen(false)}
                     />
                   ))}
                   <div className="mt-3">
                     <LanguageSwitcher />
                   </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <Button asChild size="lg" variant="outline">
+                      <Link href="/student/login" onClick={() => setMenuOpen(false)}>
+                        {t.nav.studentPortal}
+                      </Link>
+                    </Button>
+                    <Button asChild size="lg" variant="outline">
+                      <Link href="/volunteer/login" onClick={() => setMenuOpen(false)}>
+                        {t.nav.volunteerPortal}
+                      </Link>
+                    </Button>
+                  </div>
                   <Button asChild size="lg" className="mt-3">
-                    <Link href="/join">{t.nav.joinUs}</Link>
+                    <Link href="/volunteer/login" onClick={() => setMenuOpen(false)}>
+                      {t.nav.joinUs}
+                    </Link>
                   </Button>
                   <Button asChild size="lg" variant="destructive" className="mt-2">
-                    <Link href="/emergency">{t.nav.emergencySupport}</Link>
+                    <Link href="/emergency" onClick={() => setMenuOpen(false)}>
+                      {t.nav.emergencySupport}
+                    </Link>
                   </Button>
                 </nav>
               </SheetContent>
@@ -214,15 +252,18 @@ function MobileLink({
   label,
   onActive,
   highlight,
+  onClick,
 }: {
   href: string;
   label: string;
   onActive: boolean;
   highlight?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={cn(
         "rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
         highlight ? "text-crescent" : "text-foreground/85",

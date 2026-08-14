@@ -42,7 +42,7 @@ export default async function VolunteersPage({
         description={t.volunteers.heroDescription}
       >
         <Link
-          href="/join"
+          href="/volunteer/login"
           className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
         >
           <Users className="h-4 w-4" aria-hidden />

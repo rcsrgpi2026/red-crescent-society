@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { adminGetTeam } from "@/lib/queries";
 import { saveTeamMember, deleteTeamMember } from "@/lib/admin-actions";
@@ -7,6 +7,9 @@ import { AdminFormDialog, FieldError } from "@/components/admin/admin-form-dialo
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { AdminPageHeader } from "@/components/admin/page-header";
+import { Reveal } from "@/components/shared/reveal";
+import { EmptyState } from "@/components/shared/empty-state";
 import { Input, Label, Textarea, Checkbox } from "@/components/ui";
 import { TEAM_POSITIONS, DEPARTMENTS, SEMESTERS } from "@/lib/constants";
 
@@ -15,35 +18,34 @@ export default async function AdminTeamPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Team</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Faculty advisors and student leaders shown on the About page.
-          </p>
-        </div>
-        <AdminFormDialog
-          trigger={
-            <Button>
-              <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-              Add member
-            </Button>
-          }
-          title="Add team member"
-          description="The member appears on the About page in display order."
-          action={saveTeamMember}
-          submitLabel="Add member"
-        >
-          {(errors) => (
-            <TeamFields errors={errors} />
-          )}
-        </AdminFormDialog>
-      </div>
+      <AdminPageHeader
+        icon={UserCog}
+        title="Team"
+        description="Faculty advisors and student leaders shown on the About page."
+        tone="bg-gradient-to-br from-poly to-[#0f4d80]"
+        actions={
+          <AdminFormDialog
+            trigger={
+              <Button>
+                <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+                Add member
+              </Button>
+            }
+            title="Add team member"
+            description="The member appears on the About page in display order."
+            action={saveTeamMember}
+            submitLabel="Add member"
+          >
+            <TeamFields />
+          </AdminFormDialog>
+        }
+      />
 
       {team.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {team.map((member) => (
-            <div key={member.id} className="rounded-2xl border border-line bg-white p-5">
+          {team.map((member, index) => (
+            <Reveal key={member.id} delay={Math.min(index * 0.05, 0.3)} className="h-full">
+            <div className="h-full rounded-2xl border border-line bg-white p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md hover:shadow-brand/10">
               <div className="flex items-start gap-3">
                 <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-brand-soft">
                   {member.photo_url ? (
@@ -81,7 +83,7 @@ export default async function AdminTeamPage() {
                     action={saveTeamMember}
                     submitLabel="Save changes"
                   >
-                    {(errors) => <TeamFields errors={errors} member={member} />}
+                    <TeamFields member={member} />
                   </AdminFormDialog>
                   <ConfirmDelete
                     action={deleteTeamMember}
@@ -91,25 +93,23 @@ export default async function AdminTeamPage() {
                 </div>
               </div>
             </div>
+            </Reveal>
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-line bg-mist/50 p-12 text-center">
-          <p className="font-medium text-foreground">No team members yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Add the faculty advisor and student leaders.
-          </p>
-        </div>
+        <EmptyState
+          icon={UserCog}
+          title="No team members yet"
+          description="Add the faculty advisor and student leaders."
+        />
       )}
     </div>
   );
 }
 
 function TeamFields({
-  errors,
   member,
 }: {
-  errors?: Record<string, string[]>;
   member?: { id: string; name: string; position: string; department: string | null; semester: string | null; bio: string | null; photo_url: string | null; display_order: number; is_active: boolean };
 }) {
   return (
@@ -118,7 +118,7 @@ function TeamFields({
       <div>
         <Label htmlFor="t-name">Full name</Label>
         <Input id="t-name" name="name" defaultValue={member?.name} placeholder="e.g. Md. Rafiqul Islam" className="mt-1.5" />
-        <FieldError errors={errors} name="name" />
+        <FieldError name="name" />
       </div>
       <div>
         <Label htmlFor="t-position">Position</Label>
@@ -134,7 +134,7 @@ function TeamFields({
             </option>
           ))}
         </select>
-        <FieldError errors={errors} name="position" />
+        <FieldError name="position" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>

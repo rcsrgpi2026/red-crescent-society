@@ -3,7 +3,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Profile, UserRole, Volunteer } from "@/types/database";
+import type { Profile, Student, UserRole, Volunteer } from "@/types/database";
 
 export async function getCurrentUser() {
   const supabase = await createClient();
@@ -41,13 +41,61 @@ export async function getCurrentVolunteer(): Promise<Volunteer | null> {
   return data;
 }
 
+export async function getCurrentStudent(): Promise<Student | null> {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("students")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  return data;
+}
+
+/** The default landing area for each profile role (admin, portal or home). */
+export function homeForRole(role: UserRole | null | undefined): string {
+  switch (role) {
+    case "SUPER_ADMIN":
+    case "ADMIN":
+    case "VOLUNTEER_MANAGER":
+    case "EVENT_MANAGER":
+    case "CONTENT_MANAGER":
+      return "/admin";
+    case "STUDENT":
+      return "/student";
+    case "VOLUNTEER":
+      return "/volunteer";
+    default:
+      return "/";
+  }
+}
+
+/** Roles that are allowed into the /admin dashboard. */
+export function isAdminRole(role: UserRole | null | undefined): boolean {
+  return (
+    role === "SUPER_ADMIN" ||
+    role === "ADMIN" ||
+    role === "VOLUNTEER_MANAGER" ||
+    role === "EVENT_MANAGER" ||
+    role === "CONTENT_MANAGER"
+  );
+}
+
 const ADMIN_ONLY: UserRole[] = ["SUPER_ADMIN", "ADMIN"];
 
-/** Redirects to the login page when there is no session or the user is not an admin. */
-export async function requireAdmin() {
+/**
+ * Returns the admin profile, or `null` when there is no session or the user is
+ * not an admin. Callers decide what to do with `null`: pages redirect, route
+ * handlers return an HTTP error (redirects from route handlers can collide
+ * with the middleware's login interception and produce confusing responses).
+ */
+export async function requireAdmin(): Promise<Profile | null> {
   const profile = await getProfile();
   if (!profile || !ADMIN_ONLY.includes(profile.role)) {
-    redirect("/admin/login");
+    return null;
   }
   return profile;
 }
@@ -59,6 +107,36 @@ export async function requireAnyRole(roles: UserRole[]) {
     redirect("/admin");
   }
   return profile;
+}
+
+/** Redirects to the student login when there is no student session. */
+export async function requireStudent() {
+  const profile = await getProfile();
+  if (!profile || profile.role !== "STUDENT") {
+    redirect("/student/login");
+  }
+  const student = await getCurrentStudent();
+  if (!student) {
+    redirect("/student/login");
+  }
+  return { profile, student };
+}
+
+/**
+ * Redirects to the volunteer login when there is no volunteer session.
+ * Pending/rejected volunteers still land here — the page itself shows the
+ * approval notice (login is allowed, access is gated by admin approval).
+ */
+export async function requireVolunteer() {
+  const profile = await getProfile();
+  if (!profile || profile.role !== "VOLUNTEER") {
+    redirect("/volunteer/login");
+  }
+  const volunteer = await getCurrentVolunteer();
+  if (!volunteer) {
+    redirect("/volunteer/login");
+  }
+  return { profile, volunteer };
 }
 
 export function canAccessAdmin(profile: Profile | null): boolean {

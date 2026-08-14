@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Trash2, Loader2 } from "lucide-react";
 import {
@@ -22,6 +23,8 @@ interface ConfirmDeleteProps {
   id: string;
   label?: string;
   description?: string;
+  /** Navigate here after a successful delete (e.g. back to a list page). */
+  redirectTo?: string;
 }
 
 export function ConfirmDelete({
@@ -29,7 +32,9 @@ export function ConfirmDelete({
   id,
   label = "Delete",
   description = "This action cannot be undone.",
+  redirectTo,
 }: ConfirmDeleteProps) {
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   async function handleDelete() {
@@ -38,6 +43,9 @@ export function ConfirmDelete({
     setBusy(false);
     if (result.success) {
       toast.success(result.message ?? "Deleted.");
+      // Detail pages that deleted their own record must leave — the record
+      // no longer exists and re-rendering it would show a 404.
+      if (redirectTo) router.push(redirectTo);
     } else {
       toast.error(result.message ?? "Could not delete.");
     }

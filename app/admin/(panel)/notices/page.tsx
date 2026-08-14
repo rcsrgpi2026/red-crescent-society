@@ -1,18 +1,15 @@
-import { Plus, Pencil } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Plus, Pencil, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { AdminFormDialog, FieldError } from "@/components/admin/admin-form-dialog";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
 import { ImageListUploadField } from "@/components/admin/image-list-upload-field";
+import { AdminPageHeader } from "@/components/admin/page-header";
+import {
+  ResponsiveTable,
+  type Column,
+} from "@/components/admin/responsive-table";
 import { adminGetNotices, adminGetNoticeAttachments } from "@/lib/queries";
 import { saveNotice, deleteNotice } from "@/lib/admin-actions";
 import { NOTICE_CATEGORIES, formatDate } from "@/lib/constants";
@@ -20,111 +17,128 @@ import { Input, Label, Textarea, Checkbox } from "@/components/ui";
 
 export default async function AdminNoticesPage() {
   const notices = await adminGetNotices();
-  const attachmentsByNotice = await Promise.all(
+  const attachmentLists = await Promise.all(
     notices.map((notice) => adminGetNoticeAttachments(notice.id))
   );
+  const attachmentsByNotice = new Map(
+    notices.map((notice, index) => [notice.id, attachmentLists[index] ?? []])
+  );
+
+  const columns: Column<(typeof notices)[number]>[] = [
+    {
+      header: "Notice",
+      render: (notice) => (
+        <div>
+          <p className="font-medium text-foreground">{notice.title}</p>
+          <p className="text-xs text-muted-foreground">/notices/{notice.slug}</p>
+        </div>
+      ),
+    },
+    {
+      header: "Category",
+      render: (notice) => (
+        <span className="inline-flex rounded-full bg-poly-soft px-2.5 py-0.5 text-xs font-semibold text-poly">
+          {notice.category ?? "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Created",
+      render: (notice) => (
+        <span className="text-xs text-muted-foreground">
+          {formatDate(notice.created_at)}
+        </span>
+      ),
+    },
+    {
+      header: "Flags",
+      render: (notice) => (
+        <div className="flex gap-1.5">
+          {notice.pinned && <StatusBadge label="Pinned" tone="crescent" />}
+          {notice.publish_at && <StatusBadge label="Scheduled" tone="poly" />}
+        </div>
+      ),
+    },
+    {
+      header: "Visibility",
+      render: (notice) => (
+        <StatusBadge
+          label={notice.published ? "Published" : "Draft"}
+          tone={statusTone(notice.published ? "PUBLISHED" : "DRAFT")}
+        />
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Notices</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Publish and schedule announcements for the notice board.
-          </p>
-        </div>
-        <AdminFormDialog
-          trigger={
-            <Button>
-              <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-              New notice
-            </Button>
-          }
-          title="Create notice"
-          action={saveNotice}
-          submitLabel="Publish notice"
-        >
-          {(errors) => <NoticeFields errors={errors} />}
-        </AdminFormDialog>
-      </div>
+      <AdminPageHeader
+        icon={Megaphone}
+        title="Notices"
+        description="Publish and schedule announcements for the notice board."
+        tone="bg-gradient-to-br from-amber-400 to-orange-500"
+        actions={
+          <AdminFormDialog
+            trigger={
+              <Button>
+                <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+                New notice
+              </Button>
+            }
+            title="Create notice"
+            action={saveNotice}
+            submitLabel="Publish notice"
+          >
+            <NoticeFields />
+          </AdminFormDialog>
+        }
+      />
 
-      {notices.length > 0 ? (
-        <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-mist/60">
-                <TableHead>Notice</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Flags</TableHead>
-                <TableHead>Visibility</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {notices.map((notice, index) => (
-                <TableRow key={notice.id}>
-                  <TableCell>
-                    <p className="font-medium text-foreground">{notice.title}</p>
-                    <p className="text-xs text-muted-foreground">/notices/{notice.slug}</p>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{notice.category ?? "—"}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{formatDate(notice.created_at)}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1.5">
-                      {notice.pinned && <StatusBadge label="Pinned" tone="crescent" />}
-                      {notice.publish_at && (
-                        <StatusBadge label="Scheduled" tone="poly" />
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge
-                      label={notice.published ? "Published" : "Draft"}
-                      tone={statusTone(notice.published ? "PUBLISHED" : "DRAFT")}
-                    />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <AdminFormDialog
-                        trigger={
-                          <Button variant="ghost" size="sm">
-                            <Pencil className="h-3.5 w-3.5" aria-hidden />
-                          </Button>
-                        }
-                        title={`Edit ${notice.title}`}
-                        action={saveNotice}
-                        submitLabel="Save changes"
-                      >
-                        {(errors) => (
-                          <NoticeFields errors={errors} notice={notice} attachments={attachmentsByNotice[index] ?? []} />
-                        )}
-                      </AdminFormDialog>
-                      <ConfirmDelete
-                        action={deleteNotice}
-                        id={notice.id}
-                        description={`Delete "${notice.title}"?`}
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <EmptyState title="No notices yet" description="Publish your first announcement." />
-      )}
+      <ResponsiveTable
+        columns={columns}
+        rows={notices}
+        keyFor={(notice) => notice.id}
+        minWidth="min-w-[720px]"
+        actions={(notice) => (
+          <>
+            <AdminFormDialog
+              trigger={
+                <Button variant="ghost" size="sm" aria-label={`Edit ${notice.title}`}>
+                  <Pencil className="h-3.5 w-3.5" aria-hidden />
+                </Button>
+              }
+              title={`Edit ${notice.title}`}
+              action={saveNotice}
+              submitLabel="Save changes"
+            >
+              <NoticeFields
+                notice={notice}
+                attachments={attachmentsByNotice.get(notice.id) ?? []}
+              />
+            </AdminFormDialog>
+            <ConfirmDelete
+              action={deleteNotice}
+              id={notice.id}
+              description={`Delete "${notice.title}"?`}
+            />
+          </>
+        )}
+        empty={
+          <EmptyState
+            icon={Megaphone}
+            title="No notices yet"
+            description="Publish your first announcement."
+          />
+        }
+      />
     </div>
   );
 }
 
 function NoticeFields({
-  errors,
   notice,
   attachments,
 }: {
-  errors?: Record<string, string[]>;
   notice?: {
     id: string;
     title: string;
@@ -144,7 +158,7 @@ function NoticeFields({
       <div>
         <Label htmlFor="n-title">Title</Label>
         <Input id="n-title" name="title" defaultValue={notice?.title} placeholder="e.g. General meeting this Friday" className="mt-1.5" />
-        <FieldError errors={errors} name="title" />
+        <FieldError name="title" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function AdminLoginPage() {
   return (
-    <div className="grid min-h-[calc(100vh-4rem)] lg:grid-cols-2">
+    <div className="grid min-h-screen lg:grid-cols-2">
       {/* Brand side */}
       <div className="relative hidden overflow-hidden bg-brand-dark lg:flex lg:flex-col lg:justify-between lg:p-12">
         <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/5 blur-3xl" aria-hidden />

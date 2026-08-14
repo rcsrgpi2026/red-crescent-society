@@ -161,7 +161,7 @@ export function Hero({
               variant="outline"
               className="border-white/40 bg-white/5 text-white backdrop-blur hover:bg-white/15 hover:text-white"
             >
-              <Link href="/join">
+              <Link href="/volunteer/login">
                 {t.home.becomeVolunteer}
                 <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
               </Link>

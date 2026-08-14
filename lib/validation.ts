@@ -82,3 +82,46 @@ export const loginSchema = z.object({
 });
 
 export type LoginFormValues = z.infer<typeof loginSchema>;
+
+/**
+ * Student portal registration — every field is mandatory. Students are
+ * approved instantly (no admin approval needed).
+ */
+export const studentSignupSchema = z.object({
+  name: z.string().min(3, "Please enter your full name").max(100),
+  email: z.string().regex(emailRegex, "Enter a valid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  session: z.string().min(1, "Academic session is required").max(20),
+  semester: z.string().min(1, "Select your semester"),
+  roll: z.string().min(1, "Roll number is required").max(30),
+  department: z.string().min(1, "Select your department"),
+  phone: z.string().regex(phoneRegex, "Enter a valid Bangladeshi mobile number (e.g. 017XXXXXXXX)"),
+});
+
+export type StudentSignupValues = z.infer<typeof studentSignupSchema>;
+
+/**
+ * Volunteer portal registration — reuses the volunteer application fields,
+ * but everything (including email, skills and experience) is mandatory, plus
+ * a password. The row is created as PENDING and requires admin approval
+ * before the volunteer's portal unlocks.
+ */
+export const volunteerSignupSchema = z.object({
+  name: z.string().min(3, "Please enter your full name").max(100),
+  roll: z.string().min(1, "Roll number is required").max(30),
+  registrationNo: z.string().min(1, "College registration number is required").max(30),
+  department: z.string().min(1, "Select your department"),
+  semester: z.string().min(1, "Select your semester"),
+  phone: z.string().regex(phoneRegex, "Enter a valid Bangladeshi mobile number (e.g. 017XXXXXXXX)"),
+  email: z.string().regex(emailRegex, "Enter a valid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  bloodGroup: z.string().min(1, "Select your blood group"),
+  area: z.string().min(2, "Enter your area / address").max(200),
+  emergencyContactName: z.string().min(2, "Emergency contact name is required").max(100),
+  emergencyContactPhone: z.string().regex(phoneRegex, "Enter a valid emergency contact number"),
+  skills: z.array(z.string()).min(1, "List at least one skill").max(10),
+  experience: z.string().min(1, "Previous experience is required").max(2000),
+  motivation: z.string().min(20, "Tell us a little more about why you want to join (min 20 characters)").max(2000),
+});
+
+export type VolunteerSignupValues = z.infer<typeof volunteerSignupSchema>;

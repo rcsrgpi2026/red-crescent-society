@@ -1,73 +1,93 @@
 import { MessageSquare } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { InlineStatus } from "@/components/admin/inline-status";
+import { AdminPageHeader } from "@/components/admin/page-header";
+import {
+  ResponsiveTable,
+  type Column,
+} from "@/components/admin/responsive-table";
 import { adminGetMessages } from "@/lib/queries";
 import { updateMessageStatus } from "@/lib/admin-actions";
 import { formatDateTime } from "@/lib/constants";
 
+const STATUS_LABELS: Record<string, string> = {
+  NEW: "New",
+  READ: "Read",
+  ARCHIVED: "Archived",
+};
+const STATUS_OPTIONS = Object.entries(STATUS_LABELS).map(([value, label]) => ({
+  value,
+  label,
+}));
+
 export default async function AdminMessagesPage() {
   const messages = await adminGetMessages();
 
+  const columns: Column<(typeof messages)[number]>[] = [
+    {
+      header: "From",
+      render: (m) => (
+        <span className="font-medium text-foreground">{m.name}</span>
+      ),
+    },
+    {
+      header: "Subject",
+      render: (m) => (
+        <span className="line-clamp-2 max-w-[16rem] text-sm text-muted-foreground">
+          {m.subject ?? "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Received",
+      render: (m) => (
+        <span className="text-xs text-muted-foreground">
+          {formatDateTime(m.created_at)}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      render: (m) => (
+        <InlineStatus
+          action={updateMessageStatus}
+          id={m.id}
+          value={m.status}
+          options={STATUS_OPTIONS}
+        />
+      ),
+      mobileRender: (m) => (
+        <StatusBadge
+          label={STATUS_LABELS[m.status] ?? m.status}
+          tone={statusTone(m.status)}
+        />
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Messages</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Messages submitted through the public contact form.
-        </p>
-      </div>
+      <AdminPageHeader
+        icon={MessageSquare}
+        title="Messages"
+        description="Messages submitted through the public contact form."
+        tone="bg-gradient-to-br from-emerald-400 to-emerald-600"
+      />
 
-      {messages.length > 0 ? (
-        <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-mist/60">
-                <TableHead>From</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead>Received</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {messages.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell className="font-medium text-foreground">{m.name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{m.subject ?? "—"}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {formatDateTime(m.created_at)}
-                  </TableCell>
-                  <TableCell>
-                    <InlineStatus
-                      action={updateMessageStatus}
-                      id={m.id}
-                      value={m.status}
-                      options={[
-                        { value: "NEW", label: "New" },
-                        { value: "READ", label: "Read" },
-                        { value: "ARCHIVED", label: "Archived" },
-                      ]}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <EmptyState
-          icon={MessageSquare}
-          title="No messages yet"
-          description="Contact form submissions appear here."
-        />
-      )}
+      <ResponsiveTable
+        columns={columns}
+        rows={messages}
+        keyFor={(m) => m.id}
+        minWidth="min-w-[600px]"
+        empty={
+          <EmptyState
+            icon={MessageSquare}
+            title="No messages yet"
+            description="Contact form submissions appear here."
+          />
+        }
+      />
     </div>
   );
 }

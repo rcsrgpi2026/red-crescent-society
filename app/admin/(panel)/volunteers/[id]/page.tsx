@@ -3,12 +3,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, BadgeCheck, Camera, PhoneCall, UserRound, Sparkles } from "lucide-react";
 import { adminGetVolunteer, adminGetPoints } from "@/lib/queries";
-import { updateVolunteerStatus, deleteVolunteer, updateVolunteerPhoto } from "@/lib/admin-actions";
+import { submitVolunteerStatus, deleteVolunteer, updateVolunteerPhoto } from "@/lib/admin-actions";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
 import { AdminFormDialog } from "@/components/admin/admin-form-dialog";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { PointsForm } from "@/components/admin/points-form";
+import { Reveal } from "@/components/shared/reveal";
 import { formatDateTime } from "@/lib/constants";
 
 export default async function AdminVolunteerDetailPage({
@@ -24,7 +25,8 @@ export default async function AdminVolunteerDetailPage({
 
   const rows: { label: string; value: string | null }[] = [
     { label: "Member ID", value: volunteer.member_id },
-    { label: "Student ID", value: volunteer.student_id },
+    { label: "Roll", value: volunteer.roll },
+    { label: "Registration number", value: volunteer.registration_no },
     { label: "Department", value: volunteer.department },
     { label: "Semester", value: volunteer.semester },
     { label: "Phone", value: volunteer.phone },
@@ -40,14 +42,17 @@ export default async function AdminVolunteerDetailPage({
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/admin/volunteers"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-brand-dark"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-        All volunteers
-      </Link>
+      <Reveal>
+        <Link
+          href="/admin/volunteers"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-brand-dark"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          All volunteers
+        </Link>
+      </Reveal>
 
+      <Reveal delay={0.05}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-brand-soft">
@@ -72,18 +77,16 @@ export default async function AdminVolunteerDetailPage({
               action={updateVolunteerPhoto}
               submitLabel="Save photo"
             >
-              {() => (
-                <>
-                  <input type="hidden" name="id" value={volunteer.id} />
-                  <ImageUploadField
-                    name="photoUrl"
-                    label="Photo"
-                    defaultValue={volunteer.photo_url}
-                    folder="volunteers"
-                    description="Shown on the public volunteer profile."
-                  />
-                </>
-              )}
+              <>
+                <input type="hidden" name="id" value={volunteer.id} />
+                <ImageUploadField
+                  name="photoUrl"
+                  label="Photo"
+                  defaultValue={volunteer.photo_url}
+                  folder="volunteers"
+                  description="Shown on the public volunteer profile."
+                />
+              </>
             </AdminFormDialog>
           </div>
           <div>
@@ -98,7 +101,7 @@ export default async function AdminVolunteerDetailPage({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {volunteer.status !== "APPROVED" && (
-            <form action={async (fd) => { await updateVolunteerStatus(fd); }}>
+            <form action={submitVolunteerStatus}>
               <input type="hidden" name="id" value={volunteer.id} />
               <input type="hidden" name="status" value="APPROVED" />
               <button
@@ -112,7 +115,7 @@ export default async function AdminVolunteerDetailPage({
           )}
           {volunteer.status !== "REJECTED" && volunteer.status !== "PENDING" && null}
           {volunteer.status === "PENDING" && (
-            <form action={async (fd) => { await updateVolunteerStatus(fd); }}>
+            <form action={submitVolunteerStatus}>
               <input type="hidden" name="id" value={volunteer.id} />
               <input type="hidden" name="status" value="REJECTED" />
               <button
@@ -128,10 +131,13 @@ export default async function AdminVolunteerDetailPage({
             id={volunteer.id}
             label="Remove"
             description="Delete this volunteer record and all linked data? This cannot be undone."
+            redirectTo="/admin/volunteers"
           />
         </div>
       </div>
+      </Reveal>
 
+      <Reveal delay={0.1}>
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Record */}
         <div className="rounded-2xl border border-line bg-white p-6">
@@ -214,6 +220,7 @@ export default async function AdminVolunteerDetailPage({
           )}
         </div>
       </div>
+      </Reveal>
     </div>
   );
 }

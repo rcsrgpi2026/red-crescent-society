@@ -1,16 +1,14 @@
 import { Droplets, MessageCircle } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { InlineStatus } from "@/components/admin/inline-status";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
+import { AdminPageHeader } from "@/components/admin/page-header";
+import {
+  ResponsiveTable,
+  type Column,
+} from "@/components/admin/responsive-table";
+import { Reveal } from "@/components/shared/reveal";
 import { adminGetDonors, adminGetContactRequests } from "@/lib/queries";
 import {
   updateDonor,
@@ -19,139 +17,194 @@ import {
 } from "@/lib/admin-actions";
 import { formatDate } from "@/lib/constants";
 
+const CONTACT_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Pending",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+};
+const CONTACT_STATUS_OPTIONS = Object.entries(CONTACT_STATUS_LABELS).map(
+  ([value, label]) => ({ value, label })
+);
+
 export default async function AdminDonorsPage() {
   const [donors, contactRequests] = await Promise.all([
     adminGetDonors(),
     adminGetContactRequests(),
   ]);
 
+  const donorColumns: Column<(typeof donors)[number]>[] = [
+    {
+      header: "Donor",
+      render: (d) => (
+        <span className="font-medium text-foreground">{d.name}</span>
+      ),
+    },
+    {
+      header: "Blood",
+      render: (d) => (
+        <span className="inline-flex rounded-md bg-crescent-soft px-2 py-0.5 text-xs font-bold text-crescent">
+          {d.blood_group}
+        </span>
+      ),
+    },
+    {
+      header: "Area",
+      render: (d) => (
+        <span className="text-xs text-muted-foreground">{d.area ?? "—"}</span>
+      ),
+    },
+    {
+      header: "Phone (private)",
+      render: (d) => (
+        <span className="text-xs text-muted-foreground">{d.phone ?? "—"}</span>
+      ),
+    },
+    {
+      header: "Last donation",
+      render: (d) => (
+        <span className="text-xs text-muted-foreground">
+          {d.last_donation_date ? formatDate(d.last_donation_date) : "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      render: (d) => (
+        <div className="flex items-center gap-2">
+          <InlineStatus
+            action={updateDonor}
+            id={d.id}
+            value={d.availability}
+            name="availability"
+            options={[
+              { value: "AVAILABLE", label: "Available" },
+              { value: "UNAVAILABLE", label: "Unavailable" },
+            ]}
+          />
+          <StatusBadge
+            label={d.is_active ? "Active" : "Hidden"}
+            tone={d.is_active ? "success" : "neutral"}
+          />
+        </div>
+      ),
+      mobileRender: (d) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <StatusBadge
+            label={d.availability === "AVAILABLE" ? "Available" : "Unavailable"}
+            tone={d.availability === "AVAILABLE" ? "success" : "neutral"}
+          />
+          <StatusBadge
+            label={d.is_active ? "Active" : "Hidden"}
+            tone={d.is_active ? "success" : "neutral"}
+          />
+        </div>
+      ),
+    },
+  ];
+
+  const contactColumns: Column<(typeof contactRequests)[number]>[] = [
+    {
+      header: "Requester",
+      render: (r) => (
+        <span className="font-medium text-foreground">{r.requester_name}</span>
+      ),
+    },
+    {
+      header: "Contact",
+      render: (r) => (
+        <span className="text-xs text-muted-foreground">{r.requester_contact}</span>
+      ),
+    },
+    {
+      header: "Message",
+      render: (r) => (
+        <span className="line-clamp-2 max-w-xs text-xs text-muted-foreground">
+          {r.message ?? "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      render: (r) => (
+        <InlineStatus
+          action={updateContactRequestStatus}
+          id={r.id}
+          value={r.status}
+          options={CONTACT_STATUS_OPTIONS}
+        />
+      ),
+      mobileRender: (r) => (
+        <StatusBadge
+          label={CONTACT_STATUS_LABELS[r.status] ?? r.status}
+          tone={statusToneFor(r.status)}
+        />
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Blood Donors</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Donor records — phone numbers are private and never shown on the public site.
-        </p>
-      </div>
+      <AdminPageHeader
+        icon={Droplets}
+        title="Blood Donors"
+        description="Donor records — phone numbers are private and never shown on the public site."
+        tone="bg-gradient-to-br from-crescent to-crescent-dark"
+      />
 
-      {donors.length > 0 ? (
-        <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-mist/60">
-                <TableHead>Donor</TableHead>
-                <TableHead>Blood</TableHead>
-                <TableHead>Area</TableHead>
-                <TableHead>Phone (private)</TableHead>
-                <TableHead>Last donation</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {donors.map((d) => (
-                <TableRow key={d.id}>
-                  <TableCell className="font-medium text-foreground">{d.name}</TableCell>
-                  <TableCell>
-                    <span className="inline-flex rounded-md bg-crescent-soft px-2 py-0.5 text-xs font-bold text-crescent">
-                      {d.blood_group}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{d.area ?? "—"}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{d.phone ?? "—"}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {d.last_donation_date ? formatDate(d.last_donation_date) : "—"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <InlineStatus
-                        action={updateDonor}
-                        id={d.id}
-                        value={d.availability}
-                        name="availability"
-                        options={[
-                          { value: "AVAILABLE", label: "Available" },
-                          { value: "UNAVAILABLE", label: "Unavailable" },
-                        ]}
-                      />
-                      <StatusBadge
-                        label={d.is_active ? "Active" : "Hidden"}
-                        tone={d.is_active ? "success" : "neutral"}
-                      />
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <ConfirmDelete
-                      action={deleteDonor}
-                      id={d.id}
-                      label="Remove"
-                      description={`Remove ${d.name} from the donor list?`}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <EmptyState
-          icon={Droplets}
-          title="No donors registered"
-          description="Public donor registrations will appear here."
-        />
-      )}
+      <ResponsiveTable
+        columns={donorColumns}
+        rows={donors}
+        keyFor={(d) => d.id}
+        minWidth="min-w-[760px]"
+        actions={(d) => (
+          <ConfirmDelete
+            action={deleteDonor}
+            id={d.id}
+            label="Remove"
+            description={`Remove ${d.name} from the donor list?`}
+          />
+        )}
+        empty={
+          <EmptyState
+            icon={Droplets}
+            title="No donors registered"
+            description="Public donor registrations will appear here."
+          />
+        }
+      />
 
       {/* Contact requests */}
-      <div>
-        <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
-          <MessageCircle className="h-5 w-5 text-brand" aria-hidden />
-          Contact requests
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          When someone requests a donor&apos;s contact, review it here and connect them safely.
-        </p>
-        {contactRequests.length > 0 ? (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-white">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-mist/60">
-                  <TableHead>Requester</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Message</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {contactRequests.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium text-foreground">{r.requester_name}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{r.requester_contact}</TableCell>
-                    <TableCell className="max-w-xs text-xs text-muted-foreground">
-                      {r.message ?? "—"}
-                    </TableCell>
-                    <TableCell>
-                      <InlineStatus
-                        action={updateContactRequestStatus}
-                        id={r.id}
-                        value={r.status}
-                        options={[
-                          { value: "PENDING", label: "Pending" },
-                          { value: "APPROVED", label: "Approved" },
-                          { value: "REJECTED", label: "Rejected" },
-                        ]}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+      <Reveal>
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-poly to-[#0f4d80] text-white shadow-sm">
+            <MessageCircle className="h-4 w-4" aria-hidden />
+          </span>
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Contact requests</h2>
+            <p className="text-xs text-muted-foreground">
+              When someone requests a donor&apos;s contact, review it here and connect them safely.
+            </p>
           </div>
-        ) : (
-          <div className="mt-4 rounded-2xl border border-dashed border-line bg-mist/50 p-10 text-center text-sm text-muted-foreground">
+        </div>
+      </Reveal>
+
+      <ResponsiveTable
+        columns={contactColumns}
+        rows={contactRequests}
+        keyFor={(r) => r.id}
+        minWidth="min-w-[640px]"
+        empty={
+          <div className="rounded-2xl border border-dashed border-line bg-mist/50 p-10 text-center text-sm text-muted-foreground">
             No contact requests yet.
           </div>
-        )}
-      </div>
+        }
+      />
     </div>
   );
+}
+
+function statusToneFor(status: string): "warning" | "success" | "crescent" {
+  if (status === "APPROVED") return "success";
+  if (status === "REJECTED") return "crescent";
+  return "warning";
 }

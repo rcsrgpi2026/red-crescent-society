@@ -4,7 +4,9 @@ export type UserRole =
   | "VOLUNTEER_MANAGER"
   | "EVENT_MANAGER"
   | "CONTENT_MANAGER"
-  | "USER";
+  | "USER"
+  | "STUDENT"
+  | "VOLUNTEER";
 
 export type VolunteerStatus = "PENDING" | "APPROVED" | "REJECTED";
 export type BloodRequestStatus =
@@ -32,12 +34,28 @@ export interface Profile {
   updated_at: string;
 }
 
+export interface Student {
+  id: string;
+  user_id: string | null;
+  name: string;
+  session: string;
+  semester: string;
+  roll: string;
+  department: string;
+  phone: string;
+  email: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Volunteer {
   id: string;
   user_id: string | null;
   member_id: string | null;
   name: string;
   student_id: string | null;
+  roll: string | null;
+  registration_no: string | null;
   department: string | null;
   semester: string | null;
   phone: string | null;

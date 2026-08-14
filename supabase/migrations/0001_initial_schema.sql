@@ -20,6 +20,23 @@ end;
 $$;
 
 -- ------------------------------------------------------------
+-- profiles
+-- ------------------------------------------------------------
+create table public.profiles (
+  id uuid primary key references auth.users (id) on delete cascade,
+  role text not null default 'USER'
+    check (role in ('SUPER_ADMIN', 'ADMIN', 'VOLUNTEER_MANAGER', 'EVENT_MANAGER', 'CONTENT_MANAGER', 'USER')),
+  full_name text,
+  avatar_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create trigger profiles_updated_at
+  before update on public.profiles
+  for each row execute function public.set_updated_at();
+
+-- ------------------------------------------------------------
 -- Helper: role checks used by RLS policies
 -- ------------------------------------------------------------
 create or replace function public.is_admin(uid uuid)
@@ -47,23 +64,6 @@ as $$
     where id = uid and role = any(roles)
   );
 $$;
-
--- ------------------------------------------------------------
--- profiles
--- ------------------------------------------------------------
-create table public.profiles (
-  id uuid primary key references auth.users (id) on delete cascade,
-  role text not null default 'USER'
-    check (role in ('SUPER_ADMIN', 'ADMIN', 'VOLUNTEER_MANAGER', 'EVENT_MANAGER', 'CONTENT_MANAGER', 'USER')),
-  full_name text,
-  avatar_url text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create trigger profiles_updated_at
-  before update on public.profiles
-  for each row execute function public.set_updated_at();
 
 -- Auto-create a profile whenever a new auth user signs up.
 create or replace function public.handle_new_user()

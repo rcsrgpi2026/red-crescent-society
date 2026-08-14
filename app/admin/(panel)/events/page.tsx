@@ -1,12 +1,4 @@
-import { Plus, Pencil } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Plus, Pencil, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -14,6 +6,11 @@ import { AdminFormDialog, FieldError } from "@/components/admin/admin-form-dialo
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
 import { EventRegistrations } from "@/components/admin/event-registrations";
+import { AdminPageHeader } from "@/components/admin/page-header";
+import {
+  ResponsiveTable,
+  type Column,
+} from "@/components/admin/responsive-table";
 import { adminGetEvents, adminGetEventRegistrations } from "@/lib/queries";
 import { saveEvent, deleteEvent } from "@/lib/admin-actions";
 import { EVENT_CATEGORIES, EVENT_STATUS_LABELS, formatDate } from "@/lib/constants";
@@ -21,112 +18,134 @@ import { Input, Label, Textarea, Checkbox } from "@/components/ui";
 
 export default async function AdminEventsPage() {
   const events = await adminGetEvents();
-  const registrationsByEvent = await Promise.all(
+  const registrationLists = await Promise.all(
     events.map((event) => adminGetEventRegistrations(event.id))
   );
+  const registrationsByEvent = new Map(
+    events.map((event, index) => [event.id, registrationLists[index] ?? []])
+  );
+
+  const columns: Column<(typeof events)[number]>[] = [
+    {
+      header: "Event",
+      render: (event) => (
+        <div>
+          <p className="font-medium text-foreground">{event.title}</p>
+          <p className="text-xs text-muted-foreground">
+            {event.category ?? "Uncategorized"} · /events/{event.slug}
+          </p>
+        </div>
+      ),
+    },
+    {
+      header: "Date",
+      render: (event) => (
+        <span className="text-xs text-muted-foreground">
+          {formatDate(event.date)}
+        </span>
+      ),
+    },
+    {
+      header: "Location",
+      render: (event) => (
+        <span className="block max-w-[10rem] truncate text-xs text-muted-foreground">
+          {event.location ?? "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      render: (event) => (
+        <StatusBadge
+          label={EVENT_STATUS_LABELS[event.status] ?? event.status}
+          tone={statusTone(event.status)}
+        />
+      ),
+    },
+    {
+      header: "Registrations",
+      render: (event) => (
+        <EventRegistrations
+          eventTitle={event.title}
+          registrations={registrationsByEvent.get(event.id) ?? []}
+        />
+      ),
+      mobileRender: (event) => {
+        const count = registrationsByEvent.get(event.id)?.length ?? 0;
+        return (
+          <span className="inline-flex rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-bold text-brand-ink">
+            {count} registered
+          </span>
+        );
+      },
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Events</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Create, publish and manage events and their registrations.
-          </p>
-        </div>
-        <AdminFormDialog
-          trigger={
-            <Button>
-              <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-              New event
-            </Button>
-          }
-          title="Create event"
-          action={saveEvent}
-          submitLabel="Create event"
-        >
-          {(errors) => <EventFields errors={errors} />}
-        </AdminFormDialog>
-      </div>
+      <AdminPageHeader
+        icon={CalendarDays}
+        title="Events"
+        description="Create, publish and manage events and their registrations."
+        tone="bg-gradient-to-br from-poly to-[#0f4d80]"
+        actions={
+          <AdminFormDialog
+            trigger={
+              <Button>
+                <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+                New event
+              </Button>
+            }
+            title="Create event"
+            action={saveEvent}
+            submitLabel="Create event"
+          >
+            <EventFields />
+          </AdminFormDialog>
+        }
+      />
 
-      {events.length > 0 ? (
-        <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-mist/60">
-                <TableHead>Event</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Registrations</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {events.map((event, index) => {
-                const registrations = registrationsByEvent[index] ?? [];
-                return (
-                  <TableRow key={event.id}>
-                    <TableCell>
-                      <p className="font-medium text-foreground">{event.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {event.category ?? "Uncategorized"} · /events/{event.slug}
-                      </p>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {formatDate(event.date)}
-                    </TableCell>
-                    <TableCell className="max-w-[10rem] truncate text-xs text-muted-foreground">
-                      {event.location ?? "—"}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge
-                        label={EVENT_STATUS_LABELS[event.status] ?? event.status}
-                        tone={statusTone(event.status)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <EventRegistrations eventTitle={event.title} registrations={registrations} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <AdminFormDialog
-                          trigger={
-                            <Button variant="ghost" size="sm">
-                              <Pencil className="h-3.5 w-3.5" aria-hidden />
-                            </Button>
-                          }
-                          title={`Edit ${event.title}`}
-                          action={saveEvent}
-                          submitLabel="Save changes"
-                        >
-                          {(errors) => <EventFields errors={errors} event={event} />}
-                        </AdminFormDialog>
-                        <ConfirmDelete
-                          action={deleteEvent}
-                          id={event.id}
-                          description={`Delete "${event.title}" and its registrations?`}
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <EmptyState title="No events yet" description="Create the first event to get started." />
-      )}
+      <ResponsiveTable
+        columns={columns}
+        rows={events}
+        keyFor={(event) => event.id}
+        minWidth="min-w-[720px]"
+        actions={(event) => (
+          <>
+            <AdminFormDialog
+              trigger={
+                <Button variant="ghost" size="sm" aria-label={`Edit ${event.title}`}>
+                  <Pencil className="h-3.5 w-3.5" aria-hidden />
+                </Button>
+              }
+              title={`Edit ${event.title}`}
+              action={saveEvent}
+              submitLabel="Save changes"
+            >
+              <EventFields event={event} />
+            </AdminFormDialog>
+            <ConfirmDelete
+              action={deleteEvent}
+              id={event.id}
+              description={`Delete "${event.title}" and its registrations?`}
+            />
+          </>
+        )}
+        empty={
+          <EmptyState
+            icon={CalendarDays}
+            title="No events yet"
+            description="Create the first event to get started."
+          />
+        }
+      />
     </div>
   );
 }
 
 function EventFields({
-  errors,
   event,
 }: {
-  errors?: Record<string, string[]>;
   event?: {
     id: string;
     title: string;
@@ -150,7 +169,7 @@ function EventFields({
       <div>
         <Label htmlFor="ev-title">Title</Label>
         <Input id="ev-title" name="title" defaultValue={event?.title} placeholder="e.g. Blood Donation Camp 2026" className="mt-1.5" />
-        <FieldError errors={errors} name="title" />
+        <FieldError name="title" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>

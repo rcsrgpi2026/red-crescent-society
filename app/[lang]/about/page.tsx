@@ -309,7 +309,7 @@ export default async function AboutPage() {
           )}
           <Reveal className="mt-10 text-center">
             <Link
-              href="/join"
+              href="/volunteer/login"
               className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
             >
               {t.about.wantToBePart}

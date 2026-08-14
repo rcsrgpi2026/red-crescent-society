@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { BadgeCheck, ShieldAlert, Award } from "lucide-react";
 import { formatDate } from "@/lib/constants";
 import { SiteLogo } from "@/components/layout/site-logo";
 import { getServerMessages } from "@/lib/i18n/server";
+import { getCertificateVerification } from "@/lib/queries";
 import { format } from "@/lib/i18n";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -25,20 +24,7 @@ export default async function VerifyCertificatePage({
   const { token } = await params;
   const t = await getServerMessages();
 
-  let result: {
-    certificate_title: string;
-    issued_at: string | null;
-    volunteer_name: string;
-    member_id: string | null;
-    valid: boolean;
-  } | null = null;
-
-  if (isSupabaseConfigured) {
-    const supabase = await createClient();
-    const { data } = await supabase.rpc("verify_certificate", { p_token: token });
-    result = data && data.length > 0 ? data[0] : null;
-  }
-
+  const result = await getCertificateVerification(token);
   if (!result) notFound();
 
   return (

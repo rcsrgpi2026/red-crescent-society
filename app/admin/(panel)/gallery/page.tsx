@@ -1,18 +1,15 @@
 import { Plus, Pencil, Images } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { AdminFormDialog, FieldError } from "@/components/admin/admin-form-dialog";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { ImageListUploadField } from "@/components/admin/image-list-upload-field";
+import { AdminPageHeader } from "@/components/admin/page-header";
+import {
+  ResponsiveTable,
+  type Column,
+} from "@/components/admin/responsive-table";
 import { adminGetAlbums, getAlbumImages } from "@/lib/queries";
 import { saveAlbum, deleteAlbum } from "@/lib/admin-actions";
 import { formatDate } from "@/lib/constants";
@@ -20,99 +17,110 @@ import { Input, Label, Textarea } from "@/components/ui";
 
 export default async function AdminGalleryPage() {
   const albums = await adminGetAlbums();
-  const imagesByAlbum = await Promise.all(
+  const imageLists = await Promise.all(
     albums.map(async (album) => getAlbumImages(album.id))
   );
+  const albumImages = new Map(
+    albums.map((album, index) => [album.id, imageLists[index] ?? []])
+  );
+
+  const columns: Column<(typeof albums)[number]>[] = [
+    {
+      header: "Album",
+      render: (album) => (
+        <div>
+          <p className="font-medium text-foreground">{album.title}</p>
+          <p className="text-xs text-muted-foreground">/gallery/{album.slug}</p>
+        </div>
+      ),
+    },
+    {
+      header: "Date",
+      render: (album) => (
+        <span className="text-xs text-muted-foreground">
+          {formatDate(album.date)}
+        </span>
+      ),
+    },
+    {
+      header: "Photos",
+      render: (album) => (
+        <span className="text-xs font-semibold text-brand-dark">
+          {albumImages.get(album.id)?.length ?? 0}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Gallery</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Organize photos into albums for the public gallery.
-          </p>
-        </div>
-        <AdminFormDialog
-          trigger={
-            <Button>
-              <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-              New album
-            </Button>
-          }
-          title="Create album"
-          action={saveAlbum}
-          submitLabel="Create album"
-        >
-          {(errors) => <AlbumFields errors={errors} />}
-        </AdminFormDialog>
-      </div>
+      <AdminPageHeader
+        icon={Images}
+        title="Gallery"
+        description="Organize photos into albums for the public gallery."
+        tone="bg-gradient-to-br from-violet-500 to-purple-700"
+        actions={
+          <AdminFormDialog
+            trigger={
+              <Button>
+                <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+                New album
+              </Button>
+            }
+            title="Create album"
+            action={saveAlbum}
+            submitLabel="Create album"
+          >
+            <AlbumFields />
+          </AdminFormDialog>
+        }
+      />
 
-      {albums.length > 0 ? (
-        <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-mist/60">
-                <TableHead>Album</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Photos</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {albums.map((album, index) => (
-                <TableRow key={album.id}>
-                  <TableCell>
-                    <p className="font-medium text-foreground">{album.title}</p>
-                    <p className="text-xs text-muted-foreground">/gallery/{album.slug}</p>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{formatDate(album.date)}</TableCell>
-                  <TableCell className="text-xs">{imagesByAlbum[index]?.length ?? 0}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <AdminFormDialog
-                        trigger={
-                          <Button variant="ghost" size="sm">
-                            <Pencil className="h-3.5 w-3.5" aria-hidden />
-                          </Button>
-                        }
-                        title={`Edit ${album.title}`}
-                        action={saveAlbum}
-                        submitLabel="Save changes"
-                      >
-                        {(errors) => (
-                          <AlbumFields errors={errors} album={album} images={imagesByAlbum[index] ?? []} />
-                        )}
-                      </AdminFormDialog>
-                      <ConfirmDelete
-                        action={deleteAlbum}
-                        id={album.id}
-                        description={`Delete "${album.title}" and its photos?`}
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <EmptyState
-          icon={Images}
-          title="No albums yet"
-          description="Create an album and upload or paste photo URLs."
-        />
-      )}
+      <ResponsiveTable
+        columns={columns}
+        rows={albums}
+        keyFor={(album) => album.id}
+        minWidth="min-w-[560px]"
+        actions={(album) => (
+          <>
+            <AdminFormDialog
+              trigger={
+                <Button variant="ghost" size="sm" aria-label={`Edit ${album.title}`}>
+                  <Pencil className="h-3.5 w-3.5" aria-hidden />
+                </Button>
+              }
+              title={`Edit ${album.title}`}
+              action={saveAlbum}
+              submitLabel="Save changes"
+            >
+              <AlbumFields
+                album={album}
+                images={albumImages.get(album.id) ?? []}
+              />
+            </AdminFormDialog>
+            <ConfirmDelete
+              action={deleteAlbum}
+              id={album.id}
+              description={`Delete "${album.title}" and its photos?`}
+            />
+          </>
+        )}
+        empty={
+          <EmptyState
+            icon={Images}
+            title="No albums yet"
+            description="Create an album and upload or paste photo URLs."
+          />
+        }
+      />
     </div>
   );
 }
 
 function AlbumFields({
-  errors,
   album,
   images,
 }: {
-  errors?: Record<string, string[]>;
   album?: {
     id: string;
     title: string;
@@ -129,7 +137,7 @@ function AlbumFields({
       <div>
         <Label htmlFor="g-title">Title</Label>
         <Input id="g-title" name="title" defaultValue={album?.title} placeholder="e.g. Blood Donation 2026" className="mt-1.5" />
-        <FieldError errors={errors} name="title" />
+        <FieldError name="title" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>

@@ -1,8 +1,9 @@
+import "../globals.css";
+
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SiteHeader } from "@/components/layout/site-header";
-import { SiteFooter } from "@/components/layout/site-footer";
 import { LocaleProvider } from "@/components/providers/locale-provider";
+import { LogoProvider } from "@/components/providers/logo-provider";
 import { messages as enMessages } from "@/lib/i18n/messages";
 import { fontVariables } from "@/lib/fonts";
 
@@ -21,12 +22,10 @@ export default function AdminRootLayout({
       className={`${fontVariables} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col">
+      <body className="min-h-screen bg-mist text-foreground antialiased">
         <TooltipProvider delayDuration={200}>
           <LocaleProvider locale="en" t={enMessages}>
-            <SiteHeader />
-            <main className="flex-1">{children}</main>
-            <SiteFooter />
+            <LogoProvider>{children}</LogoProvider>
           </LocaleProvider>
           <Toaster position="top-center" richColors closeButton />
         </TooltipProvider>

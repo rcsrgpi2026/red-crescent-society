@@ -103,7 +103,7 @@ export default async function TrainingPage() {
           </div>
           <div className="mt-6 text-center">
             <Link
-              href="/join"
+              href="/volunteer/login"
               className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
             >
               <GraduationCap className="h-4 w-4" aria-hidden />

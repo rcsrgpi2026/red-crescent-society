@@ -26,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { SiteLogo } from "@/components/layout/site-logo";
@@ -33,6 +34,7 @@ import { SiteLogo } from "@/components/layout/site-logo";
 const NAV = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Volunteers", href: "/admin/volunteers", icon: Users },
+  { label: "Students", href: "/admin/students", icon: GraduationCap },
   { label: "Team", href: "/admin/team", icon: UserCog },
   { label: "Founders", href: "/admin/founders", icon: Handshake },
   { label: "Community", href: "/admin/community", icon: Network },
@@ -50,7 +52,17 @@ const NAV = [
   { label: "Audit Log", href: "/admin/audit", icon: ScrollText },
 ];
 
-export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
+/**
+ * The admin sidebar content. Renders as a full-height column:
+ *
+ *   Header (logo + title + optional close button)
+ *   Navigation (the only scrollable area)
+ *   Footer (view website / sign out)
+ *
+ * `onClose` is provided by the mobile drawer; when present a close button is
+ * shown at the top-right of the header (mobile only).
+ */
+export function AdminSidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
@@ -64,15 +76,40 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   return (
-    <div className="flex h-full flex-col bg-white">
-      <div className="flex h-16 items-center gap-2.5 border-b border-line px-5">
-        <SiteLogo variant="society" className="w-9" />
-        <div className="min-w-0 leading-tight">
-          <p className="truncate text-sm font-bold text-brand-dark">Society Admin</p>
-          <p className="truncate text-[11px] text-muted-foreground">RPI Red Crescent</p>
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-gradient-to-b from-brand-dark to-[#043c28] text-white">
+      {/* Decorative glow */}
+      <div
+        className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/5 blur-3xl"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-crescent/10 blur-3xl"
+        aria-hidden
+      />
+
+      {/* Header */}
+      <div className="relative flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-4">
+        <SiteLogo variant="society" className="w-9 shrink-0" />
+        <div className="min-w-0 flex-1 leading-tight">
+          <p className="truncate text-sm font-bold text-white">Society Admin</p>
+          <p className="truncate text-[11px] text-white/60">RPI Red Crescent</p>
         </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="shrink-0 rounded-full bg-white/10 p-1.5 text-white/80 transition-colors hover:bg-white/20 hover:text-white lg:hidden"
+            aria-label="Close menu"
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </button>
+        )}
       </div>
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4" aria-label="Admin navigation">
+
+      {/* Scrollable navigation — the only scroll container in the sidebar */}
+      <nav
+        className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-4"
+        aria-label="Admin navigation"
+      >
         {NAV.map((item) => {
           const active =
             item.href === "/admin"
@@ -82,26 +119,40 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
             <Link
               key={item.href}
               href={item.href}
-              onClick={onNavigate}
+              onClick={onClose}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
                 active
-                  ? "bg-brand text-white shadow-sm"
-                  : "text-muted-foreground hover:bg-mist hover:text-foreground"
+                  ? "bg-brand-soft text-brand-ink shadow-lg shadow-black/10"
+                  : "text-white/60 hover:bg-white/5 hover:text-white"
               )}
               aria-current={active ? "page" : undefined}
             >
-              <item.icon className="h-4 w-4 shrink-0" aria-hidden />
+              {active && (
+                <span
+                  className="absolute -left-3 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-crescent"
+                  aria-hidden
+                />
+              )}
+              <item.icon
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-transform duration-200",
+                  !active && "group-hover:scale-110 group-hover:text-brand-soft"
+                )}
+                aria-hidden
+              />
               {item.label}
             </Link>
           );
         })}
       </nav>
-      <div className="border-t border-line p-3">
+
+      {/* Footer */}
+      <div className="relative shrink-0 border-t border-white/10 p-3">
         <Link
           href="/"
           target="_blank"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-mist hover:text-foreground"
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white"
         >
           <ExternalLink className="h-4 w-4" aria-hidden />
           View website
@@ -109,7 +160,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
         <button
           onClick={signOut}
           disabled={signingOut}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-crescent transition-colors hover:bg-crescent-soft disabled:opacity-60"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-crescent transition-colors hover:bg-white/5 disabled:opacity-60"
         >
           {signingOut ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -123,24 +174,35 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+/**
+ * Mobile off-canvas drawer. Mounted only while open, so the drawer starts
+ * fully outside the viewport (it is not rendered at all) and slides in from
+ * the left on mount. The backdrop closes it on click.
+ *
+ * Rendered through a portal to <body> on purpose: the topbar header uses
+ * `backdrop-blur`, and `backdrop-filter` makes that header a containing
+ * block for `position: fixed` descendants — which would otherwise shrink
+ * the drawer to the header's height instead of the viewport.
+ */
 export function MobileAdminNav({ onClose }: { onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 lg:hidden">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 lg:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Admin menu"
+    >
+      {/* Backdrop */}
       <button
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
+        className="absolute inset-0 animate-in fade-in bg-black/50 backdrop-blur-sm"
         aria-label="Close menu"
       />
-      <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] shadow-2xl">
-        <button
-          onClick={onClose}
-          className="absolute right-3 top-4 z-10 rounded-full bg-mist p-1.5 text-muted-foreground"
-          aria-label="Close"
-        >
-          <X className="h-4 w-4" aria-hidden />
-        </button>
-        <AdminSidebar onNavigate={onClose} />
+      {/* Drawer panel */}
+      <div className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] animate-in slide-in-from-left duration-300 ease-out shadow-2xl">
+        <AdminSidebar onClose={onClose} />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

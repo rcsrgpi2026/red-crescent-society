@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { useLogos } from "@/components/providers/logo-provider";
 
 interface SiteLogoProps {
   variant?: "society" | "institute";
@@ -8,15 +11,20 @@ interface SiteLogoProps {
 }
 
 /**
- * Renders one of the two official logos. Logos are never resized beyond their
- * natural proportions (aspect ratio is preserved via width/height + h-auto).
- * Replace the placeholder files in /public/logos with the official logos.
+ * Renders one of the two official logos. Uses the logo uploaded from the
+ * admin (Settings → Logos) when available, otherwise the placeholder files
+ * in /public/logos. Logos are never resized beyond their natural
+ * proportions (aspect ratio is preserved via width/height + h-auto).
  */
 export function SiteLogo({ variant = "society", className, priority }: SiteLogoProps) {
+  const logos = useLogos();
   const isSociety = variant === "society";
+  const custom = isSociety ? logos.rcs : logos.rpi;
+  const src = custom ?? (isSociety ? "/logos/rcr-logo.svg" : "/logos/rpi-logo.svg");
+
   return (
     <Image
-      src={isSociety ? "/logos/rcr-logo.svg" : "/logos/rpi-logo.svg"}
+      src={src}
       alt={isSociety ? "Rajshahi Polytechnic Institute Red Crescent Society logo" : "Rajshahi Polytechnic Institute logo"}
       width={64}
       height={64}

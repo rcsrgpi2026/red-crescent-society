@@ -26,10 +26,19 @@ function getPreferredLocale(request: NextRequest): string {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // These paths are locale-independent: admin stays English, and the special
-  // route-handler files are not part of the [lang] tree.
+  // These paths are locale-independent: admin stays English, the student and
+  // volunteer portals are functional areas, and the special route-handler
+  // files are not part of the [lang] tree.
+  //
+  // Prefix matching must be exact per segment: "/volunteers" (the public
+  // directory) must NOT match the "/volunteer" portal prefix.
   const isExcluded =
-    pathname.startsWith("/admin") ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
+    pathname === "/student" ||
+    pathname.startsWith("/student/") ||
+    pathname === "/volunteer" ||
+    pathname.startsWith("/volunteer/") ||
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml" ||
     pathname === "/favicon.ico";

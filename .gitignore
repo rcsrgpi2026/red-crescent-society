@@ -43,3 +43,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local one-off test scripts
+/*.mjs
+
+# supabase cli local state
+/supabase/.temp/

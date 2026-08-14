@@ -1,17 +1,14 @@
-import { Plus, Pencil } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Plus, Pencil, HandHeart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { AdminFormDialog, FieldError } from "@/components/admin/admin-form-dialog";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
 import { ImageListUploadField } from "@/components/admin/image-list-upload-field";
+import { AdminPageHeader } from "@/components/admin/page-header";
+import {
+  ResponsiveTable,
+  type Column,
+} from "@/components/admin/responsive-table";
 import { adminGetActivities } from "@/lib/queries";
 import { saveActivity, deleteActivity } from "@/lib/admin-actions";
 import { ACTIVITY_CATEGORIES, formatDate } from "@/lib/constants";
@@ -20,92 +17,107 @@ import { Input, Label, Textarea } from "@/components/ui";
 export default async function AdminActivitiesPage() {
   const activities = await adminGetActivities();
 
+  const columns: Column<(typeof activities)[number]>[] = [
+    {
+      header: "Activity",
+      render: (activity) => (
+        <div>
+          <p className="font-medium text-foreground">{activity.title}</p>
+          <p className="text-xs text-muted-foreground">/activities/{activity.slug}</p>
+        </div>
+      ),
+    },
+    {
+      header: "Date",
+      render: (activity) => (
+        <span className="text-xs text-muted-foreground">
+          {formatDate(activity.date)}
+        </span>
+      ),
+    },
+    {
+      header: "Category",
+      render: (activity) => (
+        <span className="inline-flex rounded-full bg-poly-soft px-2.5 py-0.5 text-xs font-semibold text-poly">
+          {activity.category ?? "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Participants",
+      render: (activity) => (
+        <span className="text-xs font-semibold text-brand-dark">
+          {activity.participants}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Activities</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Document campaigns and their impact for the public site.
-          </p>
-        </div>
-        <AdminFormDialog
-          trigger={
-            <Button>
-              <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-              New activity
-            </Button>
-          }
-          title="Create activity"
-          action={saveActivity}
-          submitLabel="Create activity"
-        >
-          {(errors) => <ActivityFields errors={errors} />}
-        </AdminFormDialog>
-      </div>
+      <AdminPageHeader
+        icon={HandHeart}
+        title="Activities"
+        description="Document campaigns and their impact for the public site."
+        tone="bg-gradient-to-br from-emerald-500 to-teal-600"
+        actions={
+          <AdminFormDialog
+            trigger={
+              <Button>
+                <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+                New activity
+              </Button>
+            }
+            title="Create activity"
+            action={saveActivity}
+            submitLabel="Create activity"
+          >
+            <ActivityFields />
+          </AdminFormDialog>
+        }
+      />
 
-      {activities.length > 0 ? (
-        <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-mist/60">
-                <TableHead>Activity</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Participants</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {activities.map((activity) => (
-                <TableRow key={activity.id}>
-                  <TableCell>
-                    <p className="font-medium text-foreground">{activity.title}</p>
-                    <p className="text-xs text-muted-foreground">/activities/{activity.slug}</p>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {formatDate(activity.date)}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{activity.category ?? "—"}</TableCell>
-                  <TableCell className="text-xs">{activity.participants}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <AdminFormDialog
-                        trigger={
-                          <Button variant="ghost" size="sm">
-                            <Pencil className="h-3.5 w-3.5" aria-hidden />
-                          </Button>
-                        }
-                        title={`Edit ${activity.title}`}
-                        action={saveActivity}
-                        submitLabel="Save changes"
-                      >
-                        {(errors) => <ActivityFields errors={errors} activity={activity} />}
-                      </AdminFormDialog>
-                      <ConfirmDelete
-                        action={deleteActivity}
-                        id={activity.id}
-                        description={`Delete "${activity.title}"?`}
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <EmptyState title="No activities yet" description="Document your first campaign." />
-      )}
+      <ResponsiveTable
+        columns={columns}
+        rows={activities}
+        keyFor={(activity) => activity.id}
+        minWidth="min-w-[640px]"
+        actions={(activity) => (
+          <>
+            <AdminFormDialog
+              trigger={
+                <Button variant="ghost" size="sm" aria-label={`Edit ${activity.title}`}>
+                  <Pencil className="h-3.5 w-3.5" aria-hidden />
+                </Button>
+              }
+              title={`Edit ${activity.title}`}
+              action={saveActivity}
+              submitLabel="Save changes"
+            >
+              <ActivityFields activity={activity} />
+            </AdminFormDialog>
+            <ConfirmDelete
+              action={deleteActivity}
+              id={activity.id}
+              description={`Delete "${activity.title}"?`}
+            />
+          </>
+        )}
+        empty={
+          <EmptyState
+            icon={HandHeart}
+            title="No activities yet"
+            description="Document your first campaign."
+          />
+        }
+      />
     </div>
   );
 }
 
 function ActivityFields({
-  errors,
   activity,
 }: {
-  errors?: Record<string, string[]>;
   activity?: {
     id: string;
     title: string;
@@ -124,7 +136,7 @@ function ActivityFields({
       <div>
         <Label htmlFor="ac-title">Title</Label>
         <Input id="ac-title" name="title" defaultValue={activity?.title} placeholder="e.g. Blood Donation Camp 2026" className="mt-1.5" />
-        <FieldError errors={errors} name="title" />
+        <FieldError name="title" />
       </div>
       <div className="grid grid-cols-3 gap-4">
         <div>

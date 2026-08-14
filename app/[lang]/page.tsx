@@ -352,7 +352,7 @@ export default async function HomePage() {
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-3">
                 <Button asChild size="lg" className="bg-crescent hover:bg-crescent-dark">
-                  <Link href="/join">
+                  <Link href="/volunteer/login">
                     {t.home.applyToJoin}
                     <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
                   </Link>

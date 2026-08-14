@@ -12,7 +12,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { FormErrorProvider } from "@/components/admin/form-error";
 import type { ActionResult } from "@/lib/actions";
+
+export { FieldError } from "@/components/admin/form-error";
 
 type AdminAction = (formData: FormData) => Promise<ActionResult>;
 
@@ -21,7 +24,7 @@ interface AdminFormDialogProps {
   title: string;
   description?: string;
   action: AdminAction;
-  children: (errors: Record<string, string[]> | undefined) => React.ReactNode;
+  children: React.ReactNode;
   submitLabel?: string;
 }
 
@@ -73,7 +76,7 @@ export function AdminFormDialog({
               {error}
             </p>
           )}
-          {children(errors)}
+          <FormErrorProvider errors={errors}>{children}</FormErrorProvider>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
@@ -87,9 +90,4 @@ export function AdminFormDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-export function FieldError({ errors, name }: { errors?: Record<string, string[]>; name: string }) {
-  if (!errors?.[name]) return null;
-  return <p className="mt-1 text-xs font-medium text-crescent">{errors[name][0]}</p>;
 }

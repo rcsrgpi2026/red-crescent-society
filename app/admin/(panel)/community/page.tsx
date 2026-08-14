@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Network } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { adminGetCommunityMembers } from "@/lib/queries";
 import { saveCommunityMember, deleteCommunityMember } from "@/lib/admin-actions";
@@ -7,6 +7,9 @@ import { AdminFormDialog, FieldError } from "@/components/admin/admin-form-dialo
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { AdminPageHeader } from "@/components/admin/page-header";
+import { Reveal } from "@/components/shared/reveal";
+import { EmptyState } from "@/components/shared/empty-state";
 import { Input, Label, Checkbox } from "@/components/ui";
 import {
   COMMUNITY_LEVELS,
@@ -19,35 +22,34 @@ export default async function AdminCommunityPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Community</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            The incharge teacher and executive members shown as the leadership tree on
-            the Community page. Level 1 is the top of the tree (incharge teacher) down
-            to level 5 (assistant group leaders). Edit names, photos and roles here.
-          </p>
-        </div>
-        <AdminFormDialog
-          trigger={
-            <Button>
-              <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-              Add person
-            </Button>
-          }
-          title="Add community member"
-          description="This person appears on the Community page at the chosen level, in display order."
-          action={saveCommunityMember}
-          submitLabel="Add person"
-        >
-          {(errors) => <MemberFields errors={errors} />}
-        </AdminFormDialog>
-      </div>
+      <AdminPageHeader
+        icon={Network}
+        title="Community"
+        description="The incharge teacher and executive members shown as the leadership tree on the Community page. Level 1 is the top of the tree (incharge teacher) down to level 5 (assistant group leaders). Edit names, photos and roles here."
+        tone="bg-gradient-to-br from-teal-500 to-cyan-700"
+        actions={
+          <AdminFormDialog
+            trigger={
+              <Button>
+                <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+                Add person
+              </Button>
+            }
+            title="Add community member"
+            description="This person appears on the Community page at the chosen level, in display order."
+            action={saveCommunityMember}
+            submitLabel="Add person"
+          >
+            <MemberFields />
+          </AdminFormDialog>
+        }
+      />
 
       {members.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {members.map((member) => (
-            <div key={member.id} className="rounded-2xl border border-line bg-white p-5">
+          {members.map((member, index) => (
+            <Reveal key={member.id} delay={Math.min(index * 0.05, 0.3)} className="h-full">
+            <div className="h-full rounded-2xl border border-line bg-white p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md hover:shadow-brand/10">
               <div className="flex items-start gap-3">
                 <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-brand-soft ring-2 ring-brand/40">
                   {member.photo_url ? (
@@ -85,7 +87,7 @@ export default async function AdminCommunityPage() {
                     action={saveCommunityMember}
                     submitLabel="Save changes"
                   >
-                    {(errors) => <MemberFields errors={errors} member={member} />}
+                    <MemberFields member={member} />
                   </AdminFormDialog>
                   <ConfirmDelete
                     action={deleteCommunityMember}
@@ -95,25 +97,23 @@ export default async function AdminCommunityPage() {
                 </div>
               </div>
             </div>
+            </Reveal>
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-line bg-mist/50 p-12 text-center">
-          <p className="font-medium text-foreground">No community members added yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Add the incharge teacher and executive members shown on the Community page.
-          </p>
-        </div>
+        <EmptyState
+          icon={Network}
+          title="No community members added yet"
+          description="Add the incharge teacher and executive members shown on the Community page."
+        />
       )}
     </div>
   );
 }
 
 function MemberFields({
-  errors,
   member,
 }: {
-  errors?: Record<string, string[]>;
   member?: {
     id: string;
     name: string;
@@ -131,7 +131,7 @@ function MemberFields({
       <div>
         <Label htmlFor="c-name">Full name</Label>
         <Input id="c-name" name="name" defaultValue={member?.name} placeholder="e.g. Md. Nurul Amin" className="mt-1.5" />
-        <FieldError errors={errors} name="name" />
+        <FieldError name="name" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -148,7 +148,7 @@ function MemberFields({
               </option>
             ))}
           </select>
-          <FieldError errors={errors} name="level" />
+          <FieldError name="level" />
         </div>
         <div>
           <Label htmlFor="c-position">Position / role</Label>
@@ -158,7 +158,7 @@ function MemberFields({
               <option key={p} value={p} />
             ))}
           </datalist>
-          <FieldError errors={errors} name="position" />
+          <FieldError name="position" />
         </div>
       </div>
       <div>

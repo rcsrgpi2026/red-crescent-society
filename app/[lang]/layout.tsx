@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { LocaleProvider } from "@/components/providers/locale-provider";
+import { LogoProvider } from "@/components/providers/logo-provider";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 import { fontVariables } from "@/lib/fonts";
 import "../globals.css";
@@ -61,9 +62,11 @@ export default async function PublicRootLayout({
       <body className="flex min-h-full flex-col">
         <TooltipProvider delayDuration={200}>
           <LocaleProvider locale={locale} t={t}>
-            <SiteHeader />
-            <main className="flex-1">{children}</main>
-            <SiteFooter />
+            <LogoProvider>
+              <SiteHeader />
+              <main className="flex-1">{children}</main>
+              <SiteFooter />
+            </LogoProvider>
           </LocaleProvider>
           <Toaster position="top-center" richColors closeButton />
         </TooltipProvider>

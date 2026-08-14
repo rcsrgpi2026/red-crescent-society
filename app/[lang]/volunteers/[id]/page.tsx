@@ -167,7 +167,7 @@ export default async function VolunteerProfilePage({
               <p className="mt-2 leading-relaxed">{t.volunteers.privacyText}</p>
             </div>
             <Link
-              href="/join"
+              href="/volunteer/login"
               className="flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
             >
               {t.volunteers.becomeVolunteerToo}

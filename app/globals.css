@@ -1,26 +1,221 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-poppins);
   --font-mono: var(--font-geist-mono);
-}
+  --font-heading: var(--font-poppins);
+  --font-bengali: var(--font-noto-bengali);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* BDRCS brand palette */
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
+  --color-crescent: var(--crescent);
+  --color-crescent-dark: var(--crescent-dark);
+  --color-crescent-soft: var(--crescent-soft);
+  --color-poly: var(--poly);
+  --color-poly-soft: var(--poly-soft);
+  --color-mist: var(--mist);
+  --color-line: var(--line);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --animate-marquee: marquee var(--duration) linear infinite;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  @keyframes marquee {
+  from {
+    transform: translateX(0);
+    }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+    }
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+:root {
+  /* BDRCS Green — primary identity */
+  --brand: #006f45;
+  --brand-dark: #005a39;
+  --brand-soft: #eaf5f0;
+  --brand-ink: #0b4d35;
+
+  /* Red Crescent Red — urgency & blood */
+  --crescent: #ed1c24;
+  --crescent-dark: #c9141b;
+  --crescent-soft: #fff0f0;
+
+  /* Polytechnic Blue — subtle secondary accent */
+  --poly: #1769aa;
+  --poly-soft: #eef5fb;
+
+  /* Neutrals */
+  --mist: #f6f8f7;
+  --line: #e2e8e5;
+
+  --background: oklch(1 0 0);
+  --foreground: #1f2933;
+  --card: oklch(1 0 0);
+  --card-foreground: #1f2933;
+  --popover: oklch(1 0 0);
+  --popover-foreground: #1f2933;
+  --primary: #006f45;
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: #f6f8f7;
+  --secondary-foreground: #1f2933;
+  --muted: #f6f8f7;
+  --muted-foreground: #5b6470;
+  --accent: #eaf5f0;
+  --accent-foreground: #0b4d35;
+  --destructive: #ed1c24;
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: #e2e8e5;
+  --input: #e2e8e5;
+  --ring: #006f45;
+  --chart-1: #006f45;
+  --chart-2: #ed1c24;
+  --chart-3: #1769aa;
+  --chart-4: #2e9e74;
+  --chart-5: #f2a900;
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: #1f2933;
+  --sidebar-primary: #006f45;
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: #eaf5f0;
+  --sidebar-accent-foreground: #0b4d35;
+  --sidebar-border: #e2e8e5;
+  --sidebar-ring: #006f45;
+}
+
+.dark {
+  --background: #101a16;
+  --foreground: oklch(0.985 0 0);
+  --card: #16211c;
+  --card-foreground: oklch(0.985 0 0);
+  --popover: #16211c;
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: #2e9e74;
+  --primary-foreground: #0b1f17;
+  --secondary: #1c2a24;
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: #1c2a24;
+  --muted-foreground: #9aa8a1;
+  --accent: #1c2a24;
+  --accent-foreground: #7fd8b4;
+  --destructive: #ff5c5c;
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: #2e9e74;
+  --chart-1: #2e9e74;
+  --chart-2: #ff5c5c;
+  --chart-3: #4c9fd6;
+  --chart-4: #6ec6a0;
+  --chart-5: #f2a900;
+  --sidebar: #101a16;
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: #2e9e74;
+  --sidebar-primary-foreground: #0b1f17;
+  --sidebar-accent: #1c2a24;
+  --sidebar-accent-foreground: #7fd8b4;
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: #2e9e74;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-poppins), var(--font-noto-bengali), ui-sans-serif,
+      system-ui, sans-serif;
+  }
+  html {
+    @apply font-sans;
+    scroll-behavior: smooth;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--brand) 18%, transparent);
+    color: var(--brand-dark);
+  }
+}
+
+@layer utilities {
+  .container-site {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+  .font-bengali {
+    font-family: var(--font-noto-bengali), var(--font-poppins), sans-serif;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  /* Focus visibility for keyboard users */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, UploadCloud } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { Label } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { PhotoCropDialog } from "@/components/admin/photo-crop-dialog";
 import {
   ACCEPTED_IMAGE_LABEL,
   ACCEPTED_IMAGE_TYPES,
@@ -23,6 +24,8 @@ interface ImageListUploadFieldProps {
   folder?: string;
   description?: string;
   uploadLabel?: string;
+  /** Width / height ratio of the crop box (default 4/3 = landscape photos). */
+  aspectRatio?: number;
 }
 
 export function ImageListUploadField({
@@ -32,11 +35,16 @@ export function ImageListUploadField({
   folder = "uploads",
   description,
   uploadLabel = "Upload images",
+  aspectRatio = 4 / 3,
 }: ImageListUploadFieldProps) {
   const [value, setValue] = useState(defaultValue ?? "");
   const [uploading, setUploading] = useState(false);
   const [uploadedCount, setUploadedCount] = useState(0);
   const [uploadTotal, setUploadTotal] = useState(0);
+  // Queue of files waiting to be cropped (one at a time) then uploaded.
+  const [queue, setQueue] = useState<File[]>([]);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const doneRef = useRef<string[]>([]);
 
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -60,23 +68,50 @@ export function ImageListUploadField({
     setUploading(true);
     setUploadedCount(0);
     setUploadTotal(valid.length);
+    doneRef.current = [];
+    setQueue(valid);
+    setCropFile(valid[0]);
+  }
 
-    const uploaded: string[] = [];
-    for (const file of valid) {
-      try {
-        const publicUrl = await uploadImageToStorage(file, folder);
-        uploaded.push(publicUrl);
-      } catch {
-        // Keep uploading the remaining files; report the total below.
-      }
-      setUploadedCount((c) => c + 1);
+  function cancelQueue() {
+    doneRef.current = [];
+    setQueue([]);
+    setCropFile(null);
+    setUploading(false);
+    setUploadTotal(0);
+    toast.error("Upload cancelled.");
+  }
+
+  async function handleCropped(blob: Blob) {
+    // Upload the cropped photo before moving on to the next file.
+    try {
+      const url = await uploadImageToStorage(
+        new File([blob], "photo.webp", { type: blob.type }),
+        folder
+      );
+      doneRef.current.push(url);
+    } catch {
+      // Keep going; the summary at the end reports failures.
+    }
+    setUploadedCount((c) => c + 1);
+
+    const rest = queue.slice(1);
+    setQueue(rest);
+    if (rest.length > 0) {
+      setCropFile(rest[0]);
+      return;
     }
 
+    // Queue finished — append everything that uploaded.
+    setCropFile(null);
     setUploading(false);
-    if (uploaded.length > 0) {
+    setUploadTotal(0);
+    const urls = doneRef.current;
+    doneRef.current = [];
+    if (urls.length > 0) {
       const trimmed = value.trim();
-      setValue(trimmed ? `${trimmed}\n${uploaded.join("\n")}` : uploaded.join("\n"));
-      toast.success(`${uploaded.length} image${uploaded.length > 1 ? "s" : ""} added.`);
+      setValue(trimmed ? `${trimmed}\n${urls.join("\n")}` : urls.join("\n"));
+      toast.success(`${urls.length} image${urls.length > 1 ? "s" : ""} added.`);
     } else {
       toast.error("Upload failed — paste image URLs instead.");
     }
@@ -109,7 +144,7 @@ export function ImageListUploadField({
               <UploadCloud className="h-3.5 w-3.5" aria-hidden />
             )}
             {uploading
-              ? `Uploading ${uploadedCount} of ${uploadTotal}…`
+              ? `Cropping & uploading ${uploadedCount + 1} of ${uploadTotal}…`
               : uploadLabel}
           </label>
           <input
@@ -127,6 +162,22 @@ export function ImageListUploadField({
         </div>
       )}
       {description && <p className="mt-1.5 text-xs text-muted-foreground">{description}</p>}
+
+      <PhotoCropDialog
+        open={!!cropFile}
+        onOpenChange={(open) => {
+          if (!open) cancelQueue();
+        }}
+        file={cropFile}
+        onSave={handleCropped}
+        aspectRatio={aspectRatio}
+        title="Crop photo"
+        description={
+          uploadTotal > 1
+            ? `Photo ${uploadedCount + 1} of ${uploadTotal}. Drag to position and zoom, then save.`
+            : "Drag to position the photo and use the slider to zoom. The visible area is what gets saved."
+        }
+      />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { Loader2, UploadCloud, Image as ImageIcon, X } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { Input, Label } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { PhotoCropDialog } from "@/components/admin/photo-crop-dialog";
 import {
   ACCEPTED_IMAGE_LABEL,
   ACCEPTED_IMAGE_TYPES,
@@ -22,6 +23,10 @@ interface ImageUploadFieldProps {
   /** Folder inside the "images" bucket, e.g. "founders". */
   folder?: string;
   description?: string;
+  /** Set false to upload the file as-is without cropping (e.g. certificate scans). */
+  crop?: boolean;
+  /** Width / height ratio of the crop box (default 1 = square). */
+  aspectRatio?: number;
 }
 
 export function ImageUploadField({
@@ -30,9 +35,12 @@ export function ImageUploadField({
   defaultValue,
   folder = "uploads",
   description,
+  crop = true,
+  aspectRatio = 1,
 }: ImageUploadFieldProps) {
   const [url, setUrl] = useState(defaultValue ?? "");
   const [uploading, setUploading] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -52,6 +60,14 @@ export function ImageUploadField({
       return;
     }
 
+    if (crop) {
+      setCropFile(file);
+      return;
+    }
+    await upload(file);
+  }
+
+  async function upload(file: File) {
     setUploading(true);
     try {
       const publicUrl = await uploadImageToStorage(file, folder);
@@ -65,6 +81,14 @@ export function ImageUploadField({
       toast.error(message);
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleCropped(blob: Blob) {
+    try {
+      await upload(new File([blob], "photo.webp", { type: blob.type }));
+    } finally {
+      setCropFile(null);
     }
   }
 
@@ -114,7 +138,7 @@ export function ImageUploadField({
                 ) : (
                   <UploadCloud className="h-3.5 w-3.5" aria-hidden />
                 )}
-                {uploading ? "Uploading…" : "Upload image"}
+                {uploading ? "Uploading…" : crop ? "Upload & crop" : "Upload image"}
               </label>
               <input
                 id={`${name}-file`}
@@ -132,6 +156,16 @@ export function ImageUploadField({
         </div>
       </div>
       {description && <p className="mt-1.5 text-xs text-muted-foreground">{description}</p>}
+
+      <PhotoCropDialog
+        open={!!cropFile}
+        onOpenChange={(open) => {
+          if (!open) setCropFile(null);
+        }}
+        file={cropFile}
+        onSave={handleCropped}
+        aspectRatio={aspectRatio}
+      />
     </div>
   );
 }

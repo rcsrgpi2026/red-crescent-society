@@ -106,6 +106,7 @@ export default async function AdminCertificatesPage() {
                   name="fileUrl"
                   label="Certificate file (optional)"
                   folder="certificates"
+                  crop={false}
                   description="Upload a scan or image of the certificate."
                 />
             </>

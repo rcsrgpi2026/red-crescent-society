@@ -60,19 +60,19 @@ export async function SiteFooter() {
       : undefined;
 
   return (
-    <footer className="border-t border-line bg-mist">
+    <footer className="border-t border-crescent-dark bg-crescent text-white">
       {/* Emergency strip */}
-      <div className="border-b border-line bg-white">
-        <div className="container-site flex flex-col items-start justify-between gap-3 py-4 sm:flex-row sm:items-center">
+      <div className="border-b border-white/10 bg-crescent-dark">
+        <div className="container-site flex flex-col items-start justify-between gap-2.5 py-2.5 sm:flex-row sm:items-center sm:gap-3 sm:py-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-crescent-soft text-crescent">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 sm:h-10 sm:w-10">
               <HeartPulse className="h-5 w-5" aria-hidden />
             </span>
             <div>
-              <p className="text-sm font-semibold text-foreground">
+              <p className="text-sm font-semibold text-white">
                 {t.footer.needBloodUrgently}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-white/70">
                 {typeof emergency.message === "string" && emergency.message
                   ? emergency.message
                   : t.footer.reachOut}
@@ -82,13 +82,13 @@ export async function SiteFooter() {
           <div className="flex gap-2">
             <Link
               href="/blood-support/request"
-              className="inline-flex items-center gap-1.5 rounded-full bg-crescent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-crescent-dark"
+              className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-crescent transition-colors hover:bg-white/90 sm:px-4 sm:py-2 sm:text-sm"
             >
               {t.footer.requestBlood}
             </Link>
             <Link
               href="/blood-support"
-              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-brand-dark transition-colors hover:bg-brand-soft"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/20 sm:px-4 sm:py-2 sm:text-sm"
             >
               {t.footer.findDonor}
             </Link>
@@ -96,35 +96,37 @@ export async function SiteFooter() {
         </div>
       </div>
 
-      <div className="container-site grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
+      {/* Compact on phones: identity and contact span the full width while the
+          two link lists sit side by side in half-width columns. */}
+      <div className="container-site grid grid-cols-2 gap-6 py-7 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr] lg:gap-10 lg:py-14">
         {/* Identity */}
-        <div>
+        <div className="col-span-2 lg:col-span-1">
           <div className="flex items-center gap-3">
-            <SiteLogo variant="society" className="w-12" />
+            <SiteLogo variant="society" className="w-10 sm:w-12" />
             <div className="leading-tight">
-              <p className="font-bold text-brand-dark">
+              <p className="font-bold text-white">
                 {societyShort ?? t.nav.redCrescentSociety}
               </p>
-              <p className="text-xs font-medium text-muted-foreground">
+              <p className="text-xs font-medium text-white/70">
                 {collegeName ?? t.nav.rajshahiPolytechnic}
               </p>
             </div>
           </div>
-          <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-4 hidden max-w-sm text-sm leading-relaxed text-white/70 md:block">
             {typeof settings.society?.description === "string"
               ? settings.society.description
               : t.footer.societyDefaultDescription}
           </p>
-          <div className="mt-5 flex items-center gap-3">
-            <SiteLogo variant="institute" className="w-9" />
-            <p className="text-xs text-muted-foreground">
+          <div className="mt-4 flex items-center gap-3">
+            <SiteLogo variant="institute" className="w-8" />
+            <p className="text-xs text-white/70">
               {t.footer.anOfficialUnitOf}
-              <span className="block font-semibold text-poly">
+              <span className="block font-semibold text-white">
                 {collegeName ?? t.nav.rajshahiPolytechnic}
               </span>
             </p>
           </div>
-          <div className="mt-5 flex gap-2">
+          <div className="mt-4 flex gap-2">
             {Object.entries(social)
               .filter(([, v]) => typeof v === "string" && v)
               .map(([key, value]) => {
@@ -137,7 +139,7 @@ export async function SiteFooter() {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={key}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-muted-foreground transition-colors hover:border-brand hover:bg-brand hover:text-white"
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/80 transition-colors hover:border-white hover:bg-white hover:text-crescent sm:h-9 sm:w-9"
                   >
                     <Icon className="h-4 w-4" aria-hidden />
                   </a>
@@ -148,13 +150,15 @@ export async function SiteFooter() {
 
         {/* Quick links */}
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">{t.footer.quickLinks}</h3>
-          <ul className="mt-4 space-y-2.5">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-white/90 sm:text-sm">
+            {t.footer.quickLinks}
+          </h3>
+          <ul className="mt-3 grid grid-cols-2 gap-x-2 gap-y-1.5">
             {QUICK_LINKS.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="text-sm text-muted-foreground transition-colors hover:text-brand-dark"
+                  className="text-sm text-white/75 transition-colors hover:text-white"
                 >
                   {t.nav[link.key]}
                 </Link>
@@ -165,34 +169,36 @@ export async function SiteFooter() {
 
         {/* Blood support */}
         <div>
-          <h3 className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wider text-foreground">
-            <HeartPulse className="h-4 w-4 text-crescent" aria-hidden />
+          <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white/90 sm:text-sm">
+            <HeartPulse className="h-4 w-4" aria-hidden />
             {t.footer.bloodSupport}
           </h3>
-          <ul className="mt-4 space-y-2.5">
+          <ul className="mt-3 space-y-1.5">
             {BLOOD_LINKS.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="text-sm text-muted-foreground transition-colors hover:text-crescent"
+                  className="text-sm text-white/75 transition-colors hover:text-white"
                 >
                   {t.footer[link.key]}
                 </Link>
               </li>
             ))}
           </ul>
-          <div className="mt-5 flex items-start gap-2 rounded-lg bg-brand-soft p-3 text-xs text-brand-ink">
+          <div className="mt-4 hidden items-start gap-2 rounded-lg bg-white/10 p-3 text-xs text-white/80 md:flex">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <p>{t.footer.donorPrivacy}</p>
           </div>
         </div>
 
         {/* Contact */}
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">{t.footer.contact}</h3>
-          <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+        <div className="col-span-2 lg:col-span-1">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-white/90 sm:text-sm">
+            {t.footer.contact}
+          </h3>
+          <ul className="mt-3 space-y-2 text-sm text-white/75">
             <li className="flex items-start gap-2.5">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-poly" aria-hidden />
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-white/60" aria-hidden />
               <span>
                 {typeof contact.address === "string" && contact.address
                   ? contact.address
@@ -201,40 +207,43 @@ export async function SiteFooter() {
             </li>
             {typeof contact.email === "string" && contact.email && (
               <li className="flex items-center gap-2.5">
-                <Mail className="h-4 w-4 shrink-0 text-poly" aria-hidden />
-                <a href={`mailto:${contact.email}`} className="hover:text-brand-dark">
+                <Mail className="h-4 w-4 shrink-0 text-white/60" aria-hidden />
+                <a href={`mailto:${contact.email}`} className="break-all hover:text-white">
                   {contact.email}
                 </a>
               </li>
             )}
             {typeof contact.phone === "string" && contact.phone && (
               <li className="flex items-center gap-2.5">
-                <Phone className="h-4 w-4 shrink-0 text-poly" aria-hidden />
-                <a href={`tel:${contact.phone}`} className="hover:text-brand-dark">
+                <Phone className="h-4 w-4 shrink-0 text-white/60" aria-hidden />
+                <a href={`tel:${contact.phone}`} className="hover:text-white">
                   {contact.phone}
                 </a>
               </li>
             )}
             {typeof emergency.bloodHelpline === "string" && emergency.bloodHelpline && (
               <li className="flex items-center gap-2.5">
-                <HeartPulse className="h-4 w-4 shrink-0 text-crescent" aria-hidden />
-                <a href={`tel:${emergency.bloodHelpline}`} className="font-medium text-crescent">
+                <HeartPulse className="h-4 w-4 shrink-0" aria-hidden />
+                <a href={`tel:${emergency.bloodHelpline}`} className="font-medium text-white">
                   {t.footer.bloodHelpline}{emergency.bloodHelpline}
                 </a>
               </li>
             )}
           </ul>
-          <div className="mt-5 flex items-center gap-2 text-xs text-muted-foreground">
-            <GraduationCap className="h-4 w-4 text-poly" aria-hidden />
+          <div className="mt-4 flex items-center gap-2 text-xs text-white/70">
+            <GraduationCap className="h-4 w-4 shrink-0 text-white/60" aria-hidden />
             <span>{t.footer.volunteerServeRespond}</span>
           </div>
         </div>
       </div>
 
-      <div className="border-t border-line">
-        <div className="container-site flex flex-col items-center justify-between gap-2 py-5 text-xs text-muted-foreground sm:flex-row">
-          <p>© {new Date().getFullYear()} {societyName ?? t.meta.siteName}. {t.footer.allRightsReserved}</p>
-          <p className="flex items-center gap-1.5">{t.footer.builtWithHumanity}</p>
+      <div className="border-t border-white/10 bg-crescent-dark">
+        <div className="container-site flex flex-col items-center justify-between gap-1.5 py-3 text-xs text-white/70 sm:flex-row sm:py-4">
+          <p>
+            © {new Date().getFullYear()} {societyName ?? t.meta.siteName}.{" "}
+            {t.footer.allRightsReserved}
+          </p>
+          <p className="hidden items-center gap-1.5 sm:flex">{t.footer.builtWithHumanity}</p>
         </div>
       </div>
     </footer>

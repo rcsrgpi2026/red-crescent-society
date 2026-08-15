@@ -166,6 +166,11 @@ function ActivityFields({
         defaultValue={activity?.images.join("\n") ?? ""}
         folder="activities"
         uploadLabel="Upload photos"
+        aspectRatio={16 / 9}
+        exportSize={2560}
+        quality={0.95}
+        skipCompression
+        description="Photos are cropped to 16:9 landscape and uploaded at high quality (no extra compression) so the slideshow stays sharp."
       />
       <div className="grid grid-cols-2 gap-4">
         <div>

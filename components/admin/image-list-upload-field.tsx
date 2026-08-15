@@ -26,6 +26,16 @@ interface ImageListUploadFieldProps {
   uploadLabel?: string;
   /** Width / height ratio of the crop box (default 4/3 = landscape photos). */
   aspectRatio?: number;
+  /** Longest edge in pixels of the cropped export (default 1024). */
+  exportSize?: number;
+  /** WebP quality 0–1 of the cropped export (default 0.92). */
+  quality?: number;
+  /**
+   * Skip the extra client-side compression pass after cropping. Use for
+   * photos shown large (e.g. activity slideshows) so the crop output is
+   * uploaded as-is at full quality.
+   */
+  skipCompression?: boolean;
 }
 
 export function ImageListUploadField({
@@ -36,6 +46,9 @@ export function ImageListUploadField({
   description,
   uploadLabel = "Upload images",
   aspectRatio = 4 / 3,
+  exportSize = 1024,
+  quality = 0.92,
+  skipCompression = false,
 }: ImageListUploadFieldProps) {
   const [value, setValue] = useState(defaultValue ?? "");
   const [uploading, setUploading] = useState(false);
@@ -87,7 +100,10 @@ export function ImageListUploadField({
     try {
       const url = await uploadImageToStorage(
         new File([blob], "photo.webp", { type: blob.type }),
-        folder
+        folder,
+        // The crop dialog already produced the final high-quality WebP —
+        // skip the second compression pass when requested (activities).
+        { compress: !skipCompression }
       );
       doneRef.current.push(url);
     } catch {
@@ -171,6 +187,8 @@ export function ImageListUploadField({
         file={cropFile}
         onSave={handleCropped}
         aspectRatio={aspectRatio}
+        exportSize={exportSize}
+        quality={quality}
         title="Crop photo"
         description={
           uploadTotal > 1

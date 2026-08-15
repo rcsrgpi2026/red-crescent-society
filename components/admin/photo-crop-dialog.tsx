@@ -34,6 +34,8 @@ interface PhotoCropDialogProps {
   aspectRatio?: number;
   /** Longest edge in pixels of the exported image. */
   exportSize?: number;
+  /** WebP quality (0–1) of the exported image. */
+  quality?: number;
   title?: string;
   description?: string;
 }
@@ -50,6 +52,7 @@ export function PhotoCropDialog({
   onSave,
   aspectRatio = 1,
   exportSize = 1024,
+  quality = 0.92,
   title = "Crop photo",
   description = "Drag to position the photo and use the slider to zoom. The visible area is what gets saved.",
 }: PhotoCropDialogProps) {
@@ -158,7 +161,7 @@ export function PhotoCropDialog({
       ctx.drawImage(image, sx, sy, sw, sh, 0, 0, exportW, exportH);
 
       const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, "image/webp", 0.92)
+        canvas.toBlob(resolve, "image/webp", quality)
       );
       if (!blob) throw new Error("Could not encode the cropped photo");
 

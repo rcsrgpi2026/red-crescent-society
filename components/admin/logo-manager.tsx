@@ -74,12 +74,18 @@ export function LogoManager({ defaultValue }: LogoManagerProps) {
 
   async function handleSave() {
     setSaving(true);
-    const result = await saveSettings("logos", { rpi: logos.rpi, rcs: logos.rcs });
-    setSaving(false);
-    if (result.success) {
-      toast.success("Logos saved. They are now live on the site.");
-    } else {
-      toast.error(result.message ?? "Save failed.");
+    try {
+      const result = await saveSettings("logos", { rpi: logos.rpi, rcs: logos.rcs });
+      if (result.success) {
+        toast.success("Logos saved. They are now live on the site.");
+      } else {
+        toast.error(result.message ?? "Save failed.");
+      }
+    } catch (error) {
+      console.error("saveSettings failed:", error);
+      toast.error("Save failed — please refresh the page and try again.");
+    } finally {
+      setSaving(false);
     }
   }
 

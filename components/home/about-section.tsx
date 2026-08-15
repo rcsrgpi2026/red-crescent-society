@@ -1,40 +1,27 @@
-import type { Metadata } from "next";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { Target, Eye, History, HeartPulse, ArrowRight } from "lucide-react";
-import { PageHero } from "@/components/shared/page-hero";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Reveal } from "@/components/shared/reveal";
 import { EmptyState } from "@/components/shared/empty-state";
-import { getTeamMembers, getFounders } from "@/lib/queries";
 import { SiteLogo } from "@/components/layout/site-logo";
-import { getServerMessages } from "@/lib/i18n/server";
+import type { Messages } from "@/lib/i18n";
+import type { Founder, TeamMember } from "@/types/database";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getServerMessages();
-  return {
-    title: t.meta.about.title,
-    description: t.meta.about.description,
-  };
-}
-
-export default async function AboutPage() {
-  const [t, team, founders] = await Promise.all([
-    getServerMessages(),
-    getTeamMembers(),
-    getFounders(),
-  ]);
+export function AboutSection({
+  t,
+  team,
+  founders,
+}: {
+  t: Messages;
+  team: TeamMember[];
+  founders: Founder[];
+}) {
   const principals = founders.filter((f) => f.category === "PRINCIPAL");
   const founderList = founders.filter((f) => f.category === "FOUNDER");
 
   return (
     <>
-      <PageHero
-        eyebrow={t.about.heroEyebrow}
-        title={t.about.heroTitle}
-        description={t.about.heroDescription}
-      />
-
       {/* Introduction */}
       <section className="border-b border-line bg-white">
         <div className="container-site grid gap-12 py-16 lg:grid-cols-2 lg:py-24">
@@ -165,11 +152,11 @@ export default async function AboutPage() {
                   <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-poly">
                     {t.about.foundersPrincipalLabel}
                   </p>
-                  <div className="mt-4 grid gap-5 lg:grid-cols-2">
+                  <div className="mt-4 flex flex-wrap justify-center gap-5">
                     {principals.map((principal, i) => (
-                      <Reveal key={principal.id} delay={i * 0.08}>
-                        <div className="flex h-full flex-col items-center gap-6 rounded-3xl border border-line bg-gradient-to-b from-mist/70 to-white p-8 text-center sm:flex-row sm:text-left">
-                          <div className="relative h-44 w-36 shrink-0 overflow-hidden rounded-2xl bg-brand-soft">
+                      <Reveal key={principal.id} delay={i * 0.08} className="w-full max-w-2xl">
+                        <div className="flex h-full flex-col items-center gap-7 rounded-3xl border border-line bg-gradient-to-b from-mist/70 to-white p-10 text-center">
+                          <div className="relative h-48 w-40 shrink-0 overflow-hidden rounded-2xl bg-brand-soft">
                             {principal.photo_url ? (
                               <Image
                                 src={principal.photo_url}
@@ -185,12 +172,12 @@ export default async function AboutPage() {
                             )}
                           </div>
                           <div className="min-w-0">
-                            <h3 className="text-xl font-bold text-foreground">{principal.name}</h3>
+                            <h3 className="text-2xl font-bold text-foreground">{principal.name}</h3>
                             {principal.title && (
-                              <p className="mt-1 text-sm font-medium text-brand">{principal.title}</p>
+                              <p className="mt-1.5 text-base font-medium text-brand">{principal.title}</p>
                             )}
                             {principal.bio && (
-                              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                              <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
                                 {principal.bio}
                               </p>
                             )}
@@ -207,9 +194,13 @@ export default async function AboutPage() {
                   <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-brand">
                     {t.about.foundersListLabel}
                   </p>
-                  <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="mt-6 flex flex-wrap justify-center gap-5">
                     {founderList.map((founder, i) => (
-                      <Reveal key={founder.id} delay={(i % 4) * 0.06}>
+                      <Reveal
+                        key={founder.id}
+                        delay={(i % 4) * 0.06}
+                        className="w-full sm:w-[calc(50%-0.625rem)] lg:w-[calc(25%-0.9375rem)]"
+                      >
                         <div className="flex h-full flex-col items-center rounded-2xl border border-line bg-white p-6 text-center transition-all hover:border-brand/40 hover:shadow-sm">
                           <div className="relative h-28 w-28 overflow-hidden rounded-full bg-brand-soft">
                             {founder.photo_url ? (

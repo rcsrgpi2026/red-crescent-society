@@ -34,6 +34,7 @@ export default async function AdminSettingsPage() {
           fields={[
             { key: "name", label: "Society name" },
             { key: "shortName", label: "Short name" },
+            { key: "collegeName", label: "College / institute name" },
             { key: "tagline", label: "Tagline" },
             { key: "description", label: "Short description", type: "textarea" },
           ]}

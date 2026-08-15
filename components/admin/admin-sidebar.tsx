@@ -30,6 +30,7 @@ import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { SiteLogo } from "@/components/layout/site-logo";
+import { UnreadDot } from "@/components/admin/unread-dot";
 
 const NAV = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -62,7 +63,13 @@ const NAV = [
  * `onClose` is provided by the mobile drawer; when present a close button is
  * shown at the top-right of the header (mobile only).
  */
-export function AdminSidebar({ onClose }: { onClose?: () => void }) {
+export function AdminSidebar({
+  onClose,
+  unreadMessages = 0,
+}: {
+  onClose?: () => void;
+  unreadMessages?: number;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
@@ -142,6 +149,9 @@ export function AdminSidebar({ onClose }: { onClose?: () => void }) {
                 aria-hidden
               />
               {item.label}
+              {item.href === "/admin/messages" && (
+                <UnreadDot initialCount={unreadMessages} />
+              )}
             </Link>
           );
         })}
@@ -184,7 +194,13 @@ export function AdminSidebar({ onClose }: { onClose?: () => void }) {
  * block for `position: fixed` descendants — which would otherwise shrink
  * the drawer to the header's height instead of the viewport.
  */
-export function MobileAdminNav({ onClose }: { onClose: () => void }) {
+export function MobileAdminNav({
+  onClose,
+  unreadMessages = 0,
+}: {
+  onClose: () => void;
+  unreadMessages?: number;
+}) {
   return createPortal(
     <div
       className="fixed inset-0 z-50 lg:hidden"
@@ -200,7 +216,7 @@ export function MobileAdminNav({ onClose }: { onClose: () => void }) {
       />
       {/* Drawer panel */}
       <div className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] animate-in slide-in-from-left duration-300 ease-out shadow-2xl">
-        <AdminSidebar onClose={onClose} />
+        <AdminSidebar onClose={onClose} unreadMessages={unreadMessages} />
       </div>
     </div>,
     document.body

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, BadgeCheck, Camera, PhoneCall, UserRound, Sparkles } from "lucide-react";
-import { adminGetVolunteer, adminGetPoints } from "@/lib/queries";
+import { adminGetVolunteer, adminGetPoints, getSettings } from "@/lib/queries";
 import { submitVolunteerStatus, deleteVolunteer, updateVolunteerPhoto } from "@/lib/admin-actions";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
@@ -10,7 +10,7 @@ import { AdminFormDialog } from "@/components/admin/admin-form-dialog";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { PointsForm } from "@/components/admin/points-form";
 import { Reveal } from "@/components/shared/reveal";
-import { formatDateTime } from "@/lib/constants";
+import { POINT_CATEGORIES, formatDateTime } from "@/lib/constants";
 
 export default async function AdminVolunteerDetailPage({
   params,
@@ -18,10 +18,28 @@ export default async function AdminVolunteerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const volunteer = await adminGetVolunteer(id);
+  const [volunteer, settings] = await Promise.all([
+    adminGetVolunteer(id),
+    getSettings(),
+  ]);
   if (!volunteer) notFound();
 
   const points = await adminGetPoints(id);
+
+  // Point values come from Admin → Settings (fall back to defaults when unset)
+  // so changes to the points system actually take effect when awarding points.
+  const ps = settings.points ?? {};
+  const pointValues = {
+    EVENT_PARTICIPATION: Number(
+      ps.eventParticipation ?? POINT_CATEGORIES.EVENT_PARTICIPATION
+    ),
+    TRAINING: Number(ps.training ?? POINT_CATEGORIES.TRAINING),
+    BLOOD_DONATION: Number(ps.bloodDonation ?? POINT_CATEGORIES.BLOOD_DONATION),
+    CAMPAIGN_PARTICIPATION: Number(
+      ps.campaignParticipation ?? POINT_CATEGORIES.CAMPAIGN_PARTICIPATION
+    ),
+    LEADERSHIP: Number(ps.leadership ?? POINT_CATEGORIES.LEADERSHIP),
+  };
 
   const rows: { label: string; value: string | null }[] = [
     { label: "Member ID", value: volunteer.member_id },
@@ -186,7 +204,7 @@ export default async function AdminVolunteerDetailPage({
               <span className="ml-1 text-sm font-medium text-muted-foreground">total</span>
             </p>
             <div className="mt-5">
-              <PointsForm volunteerId={volunteer.id} />
+              <PointsForm volunteerId={volunteer.id} pointValues={pointValues} />
             </div>
             {points.length > 0 && (
               <ul className="mt-5 divide-y divide-line">

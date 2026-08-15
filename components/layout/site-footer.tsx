@@ -18,8 +18,6 @@ import { getSettings } from "@/lib/queries";
 import { getServerMessages } from "@/lib/i18n/server";
 
 const QUICK_LINKS = [
-  { key: "about", href: "/about" },
-  { key: "community", href: "/community" },
   { key: "volunteers", href: "/volunteers" },
   { key: "events", href: "/events" },
   { key: "activities", href: "/activities" },
@@ -44,9 +42,22 @@ const SOCIAL_ICONS: Record<string, React.ElementType> = {
 
 export async function SiteFooter() {
   const [t, settings] = await Promise.all([getServerMessages(), getSettings()]);
+  const society = settings.society ?? {};
   const contact = settings.contact ?? {};
   const social = settings.social ?? {};
   const emergency = settings.emergency ?? {};
+  const societyShort =
+    typeof society.shortName === "string" && society.shortName.trim()
+      ? society.shortName.trim()
+      : undefined;
+  const societyName =
+    typeof society.name === "string" && society.name.trim()
+      ? society.name.trim()
+      : undefined;
+  const collegeName =
+    typeof society.collegeName === "string" && society.collegeName.trim()
+      ? society.collegeName.trim()
+      : undefined;
 
   return (
     <footer className="border-t border-line bg-mist">
@@ -91,9 +102,11 @@ export async function SiteFooter() {
           <div className="flex items-center gap-3">
             <SiteLogo variant="society" className="w-12" />
             <div className="leading-tight">
-              <p className="font-bold text-brand-dark">{t.nav.redCrescentSociety}</p>
+              <p className="font-bold text-brand-dark">
+                {societyShort ?? t.nav.redCrescentSociety}
+              </p>
               <p className="text-xs font-medium text-muted-foreground">
-                {t.nav.rajshahiPolytechnic}
+                {collegeName ?? t.nav.rajshahiPolytechnic}
               </p>
             </div>
           </div>
@@ -106,7 +119,9 @@ export async function SiteFooter() {
             <SiteLogo variant="institute" className="w-9" />
             <p className="text-xs text-muted-foreground">
               {t.footer.anOfficialUnitOf}
-              <span className="block font-semibold text-poly">{t.nav.rajshahiPolytechnic}</span>
+              <span className="block font-semibold text-poly">
+                {collegeName ?? t.nav.rajshahiPolytechnic}
+              </span>
             </p>
           </div>
           <div className="mt-5 flex gap-2">
@@ -218,7 +233,7 @@ export async function SiteFooter() {
 
       <div className="border-t border-line">
         <div className="container-site flex flex-col items-center justify-between gap-2 py-5 text-xs text-muted-foreground sm:flex-row">
-          <p>© {new Date().getFullYear()} {t.meta.siteName}. {t.footer.allRightsReserved}</p>
+          <p>© {new Date().getFullYear()} {societyName ?? t.meta.siteName}. {t.footer.allRightsReserved}</p>
           <p className="flex items-center gap-1.5">{t.footer.builtWithHumanity}</p>
         </div>
       </div>

@@ -113,7 +113,14 @@ export const getHomeStats = unstable_cache(
     };
   },
   ["home-stats"],
-  { tags: ["home"], revalidate: 60 }
+  // The stats aggregate across every content type (volunteers, donors,
+  // events, trainings, blood requests, activities), so it must be tagged with
+  // all of them — otherwise admin saves update their own tag but the homepage
+  // counters stay stale for up to `revalidate` (60s) seconds.
+  {
+    tags: ["home", "volunteers", "blood", "events", "training", "activities"],
+    revalidate: 60,
+  }
 );
 
 export const getTopVolunteers = unstable_cache(
@@ -746,16 +753,35 @@ export async function adminGetAlbums(): Promise<GalleryAlbum[]> {
   return data ?? [];
 }
 
-export async function adminGetMessages(): Promise<
-  { id: string; name: string; subject: string | null; status: string; created_at: string }[]
-> {
+export interface AdminMessage {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  subject: string | null;
+  message: string;
+  status: string;
+  created_at: string;
+}
+
+export async function adminGetMessages(): Promise<AdminMessage[]> {
   const supabase = await db();
   if (!supabase) return [];
   const { data } = await supabase
     .from("contact_messages")
-    .select("id, name, subject, status, created_at")
+    .select("id, name, email, phone, subject, message, status, created_at")
     .order("created_at", { ascending: false });
   return data ?? [];
+}
+
+export async function adminGetUnreadMessageCount(): Promise<number> {
+  const supabase = await db();
+  if (!supabase) return 0;
+  const { count } = await supabase
+    .from("contact_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "NEW");
+  return count ?? 0;
 }
 
 export async function adminGetAttendanceForEvent(eventId: string): Promise<Attendance[]> {

@@ -27,8 +27,6 @@ import { stripLocalePrefix } from "@/lib/i18n";
 type NavKey = keyof typeof import("@/lib/i18n/messages").messages.nav;
 
 const NAV_LINKS: { key: NavKey; href: string; highlight?: boolean }[] = [
-  { key: "about", href: "/about" },
-  { key: "community", href: "/community" },
   { key: "volunteers", href: "/volunteers" },
   { key: "bloodSupport", href: "/blood-support", highlight: true },
   { key: "events", href: "/events" },
@@ -38,13 +36,26 @@ const NAV_LINKS: { key: NavKey; href: string; highlight?: boolean }[] = [
 
 const MORE_LINKS: { key: NavKey; href: string }[] = [
   { key: "training", href: "/training" },
-  { key: "team", href: "/about#team" },
   { key: "gallery", href: "/gallery" },
   { key: "notices", href: "/notices" },
   { key: "emergency", href: "/emergency" },
 ];
 
-export function SiteHeader() {
+export function SiteHeader({
+  societyName,
+  siteName,
+  collegeName,
+  tagline,
+}: {
+  /** Society short name from Admin → Settings (shown next to the logo). */
+  societyName?: string;
+  /** Full society name from Admin → Settings (shown in the top strip). */
+  siteName?: string;
+  /** College / institute name from Admin → Settings (shown under the logo). */
+  collegeName?: string;
+  /** Society tagline from Admin → Settings (shown in the top strip). */
+  tagline?: string;
+}) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -68,7 +79,9 @@ export function SiteHeader() {
       {/* Top strip */}
       <div className="bg-brand-dark text-white">
         <div className="container-site flex h-9 items-center justify-between text-xs">
-          <p className="min-w-0 truncate font-medium tracking-wide">{t.meta.siteName}</p>
+          <p className="min-w-0 truncate font-medium tracking-wide">
+            {tagline ?? siteName ?? t.meta.siteName}
+          </p>
           <div className="hidden items-center gap-5 sm:flex">
             <span className="flex items-center gap-1.5 text-white/90">
               <Phone className="h-3.5 w-3.5" aria-hidden />
@@ -96,16 +109,16 @@ export function SiteHeader() {
           {/* Identity — min-w-0 + truncate so the title can shrink instead of
               forcing the header wider than the viewport on small phones. */}
           <Link href="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label={t.nav.home}>
-            <SiteLogo variant="institute" className="hidden w-10 shrink-0 sm:block" />
-            <span className="hidden h-9 w-px bg-line md:block" aria-hidden />
+            <SiteLogo variant="institute" className="w-8 shrink-0 sm:w-10" />
+            <span className="hidden h-9 w-px bg-line sm:block" aria-hidden />
             <span className="flex min-w-0 items-center gap-2">
               <SiteLogo variant="society" className="w-8 shrink-0 sm:w-9" />
               <span className="min-w-0 leading-tight">
                 <span className="block truncate text-[13px] font-bold text-brand-dark sm:text-base">
-                  {t.nav.redCrescentSociety}
+                  {societyName ?? t.nav.redCrescentSociety}
                 </span>
                 <span className="hidden truncate text-[11px] font-medium text-muted-foreground sm:block">
-                  {t.nav.rajshahiPolytechnic}
+                  {collegeName ?? t.nav.rajshahiPolytechnic}
                 </span>
               </span>
             </span>
@@ -144,9 +157,14 @@ export function SiteHeader() {
           </nav>
 
           <div className="flex items-center gap-2">
-            <LanguageSwitcher />
+            <div className="hidden sm:block">
+              <LanguageSwitcher />
+            </div>
+            {/* One unified login button on every screen size — the Student and
+                Volunteer portals are both inside its dropdown (mobile included).
+                The language switcher lives in the hamburger menu on mobile. */}
             <DropdownMenu>
-              <DropdownMenuTrigger className="hidden items-center gap-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-mist hover:text-brand-dark sm:inline-flex">
+              <DropdownMenuTrigger className="flex items-center gap-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-mist hover:text-brand-dark">
                 {t.nav.login}
                 <ChevronDown className="h-3.5 w-3.5" aria-hidden />
               </DropdownMenuTrigger>
@@ -180,9 +198,9 @@ export function SiteHeader() {
                   <SheetTitle className="flex items-center gap-2 text-left">
                     <SiteLogo variant="society" className="w-8" />
                     <span className="whitespace-nowrap text-sm leading-tight text-brand-dark">
-                      {t.nav.redCrescentSociety}
+                      {societyName ?? t.nav.redCrescentSociety}
                       <span className="block whitespace-nowrap text-[11px] font-normal text-muted-foreground">
-                        {t.nav.rajshahiPolytechnic}
+                        {collegeName ?? t.nav.rajshahiPolytechnic}
                       </span>
                     </span>
                   </SheetTitle>
@@ -215,18 +233,6 @@ export function SiteHeader() {
                   ))}
                   <div className="mt-3">
                     <LanguageSwitcher />
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <Button asChild size="lg" variant="outline">
-                      <Link href="/student/login" onClick={() => setMenuOpen(false)}>
-                        {t.nav.studentPortal}
-                      </Link>
-                    </Button>
-                    <Button asChild size="lg" variant="outline">
-                      <Link href="/volunteer/login" onClick={() => setMenuOpen(false)}>
-                        {t.nav.volunteerPortal}
-                      </Link>
-                    </Button>
                   </div>
                   <Button asChild size="lg" className="mt-3">
                     <Link href="/volunteer/login" onClick={() => setMenuOpen(false)}>

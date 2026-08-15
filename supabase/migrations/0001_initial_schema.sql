@@ -735,7 +735,7 @@ create policy "audit_admin_all" on public.audit_logs
 -- DEFAULT SETTINGS
 -- ============================================================
 insert into public.website_settings (key, value) values
-  ('society', '{"name":"Rajshahi Polytechnic Institute Red Crescent Society","shortName":"RPI Red Crescent Society","tagline":"Serve. Respond. Make a Difference.","description":"The Red Crescent Society unit of Rajshahi Polytechnic Institute — a student volunteer organization committed to humanity, service and community welfare."}'::jsonb),
+  ('society', '{"name":"Rajshahi Polytechnic Institute Red Crescent Society","shortName":"RPI Red Crescent Society","collegeName":"Rajshahi Polytechnic Institute","tagline":"Serve. Respond. Make a Difference.","description":"The Red Crescent Society unit of Rajshahi Polytechnic Institute — a student volunteer organization committed to humanity, service and community welfare."}'::jsonb),
   ('contact', '{"email":"","phone":"","address":"Rajshahi Polytechnic Institute, Rajshahi, Bangladesh","officeHours":""}'::jsonb),
   ('social', '{"facebook":"","youtube":"","instagram":"","twitter":""}'::jsonb),
   ('emergency', '{"bloodHelpline":"","societyContact":"","message":"In an emergency, contact the society helpline or the nearest blood bank immediately."}'::jsonb),

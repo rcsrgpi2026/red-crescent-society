@@ -17,6 +17,8 @@ interface HeroProps {
   /** Latest urgent/emergency blood request, shown as a live need strip. */
   liveRequest?: { blood_group: string; hospital: string | null; location: string | null } | null;
   bloodHelpline?: string | null;
+  /** College / institute name from Admin → Settings (hero badge). */
+  collegeName?: string;
 }
 
 const SLIDE_INTERVAL_MS = 6500;
@@ -36,6 +38,7 @@ export function Hero({
   backgroundImages,
   liveRequest,
   bloodHelpline,
+  collegeName,
 }: HeroProps) {
   const reduced = useReducedMotion();
   const anim = reduced ? {} : { initial: "hidden", animate: "show" } as const;
@@ -117,7 +120,7 @@ export function Hero({
           <motion.div {...anim} custom={0} variants={fadeUp} className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
               <GraduationCap className="h-3.5 w-3.5" aria-hidden />
-              {t.home.heroBadgeInstitute}
+              {collegeName ?? t.home.heroBadgeInstitute}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white/85 backdrop-blur">
               <HeartPulse className="h-3.5 w-3.5 text-crescent" aria-hidden />

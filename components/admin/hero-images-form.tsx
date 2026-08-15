@@ -18,14 +18,20 @@ export function HeroImagesForm({ defaultValue }: HeroImagesFormProps) {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
-    const fd = new FormData(e.currentTarget);
-    const heroImages = String(fd.get("heroImages") ?? "").trim();
-    const result = await saveSettings("homepage", { heroImages });
-    setBusy(false);
-    if (result.success) {
-      toast.success("Hero photos saved.");
-    } else {
-      toast.error(result.message ?? "Save failed.");
+    try {
+      const fd = new FormData(e.currentTarget);
+      const heroImages = String(fd.get("heroImages") ?? "").trim();
+      const result = await saveSettings("homepage", { heroImages });
+      if (result.success) {
+        toast.success("Hero photos saved.");
+      } else {
+        toast.error(result.message ?? "Save failed.");
+      }
+    } catch (error) {
+      console.error("saveSettings failed:", error);
+      toast.error("Save failed — please refresh the page and try again.");
+    } finally {
+      setBusy(false);
     }
   }
 

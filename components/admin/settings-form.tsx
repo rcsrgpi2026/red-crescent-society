@@ -20,17 +20,23 @@ export function SettingsForm({ title, description, group, fields, values }: Sett
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
-    const fd = new FormData(e.currentTarget);
-    const value: Record<string, string> = {};
-    for (const field of fields) {
-      value[field.key] = String(fd.get(field.key) ?? "");
-    }
-    const result = await saveSettings(group, value);
-    setBusy(false);
-    if (result.success) {
-      toast.success(`${title} saved.`);
-    } else {
-      toast.error(result.message ?? "Save failed.");
+    try {
+      const fd = new FormData(e.currentTarget);
+      const value: Record<string, string> = {};
+      for (const field of fields) {
+        value[field.key] = String(fd.get(field.key) ?? "");
+      }
+      const result = await saveSettings(group, value);
+      if (result.success) {
+        toast.success(`${title} saved.`);
+      } else {
+        toast.error(result.message ?? "Save failed.");
+      }
+    } catch (error) {
+      console.error("saveSettings failed:", error);
+      toast.error("Save failed — please refresh the page and try again.");
+    } finally {
+      setBusy(false);
     }
   }
 

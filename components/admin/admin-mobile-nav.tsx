@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Menu } from "lucide-react";
 import { MobileAdminNav } from "@/components/admin/admin-sidebar";
 
-export function AdminMobileNav() {
+export function AdminMobileNav({ unreadMessages = 0 }: { unreadMessages?: number }) {
   const [open, setOpen] = useState(false);
 
   // Lock body scroll while the drawer is open so the page behind never
@@ -38,7 +38,9 @@ export function AdminMobileNav() {
       >
         <Menu className="h-5 w-5" aria-hidden />
       </button>
-      {open && <MobileAdminNav onClose={() => setOpen(false)} />}
+      {open && (
+        <MobileAdminNav onClose={() => setOpen(false)} unreadMessages={unreadMessages} />
+      )}
     </>
   );
 }

@@ -3,13 +3,21 @@ import Link from "next/link";
 import { HeartPulse, ShieldCheck, ArrowLeft } from "lucide-react";
 import { LoginForm } from "@/components/admin/login-form";
 import { SiteLogo } from "@/components/layout/site-logo";
+import { getSettings } from "@/lib/queries";
 
 export const metadata: Metadata = {
   title: "Admin Login",
   robots: { index: false, follow: false },
 };
 
-export default function AdminLoginPage() {
+export default async function AdminLoginPage() {
+  const settings = await getSettings();
+  const society = settings.society ?? {};
+  const asString = (v: unknown) =>
+    typeof v === "string" && v.trim() ? v.trim() : undefined;
+  const societyName = asString(society.shortName) ?? asString(society.name);
+  const collegeName = asString(society.collegeName);
+
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Brand side */}
@@ -19,8 +27,10 @@ export default function AdminLoginPage() {
         <Link href="/" className="relative flex items-center gap-3 text-white">
           <SiteLogo variant="society" className="w-10" />
           <span className="leading-tight">
-            <span className="block font-bold">Red Crescent Society</span>
-            <span className="block text-xs text-white/60">Rajshahi Polytechnic Institute</span>
+            <span className="block font-bold">{societyName ?? "Red Crescent Society"}</span>
+            <span className="block text-xs text-white/60">
+              {collegeName ?? "Rajshahi Polytechnic Institute"}
+            </span>
           </span>
         </Link>
         <div className="relative">

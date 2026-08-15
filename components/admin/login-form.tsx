@@ -16,17 +16,23 @@ export function LoginForm() {
     e.preventDefault();
     setBusy(true);
     setState({ success: false });
-    const fd = new FormData(e.currentTarget);
-    const result = await adminLogin(
-      String(fd.get("email") ?? ""),
-      String(fd.get("password") ?? "")
-    );
-    setBusy(false);
-    if (result.success) {
-      router.push("/admin");
-      router.refresh();
-    } else {
-      setState(result);
+    try {
+      const fd = new FormData(e.currentTarget);
+      const result = await adminLogin(
+        String(fd.get("email") ?? ""),
+        String(fd.get("password") ?? "")
+      );
+      if (result.success) {
+        router.push("/admin");
+        router.refresh();
+      } else {
+        setState(result);
+      }
+    } catch (error) {
+      console.error("adminLogin failed:", error);
+      setState({ success: false, message: "Sign-in failed — please try again." });
+    } finally {
+      setBusy(false);
     }
   }
 

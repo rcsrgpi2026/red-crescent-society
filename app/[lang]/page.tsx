@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { Hero } from "@/components/home/hero";
 import { Stats } from "@/components/home/stats";
+import { AboutSection } from "@/components/home/about-section";
+import { CommunitySection } from "@/components/home/community-section";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Reveal } from "@/components/shared/reveal";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -29,6 +31,9 @@ import {
   getTopVolunteers,
   getAlbums,
   getPublicBloodRequests,
+  getTeamMembers,
+  getFounders,
+  getCommunityMembers,
 } from "@/lib/queries";
 import { getServerMessages } from "@/lib/i18n/server";
 import { format } from "@/lib/i18n";
@@ -47,7 +52,7 @@ function heroPhotos(images: (string | null | undefined)[]): string[] {
 }
 
 export default async function HomePage() {
-  const [t, settings, stats, events, notices, activities, volunteers, albums, requests] =
+  const [t, settings, stats, events, notices, activities, volunteers, albums, requests, team, founders, members] =
     await Promise.all([
       getServerMessages(),
       getSettings(),
@@ -58,11 +63,19 @@ export default async function HomePage() {
       getTopVolunteers(6),
       getAlbums(6),
       getPublicBloodRequests(),
+      getTeamMembers(),
+      getFounders(),
+      getCommunityMembers(),
     ]);
 
   const homepage = settings.homepage ?? {};
   const contact = settings.contact ?? {};
   const emergency = settings.emergency ?? {};
+  const society = settings.society ?? {};
+  const collegeName =
+    typeof society.collegeName === "string" && society.collegeName.trim()
+      ? society.collegeName.trim()
+      : undefined;
 
   // On-the-ground visuals: admin-chosen hero photos first, then fill the
   // remaining slots with the newest activity/album photos automatically.
@@ -98,6 +111,7 @@ export default async function HomePage() {
         backgroundImages={heroPhoto}
         liveRequest={liveRequest}
         bloodHelpline={bloodHelpline}
+        collegeName={collegeName}
       />
 
       {/* Respond — emergency strip */}
@@ -148,6 +162,9 @@ export default async function HomePage() {
         </div>
       </section>
       <Stats stats={stats} />
+
+      {/* Who we are — mission, history, team */}
+      <AboutSection t={t} team={team} founders={founders} />
 
       {/* Serve — stories from the field */}
       <section className="border-b border-line bg-mist/50">
@@ -252,6 +269,9 @@ export default async function HomePage() {
           )}
         </div>
       </section>
+
+      {/* Community — leadership tree */}
+      <CommunitySection t={t} members={members} />
 
       {/* Gallery */}
       <section className="border-b border-line bg-white">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
+import { adminGetUnreadMessageCount } from "@/lib/queries";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminMobileNav } from "@/components/admin/admin-mobile-nav";
 import { ROLE_LABELS } from "@/lib/constants";
@@ -19,12 +20,13 @@ export default async function AdminPanelLayout({
   const profile = await requireAdmin();
   if (!profile) redirect("/admin/login");
   const roleLabel = ROLE_LABELS[profile.role] ?? profile.role;
+  const unreadMessages = await adminGetUnreadMessageCount();
 
   return (
     <div className="min-h-screen bg-mist/60">
       {/* Desktop sidebar — fixed left navigation panel */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[264px] border-r border-white/10 lg:block">
-        <AdminSidebar />
+        <AdminSidebar unreadMessages={unreadMessages} />
       </aside>
 
       {/* Main column — offset by the sidebar width on desktop */}
@@ -37,7 +39,7 @@ export default async function AdminPanelLayout({
             aria-hidden
           />
           <div className="flex items-center gap-3">
-            <AdminMobileNav />
+            <AdminMobileNav unreadMessages={unreadMessages} />
             <div className="hidden sm:block">
               <p className="text-sm font-bold text-foreground">Management Dashboard</p>
               <p className="text-xs text-muted-foreground">

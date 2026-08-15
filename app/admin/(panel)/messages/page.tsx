@@ -2,6 +2,7 @@ import { MessageSquare } from "lucide-react";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { InlineStatus } from "@/components/admin/inline-status";
+import { MessageViewDialog } from "@/components/admin/message-view-dialog";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import {
   ResponsiveTable,
@@ -64,7 +65,22 @@ export default async function AdminMessagesPage() {
         />
       ),
     },
+    {
+      header: "Message",
+      render: (m) => (
+        <span className="line-clamp-2 max-w-[20rem] text-sm text-muted-foreground">
+          {m.message}
+        </span>
+      ),
+      mobileRender: (m) => (
+        <span className="line-clamp-2 text-sm text-muted-foreground">{m.message}</span>
+      ),
+    },
   ];
+
+  const actions = (m: (typeof messages)[number]) => (
+    <MessageViewDialog message={m} />
+  );
 
   return (
     <div className="space-y-6">
@@ -79,7 +95,9 @@ export default async function AdminMessagesPage() {
         columns={columns}
         rows={messages}
         keyFor={(m) => m.id}
-        minWidth="min-w-[600px]"
+        actions={actions}
+        actionsHeader=""
+        minWidth="min-w-[720px]"
         empty={
           <EmptyState
             icon={MessageSquare}

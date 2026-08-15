@@ -231,6 +231,18 @@ export interface EventRegistration {
   created_at: string;
 }
 
+export type ParticipationStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface ParticipationRequest {
+  id: string;
+  volunteer_id: string;
+  event_id: string | null;
+  activity_id: string | null;
+  status: ParticipationStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Activity {
   id: string;
   slug: string;

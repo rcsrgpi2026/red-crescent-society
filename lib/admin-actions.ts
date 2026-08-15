@@ -746,6 +746,78 @@ export async function getUnreadMessageCount(): Promise<number> {
 }
 
 // ---------------------------------------------------------------------------
+// Participation requests
+// ---------------------------------------------------------------------------
+
+export async function submitParticipationRequest(formData: FormData): Promise<ActionResult> {
+  guard();
+  const volunteerId = String(formData.get("volunteerId"));
+  const eventId = String(formData.get("eventId") ?? "");
+  const activityId = String(formData.get("activityId") ?? "");
+  if (!volunteerId) return { success: false, message: "Volunteer is required." };
+  if (!eventId && !activityId) {
+    return { success: false, message: "Choose an event or activity." };
+  }
+
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("participation_requests")
+    .select("id, status")
+    .eq("volunteer_id", volunteerId)
+    .eq(eventId ? "event_id" : "activity_id", eventId || activityId)
+    .maybeSingle();
+
+  if (existing) {
+    if (existing.status !== "REJECTED") {
+      return { success: false, message: "You already have a request for this." };
+    }
+    // A rejected request can be submitted again — flip it back to pending.
+    const { error } = await supabase
+      .from("participation_requests")
+      .update({ status: "PENDING" })
+      .eq("id", existing.id);
+    if (error) return { success: false, message: "Could not submit the request." };
+    await logAudit("participation_requested", eventId ? "event" : "activity", eventId || activityId);
+    revalidatePath("/volunteer");
+    return { success: true, message: "Request resubmitted — awaiting admin approval." };
+  }
+
+  const { error } = await supabase.from("participation_requests").insert({
+    volunteer_id: volunteerId,
+    event_id: eventId || null,
+    activity_id: activityId || null,
+    status: "PENDING",
+  });
+  if (error) return { success: false, message: "Could not submit the request." };
+  await logAudit("participation_requested", eventId ? "event" : "activity", eventId || activityId);
+  revalidatePath("/volunteer");
+  return { success: true, message: "Request submitted — awaiting admin approval." };
+}
+
+export async function updateParticipationRequestStatus(
+  formData: FormData
+): Promise<ActionResult> {
+  guard();
+  const id = String(formData.get("id"));
+  const status = String(formData.get("status"));
+  if (!["APPROVED", "REJECTED"].includes(status)) {
+    return { success: false, message: "Invalid status." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("participation_requests")
+    .update({ status })
+    .eq("id", id);
+  if (error) return { success: false, message: "Could not update the request." };
+  await logAudit(`participation_${status.toLowerCase()}`, "participation_request", id);
+  revalidatePath("/admin/participants");
+  updateTag("events");
+  updateTag("activities");
+  return { success: true, message: status === "APPROVED" ? "Request approved." : "Request rejected." };
+}
+
+// ---------------------------------------------------------------------------
 // Settings
 // ---------------------------------------------------------------------------
 

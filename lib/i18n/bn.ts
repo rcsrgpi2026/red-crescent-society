@@ -464,6 +464,7 @@ export const bn: Messages = {
     eventCompletedText: "সব অংশগ্রহণকারীকে ধন্যবাদ!",
     registrationClosed: "রেজিস্ট্রেশন বন্ধ",
     registrationClosedText: "আপডেটের জন্য নোটিশ বোর্ড দেখুন।",
+    volunteersParticipating: "অংশগ্রহণকারী স্বেচ্ছাসেবক",
     eventReport: "ইভেন্ট প্রতিবেদন",
     descriptionFallback: "{title} — রেড ক্রিসেন্ট সোসাইটির ইভেন্ট।",
   },
@@ -482,6 +483,7 @@ export const bn: Messages = {
     wantToJoinText:
       "স্বেচ্ছাসেবকদের সবসময় স্বাগত। সোসাইটিতে যোগ দিন এবং আসন্ন কার্যক্রম সম্পর্কে জানুন।",
     becomeVolunteer: "স্বেচ্ছাসেবক হোন →",
+    volunteersParticipating: "অংশগ্রহণকারী স্বেচ্ছাসেবক",
     morePhotos: "আরও ছবি",
   },
 

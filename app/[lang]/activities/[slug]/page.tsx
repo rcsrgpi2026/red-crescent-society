@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Users, TrendingUp } from "lucide-react";
-import { getPublicActivities } from "@/lib/queries";
+import { getPublicActivities, getParticipationCounts } from "@/lib/queries";
 import { formatDate } from "@/lib/constants";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 
@@ -33,13 +33,15 @@ export default async function ActivityDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [t, locale, activities] = await Promise.all([
+  const [t, locale, activities, counts] = await Promise.all([
     getServerMessages(),
     getServerLocale(),
     getPublicActivities(),
+    getParticipationCounts(),
   ]);
   const activity = activities.find((a) => a.slug === slug);
   if (!activity) notFound();
+  const approvedCount = counts.activities[activity.id] ?? 0;
 
   const cover = activity.images?.[0];
   const gallery = activity.images?.slice(1) ?? [];
@@ -73,6 +75,12 @@ export default async function ActivityDetailPage({
                 <span className="flex items-center gap-1.5">
                   <Users className="h-4 w-4 text-poly" aria-hidden />
                   {activity.participants} {t.common.participants}
+                </span>
+              )}
+              {approvedCount > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <Users className="h-4 w-4 text-brand" aria-hidden />
+                  {approvedCount} {t.activities.volunteersParticipating}
                 </span>
               )}
             </div>

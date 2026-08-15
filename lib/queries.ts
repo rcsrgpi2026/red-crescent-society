@@ -21,6 +21,7 @@ import type {
   GalleryImage,
   Notice,
   NoticeAttachment,
+  ParticipationRequest,
   PublicBloodDonor,
   PublicBloodRequest,
   PublicVolunteer,
@@ -566,6 +567,35 @@ export const getPublicTrainings = unstable_cache(
 );
 
 // ---------------------------------------------------------------------------
+// Participation (public counts)
+// ---------------------------------------------------------------------------
+
+export interface ParticipationCounts {
+  events: Record<string, number>;
+  activities: Record<string, number>;
+}
+
+/** Approved participant counts per event / activity, for the public pages. */
+export const getParticipationCounts = unstable_cache(
+  async (): Promise<ParticipationCounts> => {
+    const supabase = getPublicClient();
+    const counts: ParticipationCounts = { events: {}, activities: {} };
+    if (!supabase) return counts;
+    const { data } = await supabase
+      .from("public_participation_counts")
+      .select("event_id, activity_id, approved_count");
+    for (const row of data ?? []) {
+      if (row.event_id) counts.events[row.event_id] = row.approved_count;
+      if (row.activity_id) counts.activities[row.activity_id] = row.approved_count;
+    }
+    return counts;
+  },
+  ["participation-counts"],
+  // Approved requests change the counts, so both content tags invalidate them.
+  { tags: ["events", "activities"], revalidate: 60 }
+);
+
+// ---------------------------------------------------------------------------
 // Certificate verification (public)
 // ---------------------------------------------------------------------------
 
@@ -811,6 +841,68 @@ export async function adminGetCertificates(): Promise<Certificate[]> {
   const { data } = await supabase
     .from("certificates")
     .select("*")
+    .order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export interface AdminParticipationRequest {
+  id: string;
+  volunteer_id: string;
+  event_id: string | null;
+  activity_id: string | null;
+  status: string;
+  created_at: string;
+  volunteer_name: string;
+  volunteer_member_id: string | null;
+  event_title: string | null;
+  activity_title: string | null;
+}
+
+interface ParticipationRequestRow {
+  id: string;
+  volunteer_id: string;
+  event_id: string | null;
+  activity_id: string | null;
+  status: string;
+  created_at: string;
+  volunteers?: { name: string | null; member_id: string | null } | null;
+  events?: { title: string | null } | null;
+  activities?: { title: string | null } | null;
+}
+
+export async function adminGetParticipationRequests(): Promise<AdminParticipationRequest[]> {
+  const supabase = await db();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("participation_requests")
+    .select(
+      "id, volunteer_id, event_id, activity_id, status, created_at, " +
+        "volunteers(name, member_id), events(title), activities(title)"
+    )
+    .order("created_at", { ascending: false });
+  return ((data ?? []) as unknown as ParticipationRequestRow[]).map((r) => ({
+    id: r.id,
+    volunteer_id: r.volunteer_id,
+    event_id: r.event_id,
+    activity_id: r.activity_id,
+    status: r.status,
+    created_at: r.created_at,
+    volunteer_name: r.volunteers?.name ?? "Unknown",
+    volunteer_member_id: r.volunteers?.member_id ?? null,
+    event_title: r.events?.title ?? null,
+    activity_title: r.activities?.title ?? null,
+  }));
+}
+
+export async function getVolunteerParticipation(
+  volunteerId: string
+): Promise<ParticipationRequest[]> {
+  const supabase = await db();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("participation_requests")
+    .select("*")
+    .eq("volunteer_id", volunteerId)
     .order("created_at", { ascending: false });
   return data ?? [];
 }

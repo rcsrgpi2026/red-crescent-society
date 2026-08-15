@@ -464,6 +464,7 @@ export const messages = {
     eventCompletedText: "Thanks to everyone who participated!",
     registrationClosed: "Registration is closed",
     registrationClosedText: "Check the notice board for updates.",
+    volunteersParticipating: "Volunteers participating",
     eventReport: "Event report",
     descriptionFallback: "{title} — event of the Red Crescent Society.",
   },
@@ -482,6 +483,7 @@ export const messages = {
     wantToJoinText:
       "Volunteers are always welcome. Apply to join the society and get notified about upcoming activities.",
     becomeVolunteer: "Become a volunteer →",
+    volunteersParticipating: "Volunteers participating",
     morePhotos: "More photos",
   },
 

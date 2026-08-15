@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { CalendarDays, MapPin, Clock, Users, ArrowLeft, ClipboardList } from "lucide-react";
-import { getPublicEventBySlug } from "@/lib/queries";
+import { getPublicEventBySlug, getParticipationCounts } from "@/lib/queries";
 import { formatDate } from "@/lib/constants";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { EventRegistrationForm } from "@/components/forms/event-registration-form";
@@ -36,14 +36,16 @@ export default async function EventDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [t, locale, event] = await Promise.all([
+  const [t, locale, event, counts] = await Promise.all([
     getServerMessages(),
     getServerLocale(),
     getPublicEventBySlug(slug),
+    getParticipationCounts(),
   ]);
   if (!event || event.status === "DRAFT") notFound();
 
   const canRegister = event.registration_enabled && ["UPCOMING", "ONGOING"].includes(event.status);
+  const approvedCount = counts.events[event.id] ?? 0;
 
   return (
     <>
@@ -141,6 +143,15 @@ export default async function EventDetailPage({
                       <div>
                         <dt className="text-xs text-muted-foreground">{t.events.organizer}</dt>
                         <dd className="font-semibold text-foreground">{event.organizer}</dd>
+                      </div>
+                    </div>
+                  )}
+                  {approvedCount > 0 && (
+                    <div className="flex items-center gap-3">
+                      <Users className="h-4 w-4 shrink-0 text-poly" aria-hidden />
+                      <div>
+                        <dt className="text-xs text-muted-foreground">{t.events.volunteersParticipating}</dt>
+                        <dd className="font-semibold text-foreground">{approvedCount}</dd>
                       </div>
                     </div>
                   )}

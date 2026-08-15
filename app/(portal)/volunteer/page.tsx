@@ -14,11 +14,13 @@ import {
   Award,
 } from "lucide-react";
 import { requireVolunteer } from "@/lib/auth";
+import { getUpcomingEvents, getPublicActivities, getVolunteerParticipation } from "@/lib/queries";
 import { formatDate } from "@/lib/constants";
 import { VOLUNTEER_STATUS_LABELS } from "@/lib/constants";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { SiteLogo } from "@/components/layout/site-logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { ParticipationPanel } from "@/components/volunteer/participation-panel";
 
 export const metadata: Metadata = {
   title: "Volunteer Portal",
@@ -27,6 +29,24 @@ export const metadata: Metadata = {
 
 export default async function VolunteerPortalPage() {
   const { volunteer } = await requireVolunteer();
+
+  // Approved volunteers can request to participate in upcoming events and
+  // activities; the requests go to the admin for approval.
+  let participationEvents: { id: string; title: string; date: string | null }[] = [];
+  let participationActivities: { id: string; title: string; date: string | null }[] = [];
+  let requests: Awaited<ReturnType<typeof getVolunteerParticipation>> = [];
+  if (volunteer.status === "APPROVED") {
+    const [events, activities, ownRequests] = await Promise.all([
+      getUpcomingEvents(12),
+      getPublicActivities(),
+      getVolunteerParticipation(volunteer.id),
+    ]);
+    participationEvents = events.map((e) => ({ id: e.id, title: e.title, date: e.date }));
+    participationActivities = activities
+      .slice(0, 12)
+      .map((a) => ({ id: a.id, title: a.title, date: a.date }));
+    requests = ownRequests;
+  }
 
   return (
     <div className="min-h-screen bg-mist">
@@ -68,7 +88,17 @@ export default async function VolunteerPortalPage() {
         <div className="mt-6">
           {volunteer.status === "PENDING" && <PendingNotice />}
           {volunteer.status === "REJECTED" && <RejectedNotice />}
-          {volunteer.status === "APPROVED" && <ApprovedProfile />}
+          {volunteer.status === "APPROVED" && (
+            <>
+              <ApprovedProfile />
+              <ParticipationPanel
+                volunteerId={volunteer.id}
+                events={participationEvents}
+                activities={participationActivities}
+                requests={requests}
+              />
+            </>
+          )}
         </div>
       </main>
     </div>

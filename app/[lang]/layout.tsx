@@ -63,6 +63,9 @@ export default async function PublicRootLayout({
   const society = settings.society ?? {};
   const asString = (v: unknown) =>
     typeof v === "string" && v.trim() ? v.trim() : undefined;
+  // Server-provided logos: render the uploaded logos in the first paint so the
+  // placeholder SVGs never flash before the custom ones load.
+  const logos = settings.logos ?? {};
 
   return (
     <html
@@ -73,7 +76,12 @@ export default async function PublicRootLayout({
       <body className="flex min-h-full flex-col">
         <TooltipProvider delayDuration={200}>
           <LocaleProvider locale={locale} t={t}>
-            <LogoProvider>
+            <LogoProvider
+              initialLogos={{
+                rpi: asString(logos.rpi) ?? null,
+                rcs: asString(logos.rcs) ?? null,
+              }}
+            >
               <SiteHeader
                 societyName={asString(society.shortName)}
                 siteName={asString(society.name)}

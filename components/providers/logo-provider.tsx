@@ -11,15 +11,30 @@ export interface LogoUrls {
 
 const LogoContext = createContext<LogoUrls>({ rpi: null, rcs: null });
 
+const NO_LOGOS: LogoUrls = { rpi: null, rcs: null };
+
 /**
- * Loads the custom RPI / Red Crescent Society logos stored in
- * `website_settings.logos` and provides them to <SiteLogo /> everywhere.
- * Falls back to the static /logos/*.svg placeholders when not set.
+ * Provides the custom RPI / Red Crescent Society logos (from
+ * `website_settings.logos`) to <SiteLogo /> everywhere, falling back to the
+ * static /logos/*.svg placeholders when none are set.
+ *
+ * When `initialLogos` is passed (from a server component reading `getSettings`),
+ * the custom logos are already in the very first server render — the client
+ * never shows the placeholder first, so there is no logo "flash" on load.
+ * The client-side fetch is only used as a fallback (e.g. the admin panel).
  */
-export function LogoProvider({ children }: { children: React.ReactNode }) {
-  const [logos, setLogos] = useState<LogoUrls>({ rpi: null, rcs: null });
+export function LogoProvider({
+  children,
+  initialLogos,
+}: {
+  children: React.ReactNode;
+  initialLogos?: LogoUrls | null;
+}) {
+  const [logos, setLogos] = useState<LogoUrls>(initialLogos ?? NO_LOGOS);
 
   useEffect(() => {
+    // The server already rendered the real logos — nothing to fetch.
+    if (initialLogos) return;
     if (!isSupabaseConfigured) return;
     let cancelled = false;
 
@@ -46,7 +61,7 @@ export function LogoProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialLogos]);
 
   return <LogoContext.Provider value={logos}>{children}</LogoContext.Provider>;
 }

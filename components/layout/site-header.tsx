@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Phone, ChevronDown, HeartPulse } from "lucide-react";
+import { Menu, Phone, ChevronDown, HeartPulse, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -160,13 +160,19 @@ export function SiteHeader({
             <div className="hidden sm:block">
               <LanguageSwitcher />
             </div>
-            {/* One unified login button on every screen size — the Student and
-                Volunteer portals are both inside its dropdown (mobile included).
-                The language switcher lives in the hamburger menu on mobile. */}
+            {/* One unified login button on every screen size — icon only, with
+                the Student and Volunteer portals inside its dropdown. The
+                language switcher lives in the hamburger menu on mobile. */}
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-mist hover:text-brand-dark">
-                {t.nav.login}
-                <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-lg border-line"
+                  aria-label={t.nav.login}
+                >
+                  <LogIn className="h-4.5 w-4.5" aria-hidden />
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuItem asChild>

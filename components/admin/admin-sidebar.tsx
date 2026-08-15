@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
-  UserCog,
   Handshake,
   Network,
   Droplets,
@@ -32,12 +31,12 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { SiteLogo } from "@/components/layout/site-logo";
 import { UnreadDot } from "@/components/admin/unread-dot";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 
 const NAV = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Volunteers", href: "/admin/volunteers", icon: Users },
+  { label: "Team Members", href: "/admin/team", icon: Users },
   { label: "Students", href: "/admin/students", icon: GraduationCap },
-  { label: "Team", href: "/admin/team", icon: UserCog },
   { label: "Founders", href: "/admin/founders", icon: Handshake },
   { label: "Community", href: "/admin/community", icon: Network },
   { label: "Blood Donors", href: "/admin/donors", icon: Droplets },
@@ -73,16 +72,6 @@ export function AdminSidebar({
   unreadMessages?: number;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const [signingOut, setSigningOut] = useState(false);
-
-  async function signOut() {
-    setSigningOut(true);
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/admin/login");
-    router.refresh();
-  }
 
   return (
     <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-gradient-to-b from-brand-dark to-[#043c28] text-white">
@@ -169,18 +158,12 @@ export function AdminSidebar({
           <ExternalLink className="h-4 w-4" aria-hidden />
           View website
         </Link>
-        <button
-          onClick={signOut}
-          disabled={signingOut}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-crescent transition-colors hover:bg-white/5 disabled:opacity-60"
-        >
-          {signingOut ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          ) : (
-            <LogOut className="h-4 w-4" aria-hidden />
-          )}
-          Sign out
-        </button>
+        <SignOutButton
+          redirectTo="/volunteer/login"
+          label="Sign out"
+          variant="ghost"
+          className="w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm font-medium text-crescent hover:bg-white/5 hover:text-crescent"
+        />
       </div>
     </div>
   );

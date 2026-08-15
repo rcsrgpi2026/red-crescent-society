@@ -117,6 +117,8 @@ function FounderFields({
     name: string;
     title: string | null;
     bio: string | null;
+    message: string | null;
+    background: string | null;
     photo_url: string | null;
     category: string;
     display_order: number;
@@ -162,6 +164,28 @@ function FounderFields({
       <div>
         <Label htmlFor="f-bio">Short bio</Label>
         <Textarea id="f-bio" name="bio" defaultValue={person?.bio ?? ""} rows={3} className="mt-1.5" />
+      </div>
+      <div>
+        <Label htmlFor="f-message">Message to students &amp; volunteers</Label>
+        <Textarea
+          id="f-message"
+          name="message"
+          defaultValue={person?.message ?? ""}
+          rows={5}
+          className="mt-1.5"
+          placeholder="A personal message shown on this person's public profile page…"
+        />
+      </div>
+      <div>
+        <Label htmlFor="f-background">Working background</Label>
+        <Textarea
+          id="f-background"
+          name="background"
+          defaultValue={person?.background ?? ""}
+          rows={4}
+          className="mt-1.5"
+          placeholder="Education, experience and career — shown on the profile page…"
+        />
       </div>
       <div className="grid grid-cols-2 items-center gap-4">
         <div>

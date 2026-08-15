@@ -3,7 +3,7 @@ import { z } from "zod";
 const phoneRegex = /^(\+?88)?01[3-9]\d{8}$/;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const volunteerSchema = z.object({
+export const teamMemberSchema = z.object({
   name: z.string().min(3, "Please enter your full name").max(100),
   studentId: z.string().min(1, "Student ID is required").max(30),
   department: z.string().min(1, "Select your department"),
@@ -19,7 +19,7 @@ export const volunteerSchema = z.object({
   motivation: z.string().min(20, "Tell us a little more about why you want to join (min 20 characters)").max(2000),
 });
 
-export type VolunteerFormValues = z.infer<typeof volunteerSchema>;
+export type TeamMemberFormValues = z.infer<typeof teamMemberSchema>;
 
 export const bloodRequestSchema = z.object({
   patientName: z.string().min(2, "Patient name is required").max(100),
@@ -101,12 +101,12 @@ export const studentSignupSchema = z.object({
 export type StudentSignupValues = z.infer<typeof studentSignupSchema>;
 
 /**
- * Volunteer portal registration — reuses the volunteer application fields,
+ * Team member portal registration — reuses the team member application fields,
  * but everything (including email, skills and experience) is mandatory, plus
  * a password. The row is created as PENDING and requires admin approval
  * before the volunteer's portal unlocks.
  */
-export const volunteerSignupSchema = z.object({
+export const teamMemberSignupSchema = z.object({
   name: z.string().min(3, "Please enter your full name").max(100),
   roll: z.string().min(1, "Roll number is required").max(30),
   registrationNo: z.string().min(1, "College registration number is required").max(30),
@@ -124,4 +124,4 @@ export const volunteerSignupSchema = z.object({
   motivation: z.string().min(20, "Tell us a little more about why you want to join (min 20 characters)").max(2000),
 });
 
-export type VolunteerSignupValues = z.infer<typeof volunteerSignupSchema>;
+export type TeamMemberSignupValues = z.infer<typeof teamMemberSignupSchema>;

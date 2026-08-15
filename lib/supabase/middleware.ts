@@ -40,11 +40,16 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Exact per-segment matching: "/volunteers" (public directory) is NOT the
+  // Safe redirect for deprecated separate admin login route
+  if (pathname === "/admin/login") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/volunteer/login";
+    return NextResponse.redirect(url);
+  }
+
+  // Exact per-segment matching: "/team" (public directory) is NOT the
   // "/volunteer" portal area, and "/admins"/"/students" don't exist anyway.
-  const isAdminArea =
-    (pathname === "/admin" || pathname.startsWith("/admin/")) &&
-    pathname !== "/admin/login";
+  const isAdminArea = pathname === "/admin" || pathname.startsWith("/admin/");
   const isStudentArea =
     (pathname === "/student" || pathname.startsWith("/student/")) &&
     pathname !== "/student/login";
@@ -55,35 +60,45 @@ export async function updateSession(request: NextRequest) {
   // Protect the admin, student and volunteer areas.
   if ((isAdminArea || isStudentArea || isVolunteerArea) && !user) {
     const url = request.nextUrl.clone();
-    url.pathname = isAdminArea
-      ? "/admin/login"
-      : isStudentArea
-        ? "/student/login"
-        : "/volunteer/login";
+    url.pathname = isStudentArea ? "/student/login" : "/volunteer/login";
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
 
-  // Signed-in users don't need a login page — send them to their own area.
-  const isLoginPage =
-    pathname === "/admin/login" ||
-    pathname === "/student/login" ||
-    pathname === "/volunteer/login";
-  if (isLoginPage && user) {
+  // Role-based protection for authenticated users
+  if (user) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .maybeSingle();
     const role = profile?.role;
+    const isStaff =
+      role === "SUPER_ADMIN" ||
+      role === "ADMIN" ||
+      role === "VOLUNTEER_MANAGER" ||
+      role === "EVENT_MANAGER" ||
+      role === "CONTENT_MANAGER";
 
-    let home = "/admin";
-    if (role === "STUDENT") home = "/student";
-    else if (role === "VOLUNTEER") home = "/volunteer";
+    // Signed-in users don't need a login page — send them to their own area.
+    const isLoginPage =
+      pathname === "/admin/login" ||
+      pathname === "/student/login" ||
+      pathname === "/volunteer/login";
 
-    const url = request.nextUrl.clone();
-    url.pathname = home;
-    return NextResponse.redirect(url);
+    if (isLoginPage) {
+      let home = isStaff ? "/admin" : role === "STUDENT" ? "/student" : "/volunteer";
+      const url = request.nextUrl.clone();
+      url.pathname = home;
+      return NextResponse.redirect(url);
+    }
+
+    // Protect admin area from non-staff roles
+    if (isAdminArea && !isStaff) {
+      const url = request.nextUrl.clone();
+      url.pathname = role === "STUDENT" ? "/student" : "/volunteer";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

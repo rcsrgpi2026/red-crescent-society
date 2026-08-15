@@ -119,46 +119,51 @@ export default async function BloodSupportPage({
             <div className="mt-8 overflow-hidden rounded-2xl border border-line bg-white">
               <ul className="divide-y divide-line">
                 {requests.slice(0, 8).map((request) => (
-                  <li key={request.id} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-4">
-                    <span
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${
-                        request.emergency_level === "EMERGENCY"
-                          ? "bg-crescent text-white"
-                          : "bg-crescent-soft text-crescent"
-                      }`}
+                  <li key={request.id}>
+                    <Link
+                      href={`/blood-support/request/${request.id}`}
+                      className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-4 transition-colors hover:bg-mist/60"
                     >
-                      {request.blood_group}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-foreground">{request.patient_name}</p>
-                      <p className="flex flex-wrap items-center gap-x-4 text-xs text-muted-foreground">
-                        {request.hospital && (
+                      <span
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${
+                          request.emergency_level === "EMERGENCY"
+                            ? "bg-crescent text-white"
+                            : "bg-crescent-soft text-crescent"
+                        }`}
+                      >
+                        {request.blood_group}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-foreground">{request.patient_name}</p>
+                        <p className="flex flex-wrap items-center gap-x-4 text-xs text-muted-foreground">
+                          {request.hospital && (
+                            <span className="flex items-center gap-1">
+                              <HeartPulse className="h-3 w-3" aria-hidden />
+                              {request.hospital}
+                            </span>
+                          )}
+                          {request.location && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" aria-hidden />
+                              {request.location}
+                            </span>
+                          )}
                           <span className="flex items-center gap-1">
-                            <HeartPulse className="h-3 w-3" aria-hidden />
-                            {request.hospital}
+                            <Clock className="h-3 w-3" aria-hidden />
+                            {formatDate(request.required_date ?? request.created_at, locale === "bn" ? "bn-BD" : "en-GB")}
                           </span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {request.emergency_level === "EMERGENCY" && (
+                          <StatusBadge label={t.status.emergencyLevel.EMERGENCY} tone="crescent" />
                         )}
-                        {request.location && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" aria-hidden />
-                            {request.location}
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" aria-hidden />
-                          {formatDate(request.required_date ?? request.created_at, locale === "bn" ? "bn-BD" : "en-GB")}
-                        </span>
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {request.emergency_level === "EMERGENCY" && (
-                        <StatusBadge label={t.status.emergencyLevel.EMERGENCY} tone="crescent" />
-                      )}
-                      <StatusBadge
-                        label={t.status.bloodRequest[request.status] ?? request.status}
-                        tone={statusTone(request.status)}
-                      />
-                    </div>
+                        <StatusBadge
+                          label={t.status.bloodRequest[request.status] ?? request.status}
+                          tone={statusTone(request.status)}
+                        />
+                      </div>
+                    </Link>
                   </li>
                 ))}
               </ul>

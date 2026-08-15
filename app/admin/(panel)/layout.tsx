@@ -18,7 +18,7 @@ export default async function AdminPanelLayout({
   children: React.ReactNode;
 }) {
   const profile = await requireAdmin();
-  if (!profile) redirect("/admin/login");
+  if (!profile) redirect("/volunteer/login");
   const roleLabel = ROLE_LABELS[profile.role] ?? profile.role;
   const unreadMessages = await adminGetUnreadMessageCount();
 

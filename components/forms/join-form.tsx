@@ -1,7 +1,7 @@
 "use client";
 
 import { FormShell, FieldError, SubmitButton } from "@/components/forms/form";
-import { joinVolunteer } from "@/lib/actions";
+import { joinTeamMember } from "@/lib/actions";
 import { BLOOD_GROUPS, DEPARTMENTS, SEMESTERS } from "@/lib/constants";
 import {
   Label,
@@ -16,7 +16,7 @@ import {
 
 export function JoinForm() {
   return (
-    <FormShell action={joinVolunteer}>
+    <FormShell action={joinTeamMember}>
       {(errors) => (
         <>
           <div className="grid gap-5 sm:grid-cols-2">

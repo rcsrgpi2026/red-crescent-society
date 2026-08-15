@@ -30,7 +30,7 @@ export async function proxy(request: NextRequest) {
   // volunteer portals are functional areas, and the special route-handler
   // files are not part of the [lang] tree.
   //
-  // Prefix matching must be exact per segment: "/volunteers" (the public
+  // Prefix matching must be exact per segment: "/team" (the public
   // directory) must NOT match the "/volunteer" portal prefix.
   const isExcluded =
     pathname === "/admin" ||
@@ -48,6 +48,23 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}${pathname === "/" ? "" : pathname}`;
     return NextResponse.redirect(url);
+  }
+
+  // Visitors who land on a locale-prefixed page (typed URL or shared link)
+  // get the locale cookie, so their next click on an unprefixed link stays in
+  // that language instead of falling back to the browser default. Same format
+  // as the language switcher writes, so the two never fight.
+  if (hasLocalePrefix(pathname)) {
+    const locale = pathname.split("/")[1] ?? "";
+    if (isLocale(locale) && request.cookies.get("locale")?.value !== locale) {
+      const response = await updateSession(request);
+      response.cookies.set("locale", locale, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+      });
+      return response;
+    }
   }
 
   return updateSession(request);

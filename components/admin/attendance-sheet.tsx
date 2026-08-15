@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Check, X, Loader2 } from "lucide-react";
-import type { Volunteer } from "@/types/database";
+import type { TeamMember } from "@/types/database";
 import type { ActionResult } from "@/lib/actions";
 
 interface AttendanceSheetProps {
-  volunteers: Volunteer[];
+  volunteers: TeamMember[];
   attendanceMap: Map<string, string>;
   eventId: string;
   action: (formData: FormData) => Promise<ActionResult>;
@@ -21,11 +21,11 @@ export function AttendanceSheet({
 }: AttendanceSheetProps) {
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  async function mark(volunteerId: string, status: "PRESENT" | "ABSENT") {
-    setBusyId(volunteerId);
+  async function mark(teamMemberId: string, status: "PRESENT" | "ABSENT") {
+    setBusyId(teamMemberId);
     const fd = new FormData();
     fd.set("eventId", eventId);
-    fd.set("volunteerId", volunteerId);
+    fd.set("teamMemberId", teamMemberId);
     fd.set("mark", status);
     const result = await action(fd);
     setBusyId(null);
@@ -89,7 +89,7 @@ export function AttendanceSheet({
         </ul>
       ) : (
         <p className="py-10 text-center text-sm text-muted-foreground">
-          No approved volunteers yet.
+          No approved team members yet.
         </p>
       )}
     </div>

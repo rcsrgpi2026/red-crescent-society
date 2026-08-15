@@ -5,13 +5,13 @@ import { useTransition } from "react";
 import { Search, X, Loader2 } from "lucide-react";
 import { Input, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui";
 
-interface VolunteerFiltersProps {
+interface TeamMemberFiltersProps {
   departments: readonly string[];
   semesters: readonly string[];
   current: { search?: string; department?: string; semester?: string };
 }
 
-export function VolunteerFilters({ departments, semesters, current }: VolunteerFiltersProps) {
+export function TeamMemberFilters({ departments, semesters, current }: TeamMemberFiltersProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -20,7 +20,7 @@ export function VolunteerFilters({ departments, semesters, current }: VolunteerF
     if (next.search) params.set("search", next.search);
     if (next.department) params.set("department", next.department);
     if (next.semester) params.set("semester", next.semester);
-    startTransition(() => router.push(`/volunteers?${params.toString()}`));
+    startTransition(() => router.push(`/team?${params.toString()}`));
   };
 
   const hasFilters = Boolean(current.search || current.department || current.semester);
@@ -42,7 +42,7 @@ export function VolunteerFilters({ departments, semesters, current }: VolunteerF
             placeholder="Search by name…"
             defaultValue={current.search}
             className="pl-9"
-            aria-label="Search volunteers by name"
+            aria-label="Search team members by name"
           />
         </form>
         <Select
@@ -80,7 +80,7 @@ export function VolunteerFilters({ departments, semesters, current }: VolunteerF
         {hasFilters && (
           <Button
             variant="ghost"
-            onClick={() => router.push("/volunteers")}
+            onClick={() => router.push("/team")}
             className="text-muted-foreground"
           >
             {pending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden /> : <X className="mr-1 h-4 w-4" aria-hidden />}

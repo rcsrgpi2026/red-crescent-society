@@ -1,22 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Target, Eye, History, HeartPulse, ArrowRight } from "lucide-react";
+import { Target, Eye, History, HeartPulse } from "lucide-react";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Reveal } from "@/components/shared/reveal";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SiteLogo } from "@/components/layout/site-logo";
 import type { Messages } from "@/lib/i18n";
-import type { Founder, TeamMember } from "@/types/database";
+import type { Founder } from "@/types/database";
 
-export function AboutSection({
-  t,
-  team,
-  founders,
-}: {
-  t: Messages;
-  team: TeamMember[];
-  founders: Founder[];
-}) {
+export function AboutSection({ t, founders }: { t: Messages; founders: Founder[] }) {
   const principals = founders.filter((f) => f.category === "PRINCIPAL");
   const founderList = founders.filter((f) => f.category === "FOUNDER");
 
@@ -155,7 +147,10 @@ export function AboutSection({
                   <div className="mt-4 flex flex-wrap justify-center gap-5">
                     {principals.map((principal, i) => (
                       <Reveal key={principal.id} delay={i * 0.08} className="w-full max-w-2xl">
-                        <div className="flex h-full flex-col items-center gap-7 rounded-3xl border border-line bg-gradient-to-b from-mist/70 to-white p-10 text-center">
+                        <Link
+                          href={`/founders/${principal.id}`}
+                          className="flex h-full flex-col items-center gap-7 rounded-3xl border border-line bg-gradient-to-b from-mist/70 to-white p-10 text-center transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md"
+                        >
                           <div className="relative h-48 w-40 shrink-0 overflow-hidden rounded-2xl bg-brand-soft">
                             {principal.photo_url ? (
                               <Image
@@ -182,7 +177,7 @@ export function AboutSection({
                               </p>
                             )}
                           </div>
-                        </div>
+                        </Link>
                       </Reveal>
                     ))}
                   </div>
@@ -201,7 +196,10 @@ export function AboutSection({
                         delay={(i % 4) * 0.06}
                         className="w-full sm:w-[calc(50%-0.625rem)] lg:w-[calc(25%-0.9375rem)]"
                       >
-                        <div className="flex h-full flex-col items-center rounded-2xl border border-line bg-white p-6 text-center transition-all hover:border-brand/40 hover:shadow-sm">
+                        <Link
+                          href={`/founders/${founder.id}`}
+                          className="flex h-full flex-col items-center rounded-2xl border border-line bg-white p-6 text-center transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md"
+                        >
                           <div className="relative h-28 w-28 overflow-hidden rounded-full bg-brand-soft">
                             {founder.photo_url ? (
                               <Image
@@ -226,12 +224,13 @@ export function AboutSection({
                               {founder.bio}
                             </p>
                           )}
-                        </div>
+                        </Link>
                       </Reveal>
                     ))}
                   </div>
                 </div>
               )}
+
             </>
           ) : (
             <div className="mt-10">
@@ -244,71 +243,6 @@ export function AboutSection({
         </div>
       </section>
 
-      {/* Team */}
-      <section id="team" className="border-b border-line bg-mist/50 scroll-mt-24">
-        <div className="container-site py-16 lg:py-24">
-          <Reveal>
-            <SectionHeader
-              eyebrow={t.about.teamEyebrow}
-              title={t.about.teamTitle}
-              description={t.about.teamDescription}
-            />
-          </Reveal>
-          {team.length > 0 ? (
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {team.map((member, i) => (
-                <Reveal key={member.id} delay={(i % 3) * 0.06}>
-                  <div className="flex h-full items-start gap-4 rounded-2xl border border-line bg-white p-5 transition-all hover:border-brand/40 hover:shadow-sm">
-                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-brand-soft">
-                      {member.photo_url ? (
-                        <Image
-                          src={member.photo_url}
-                          alt={member.name}
-                          fill
-                          sizes="64px"
-                          className="object-cover"
-                        />
-                      ) : (
-                        <span className="flex h-full w-full items-center justify-center text-2xl font-bold text-brand/40">
-                          {member.name.charAt(0)}
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{member.name}</h3>
-                      <p className="text-xs font-medium text-brand">{member.position}</p>
-                      {member.department && (
-                        <p className="mt-1 text-xs text-muted-foreground">{member.department}</p>
-                      )}
-                      {member.bio && (
-                        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                          {member.bio}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-10">
-              <EmptyState
-                title={t.about.teamEmptyTitle}
-                description={t.about.teamEmptyText}
-              />
-            </div>
-          )}
-          <Reveal className="mt-10 text-center">
-            <Link
-              href="/volunteer/login"
-              className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
-            >
-              {t.about.wantToBePart}
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </Reveal>
-        </div>
-      </section>
     </>
   );
 }

@@ -3,7 +3,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Profile, Student, UserRole, Volunteer } from "@/types/database";
+import type { Profile, Student, TeamMember, UserRole } from "@/types/database";
 
 export async function getCurrentUser() {
   const supabase = await createClient();
@@ -27,13 +27,13 @@ export async function getProfile(): Promise<Profile | null> {
   return data;
 }
 
-export async function getCurrentVolunteer(): Promise<Volunteer | null> {
+export async function getCurrentTeamMember(): Promise<TeamMember | null> {
   const user = await getCurrentUser();
   if (!user) return null;
 
   const supabase = await createClient();
   const { data } = await supabase
-    .from("volunteers")
+    .from("team_members")
     .select("*")
     .eq("user_id", user.id)
     .maybeSingle();
@@ -94,7 +94,7 @@ const ADMIN_ONLY: UserRole[] = ["SUPER_ADMIN", "ADMIN"];
  */
 export async function requireAdmin(): Promise<Profile | null> {
   const profile = await getProfile();
-  if (!profile || !ADMIN_ONLY.includes(profile.role)) {
+  if (!profile || !isAdminRole(profile.role)) {
     return null;
   }
   return profile;
@@ -123,24 +123,24 @@ export async function requireStudent() {
 }
 
 /**
- * Redirects to the volunteer login when there is no volunteer session.
- * Pending/rejected volunteers still land here — the page itself shows the
+ * Redirects to the team member login when there is no team member session.
+ * Pending/rejected team members still land here — the page itself shows the
  * approval notice (login is allowed, access is gated by admin approval).
  */
-export async function requireVolunteer() {
+export async function requireTeamMember() {
   const profile = await getProfile();
   if (!profile || profile.role !== "VOLUNTEER") {
     redirect("/volunteer/login");
   }
-  const volunteer = await getCurrentVolunteer();
-  if (!volunteer) {
+  const teamMember = await getCurrentTeamMember();
+  if (!teamMember) {
     redirect("/volunteer/login");
   }
-  return { profile, volunteer };
+  return { profile, teamMember };
 }
 
 export function canAccessAdmin(profile: Profile | null): boolean {
-  return !!profile && ADMIN_ONLY.includes(profile.role);
+  return !!profile && isAdminRole(profile.role);
 }
 
 /**

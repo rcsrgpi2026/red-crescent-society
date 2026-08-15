@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
-  volunteerSchema,
+  teamMemberSchema,
   bloodRequestSchema,
   bloodDonorSchema,
   eventRegistrationSchema,
@@ -28,10 +28,11 @@ export async function adminLogin(email: string, password: string): Promise<Actio
   return { success: true, message: "Signed in" };
 }
 
-export interface ActionResult {
+export interface ActionResult<T = any> {
   success: boolean;
   message?: string;
   errors?: Record<string, string[]>;
+  data?: T;
 }
 
 function zodErrors(error: import("zod").ZodError): Record<string, string[]> {
@@ -43,11 +44,11 @@ function zodErrors(error: import("zod").ZodError): Record<string, string[]> {
   return result;
 }
 
-export async function joinVolunteer(
+export async function joinTeamMember(
   _prev: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
-  const parsed = volunteerSchema.safeParse({
+  const parsed = teamMemberSchema.safeParse({
     name: formData.get("name"),
     studentId: formData.get("studentId"),
     department: formData.get("department"),
@@ -81,7 +82,7 @@ export async function joinVolunteer(
   const v = parsed.data;
   const supabase = await createClient();
 
-  const { error } = await supabase.from("volunteers").insert({
+  const { error } = await supabase.from("team_members").insert({
     name: v.name,
     student_id: v.studentId,
     department: v.department,
@@ -96,11 +97,11 @@ export async function joinVolunteer(
     experience: v.experience || null,
     motivation: v.motivation,
     status: "PENDING",
-    position: "Volunteer",
+    position: "Team Member",
   });
 
   if (error) {
-    console.error("joinVolunteer error:", error);
+    console.error("joinTeamMember error:", error);
     return {
       success: false,
       message: "Something went wrong while submitting. Please try again.",
@@ -117,7 +118,7 @@ export async function joinVolunteer(
 export async function submitBloodRequest(
   _prev: ActionResult,
   formData: FormData
-): Promise<ActionResult> {
+): Promise<ActionResult<{ id: string }>> {
   const parsed = bloodRequestSchema.safeParse({
     patientName: formData.get("patientName"),
     bloodGroup: formData.get("bloodGroup"),
@@ -147,22 +148,26 @@ export async function submitBloodRequest(
   const v = parsed.data;
   const supabase = await createClient();
 
-  const { error } = await supabase.from("blood_requests").insert({
-    patient_name: v.patientName,
-    blood_group: v.bloodGroup,
-    units: v.units,
-    hospital: v.hospital || null,
-    location: v.location,
-    required_date: v.requiredDate || null,
-    required_time: v.requiredTime || null,
-    requester_name: v.requesterName,
-    contact: v.contact,
-    emergency_level: v.emergencyLevel,
-    additional_info: v.additionalInfo || null,
-    status: "PENDING",
-  });
+  const { data, error } = await supabase
+    .from("blood_requests")
+    .insert({
+      patient_name: v.patientName,
+      blood_group: v.bloodGroup,
+      units: v.units,
+      hospital: v.hospital || null,
+      location: v.location,
+      required_date: v.requiredDate || null,
+      required_time: v.requiredTime || null,
+      requester_name: v.requesterName,
+      contact: v.contact,
+      emergency_level: v.emergencyLevel,
+      additional_info: v.additionalInfo || null,
+      status: "PENDING",
+    })
+    .select("id")
+    .single();
 
-  if (error) {
+  if (error || !data) {
     console.error("submitBloodRequest error:", error);
     return {
       success: false,
@@ -173,7 +178,8 @@ export async function submitBloodRequest(
   return {
     success: true,
     message:
-      "Request submitted. The society leadership has been notified and will coordinate with donors. In an emergency, also call the nearest blood bank directly.",
+      "Request submitted successfully! Tracking your request in the status interface.",
+    data: { id: data.id },
   };
 }
 
@@ -203,8 +209,22 @@ export async function registerDonor(
 
   const v = parsed.data;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let volunteerId: string | null = null;
+  if (user) {
+    const { data: vol } = await supabase
+      .from("team_members")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    volunteerId = vol?.id ?? null;
+  }
 
   const { error } = await supabase.from("blood_donors").insert({
+    volunteer_id: volunteerId,
     name: v.name,
     blood_group: v.bloodGroup,
     area: v.area,
@@ -226,6 +246,77 @@ export async function registerDonor(
     success: true,
     message:
       "You are now registered as a blood donor. Thank you for being a lifesaver! Your number stays private and is only visible to the society team.",
+  };
+}
+
+export async function toggleMyDonorAvailability(
+  availability: "AVAILABLE" | "UNAVAILABLE"
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "You must be signed in to manage donor status." };
+  }
+
+  const { data: vol } = await supabase
+    .from("team_members")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!vol) {
+    return { success: false, message: "Team member profile not found." };
+  }
+
+  const { error } = await supabase
+    .from("blood_donors")
+    .update({ availability, is_active: availability === "AVAILABLE" })
+    .eq("volunteer_id", vol.id);
+
+  if (error) {
+    return { success: false, message: "Failed to update donor availability." };
+  }
+
+  return { success: true, message: `Availability updated to ${availability.toLowerCase()}.` };
+}
+
+export async function removeMyDonorListing(): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "You must be signed in." };
+  }
+
+  const { data: vol } = await supabase
+    .from("team_members")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!vol) {
+    return { success: false, message: "Team member profile not found." };
+  }
+
+  // Deactivate listing without deleting profile or account
+  const { error } = await supabase
+    .from("blood_donors")
+    .update({ availability: "UNAVAILABLE", is_active: false })
+    .eq("volunteer_id", vol.id);
+
+  if (error) {
+    return { success: false, message: "Failed to remove donor listing." };
+  }
+
+  return {
+    success: true,
+    message:
+      "You have been removed from active donor listings. Your volunteer profile remains intact.",
   };
 }
 

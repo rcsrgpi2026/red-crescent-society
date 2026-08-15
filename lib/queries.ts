@@ -24,12 +24,11 @@ import type {
   ParticipationRequest,
   PublicBloodDonor,
   PublicBloodRequest,
-  PublicVolunteer,
+  PublicTeamMember,
   Student,
   TeamMember,
+  TeamMemberPoint,
   Training,
-  Volunteer,
-  VolunteerPoint,
 } from "@/types/database";
 
 /**
@@ -89,8 +88,8 @@ export const getHomeStats = unstable_cache(
   async (): Promise<HomeStats> => {
     const supabase = getPublicClient();
     if (!supabase) return EMPTY_STATS;
-    const [volunteers, donors, events, trainings, requests, activities] = await Promise.all([
-      supabase.from("public_volunteers").select("id", { count: "exact", head: true }),
+    const [teamMembers, donors, events, trainings, requests, activities] = await Promise.all([
+      supabase.from("public_team_members").select("id", { count: "exact", head: true }),
       supabase
         .from("public_blood_donors")
         .select("id", { count: "exact", head: true })
@@ -105,7 +104,7 @@ export const getHomeStats = unstable_cache(
     const reached = (activities.data ?? []).reduce((sum, a) => sum + (a.participants ?? 0), 0);
 
     return {
-      totalVolunteers: volunteers.count ?? 0,
+      totalVolunteers: teamMembers.count ?? 0,
       activeDonors: donors.count ?? 0,
       eventsCompleted: events.count ?? 0,
       trainingSessions: trainings.count ?? 0,
@@ -122,36 +121,6 @@ export const getHomeStats = unstable_cache(
     tags: ["home", "volunteers", "blood", "events", "training", "activities"],
     revalidate: 60,
   }
-);
-
-export const getTopVolunteers = unstable_cache(
-  async (limit = 6): Promise<PublicVolunteer[]> => {
-    const supabase = getPublicClient();
-    if (!supabase) return [];
-    const { data } = await supabase
-      .from("public_volunteers")
-      .select("*")
-      .order("points", { ascending: false })
-      .limit(limit);
-    return data ?? [];
-  },
-  ["top-volunteers"],
-  { tags: ["volunteers"], revalidate: 60 }
-);
-
-export const getTeamMembers = unstable_cache(
-  async (): Promise<TeamMember[]> => {
-    const supabase = getPublicClient();
-    if (!supabase) return [];
-    const { data } = await supabase
-      .from("team_members")
-      .select("*")
-      .eq("is_active", true)
-      .order("display_order", { ascending: true });
-    return data ?? [];
-  },
-  ["team-members"],
-  { tags: ["team"], revalidate: 60 }
 );
 
 export const getFounders = unstable_cache(
@@ -277,16 +246,16 @@ export const getAlbums = unstable_cache(
 // Volunteers (public)
 // ---------------------------------------------------------------------------
 
-export const getPublicVolunteers = unstable_cache(
+export const getPublicTeamMembers = unstable_cache(
   async (params?: {
     search?: string;
     department?: string;
     semester?: string;
     limit?: number;
-  }): Promise<PublicVolunteer[]> => {
+  }): Promise<PublicTeamMember[]> => {
     const supabase = getPublicClient();
     if (!supabase) return [];
-    let query = supabase.from("public_volunteers").select("*");
+    let query = supabase.from("public_team_members").select("*");
 
     if (params?.search) {
       query = query.ilike("name", `%${params.search}%`);
@@ -307,44 +276,14 @@ export const getPublicVolunteers = unstable_cache(
   { tags: ["volunteers"], revalidate: 60 }
 );
 
-export const getPublicVolunteer = unstable_cache(
-  async (id: string): Promise<PublicVolunteer | null> => {
-    const supabase = getPublicClient();
-    if (!supabase) return null;
-    const { data } = await supabase
-      .from("public_volunteers")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
-    return data;
-  },
-  ["public-volunteer"],
-  { tags: ["volunteers"], revalidate: 60 }
-);
-
-export const getVolunteerByMemberId = unstable_cache(
-  async (memberId: string): Promise<PublicVolunteer | null> => {
-    const supabase = getPublicClient();
-    if (!supabase) return null;
-    const { data } = await supabase
-      .from("public_volunteers")
-      .select("*")
-      .eq("member_id", memberId)
-      .maybeSingle();
-    return data;
-  },
-  ["volunteer-by-member-id"],
-  { tags: ["volunteers"], revalidate: 60 }
-);
-
-export const getVolunteerAchievements = unstable_cache(
-  async (volunteerId: string): Promise<Achievement[]> => {
+export const getTeamMemberAchievements = unstable_cache(
+  async (teamMemberId: string): Promise<Achievement[]> => {
     const supabase = getPublicClient();
     if (!supabase) return [];
     const { data } = await supabase
       .from("achievements")
       .select("*")
-      .eq("volunteer_id", volunteerId)
+      .eq("volunteer_id", teamMemberId)
       .order("date", { ascending: false });
     return data ?? [];
   },
@@ -352,19 +291,68 @@ export const getVolunteerAchievements = unstable_cache(
   { tags: ["volunteers"], revalidate: 60 }
 );
 
-export const getVolunteerCertificates = unstable_cache(
-  async (volunteerId: string): Promise<Certificate[]> => {
+export const getTeamMemberCertificates = unstable_cache(
+  async (teamMemberId: string): Promise<Certificate[]> => {
     const supabase = getPublicClient();
     if (!supabase) return [];
     const { data } = await supabase
       .from("certificates")
       .select("*")
-      .eq("volunteer_id", volunteerId)
+      .eq("volunteer_id", teamMemberId)
       .order("issued_at", { ascending: false });
     return data ?? [];
   },
   ["volunteer-certificates"],
   { tags: ["certificates"], revalidate: 60 }
+);
+
+export interface TeamMemberParticipationHistoryItem {
+  id: string;
+  title: string;
+  type: "event" | "activity";
+  date: string | null;
+  category: string | null;
+}
+
+export const getTeamMemberParticipationHistory = unstable_cache(
+  async (teamMemberId: string): Promise<TeamMemberParticipationHistoryItem[]> => {
+    const supabase = getPublicClient();
+    if (!supabase) return [];
+    const { data } = await supabase
+      .from("participation_requests")
+      .select(
+        "id, event_id, activity_id, status, " +
+          "events(id, title, date, category, status), activities(id, title, date, category)"
+      )
+      .eq("volunteer_id", teamMemberId)
+      .eq("status", "APPROVED");
+
+    const items: TeamMemberParticipationHistoryItem[] = [];
+    for (const row of ((data ?? []) as any[])) {
+      if (row.events) {
+        if (row.events.status === "COMPLETED" || row.events.status === "ONGOING") {
+          items.push({
+            id: row.events.id,
+            title: row.events.title,
+            type: "event",
+            date: row.events.date,
+            category: row.events.category,
+          });
+        }
+      } else if (row.activities) {
+        items.push({
+          id: row.activities.id,
+          title: row.activities.title,
+          type: "activity",
+          date: row.activities.date,
+          category: row.activities.category,
+        });
+      }
+    }
+    return items;
+  },
+  ["volunteer-participation-history"],
+  { tags: ["volunteers", "events", "activities"], revalidate: 60 }
 );
 
 // ---------------------------------------------------------------------------
@@ -407,6 +395,21 @@ export const getPublicBloodRequests = unstable_cache(
   },
   ["public-blood-requests"],
   { tags: ["blood"], revalidate: 60 }
+);
+
+export const getPublicBloodRequestById = unstable_cache(
+  async (id: string): Promise<PublicBloodRequest | null> => {
+    const supabase = getPublicClient();
+    if (!supabase) return null;
+    const { data } = await supabase
+      .from("public_blood_requests")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    return data;
+  },
+  ["public-blood-request-by-id"],
+  { tags: ["blood"], revalidate: 30 }
 );
 
 // ---------------------------------------------------------------------------
@@ -622,24 +625,24 @@ export const getCertificateVerification = unstable_cache(
 // Admin-only reads (RLS enforces the role; never cached — always fresh)
 // ---------------------------------------------------------------------------
 
-export async function adminGetVolunteers(params?: {
+export async function adminGetTeamMembers(params?: {
   status?: string;
   search?: string;
   limit?: number;
-}): Promise<Volunteer[]> {
+}): Promise<TeamMember[]> {
   const supabase = await db();
   if (!supabase) return [];
-  let query = supabase.from("volunteers").select("*");
+  let query = supabase.from("team_members").select("*");
   if (params?.status) query = query.eq("status", params.status);
   if (params?.search) query = query.ilike("name", `%${params.search}%`);
   const { data } = await query.order("created_at", { ascending: false }).limit(params?.limit ?? 200);
   return data ?? [];
 }
 
-export async function adminGetVolunteer(id: string): Promise<Volunteer | null> {
+export async function adminGetTeamMember(id: string): Promise<TeamMember | null> {
   const supabase = await db();
   if (!supabase) return null;
-  const { data } = await supabase.from("volunteers").select("*").eq("id", id).maybeSingle();
+  const { data } = await supabase.from("team_members").select("*").eq("id", id).maybeSingle();
   return data;
 }
 
@@ -698,16 +701,6 @@ export async function adminGetEventRegistrations(eventId: string): Promise<Event
     .select("*")
     .eq("event_id", eventId)
     .order("created_at", { ascending: true });
-  return data ?? [];
-}
-
-export async function adminGetTeam(): Promise<TeamMember[]> {
-  const supabase = await db();
-  if (!supabase) return [];
-  const { data } = await supabase
-    .from("team_members")
-    .select("*")
-    .order("display_order", { ascending: true });
   return data ?? [];
 }
 
@@ -824,13 +817,13 @@ export async function adminGetAttendanceForEvent(eventId: string): Promise<Atten
   return data ?? [];
 }
 
-export async function adminGetPoints(volunteerId: string): Promise<VolunteerPoint[]> {
+export async function adminGetPoints(teamMemberId: string): Promise<TeamMemberPoint[]> {
   const supabase = await db();
   if (!supabase) return [];
   const { data } = await supabase
     .from("volunteer_points")
     .select("*")
-    .eq("volunteer_id", volunteerId)
+    .eq("volunteer_id", teamMemberId)
     .order("created_at", { ascending: false });
   return data ?? [];
 }
@@ -865,7 +858,7 @@ interface ParticipationRequestRow {
   activity_id: string | null;
   status: string;
   created_at: string;
-  volunteers?: { name: string | null; member_id: string | null } | null;
+  team_members?: { name: string | null; member_id: string | null } | null;
   events?: { title: string | null } | null;
   activities?: { title: string | null } | null;
 }
@@ -877,7 +870,7 @@ export async function adminGetParticipationRequests(): Promise<AdminParticipatio
     .from("participation_requests")
     .select(
       "id, volunteer_id, event_id, activity_id, status, created_at, " +
-        "volunteers(name, member_id), events(title), activities(title)"
+        "team_members(name, member_id), events(title), activities(title)"
     )
     .order("created_at", { ascending: false });
   return ((data ?? []) as unknown as ParticipationRequestRow[]).map((r) => ({
@@ -887,22 +880,22 @@ export async function adminGetParticipationRequests(): Promise<AdminParticipatio
     activity_id: r.activity_id,
     status: r.status,
     created_at: r.created_at,
-    volunteer_name: r.volunteers?.name ?? "Unknown",
-    volunteer_member_id: r.volunteers?.member_id ?? null,
+    volunteer_name: r.team_members?.name ?? "Unknown",
+    volunteer_member_id: r.team_members?.member_id ?? null,
     event_title: r.events?.title ?? null,
     activity_title: r.activities?.title ?? null,
   }));
 }
 
-export async function getVolunteerParticipation(
-  volunteerId: string
+export async function getTeamMemberParticipation(
+  teamMemberId: string
 ): Promise<ParticipationRequest[]> {
   const supabase = await db();
   if (!supabase) return [];
   const { data } = await supabase
     .from("participation_requests")
     .select("*")
-    .eq("volunteer_id", volunteerId)
+    .eq("volunteer_id", teamMemberId)
     .order("created_at", { ascending: false });
   return data ?? [];
 }

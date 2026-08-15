@@ -50,7 +50,7 @@ export const TRAINING_CATEGORIES = [
   "Disaster Management",
   "Blood Donation Awareness",
   "Leadership",
-  "Volunteer Orientation",
+  "Team Member Orientation",
   "Other",
 ] as const;
 
@@ -129,20 +129,6 @@ export const DEFAULT_COMMUNITY_MEMBERS: {
   { name: "Md. Maruf Islam", position: "ASST. GROUP LEADER", sub_role: "Resource Mobilization", level: 5, display_order: 5 },
 ];
 
-export const TEAM_POSITIONS = [
-  "Faculty Advisor",
-  "Unit Leader",
-  "Deputy Leader",
-  "Executive Member",
-  "Team Coordinator",
-  "Volunteer Coordinator",
-  "Blood Donation Coordinator",
-  "First Aid Coordinator",
-  "Disaster Response Coordinator",
-  "Publicity & Media",
-  "Member",
-] as const;
-
 export const ADMIN_ROLES: UserRole[] = [
   "SUPER_ADMIN",
   "ADMIN",
@@ -154,12 +140,12 @@ export const ADMIN_ROLES: UserRole[] = [
 export const ROLE_LABELS: Record<UserRole, string> = {
   SUPER_ADMIN: "Super Admin",
   ADMIN: "Admin",
-  VOLUNTEER_MANAGER: "Volunteer Manager",
+  VOLUNTEER_MANAGER: "Team Manager",
   EVENT_MANAGER: "Event Manager",
   CONTENT_MANAGER: "Content Manager",
   USER: "User",
   STUDENT: "Student",
-  VOLUNTEER: "Volunteer",
+  VOLUNTEER: "Team Member",
 };
 
 export const POINT_CATEGORIES = {
@@ -170,7 +156,7 @@ export const POINT_CATEGORIES = {
   LEADERSHIP: 15,
 } as const;
 
-export const VOLUNTEER_STATUS_LABELS: Record<string, string> = {
+export const TEAM_MEMBER_STATUS_LABELS: Record<string, string> = {
   PENDING: "Pending",
   APPROVED: "Approved",
   REJECTED: "Rejected",
@@ -207,6 +193,7 @@ export function formatDate(
 ): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "—";
   return d.toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
@@ -220,6 +207,7 @@ export function formatDateTime(
 ): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "—";
   return d.toLocaleString(locale, {
     day: "numeric",
     month: "short",

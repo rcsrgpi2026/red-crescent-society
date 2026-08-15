@@ -15,7 +15,12 @@ interface HeroProps {
   /** Real photos from activities/albums, crossfaded as the hero backdrop. */
   backgroundImages?: string[];
   /** Latest urgent/emergency blood request, shown as a live need strip. */
-  liveRequest?: { blood_group: string; hospital: string | null; location: string | null } | null;
+  liveRequest?: {
+    id: string;
+    blood_group: string;
+    hospital: string | null;
+    location: string | null;
+  } | null;
   bloodHelpline?: string | null;
   /** College / institute name from Admin → Settings (hero badge). */
   collegeName?: string;
@@ -118,11 +123,11 @@ export function Hero({
         {/* Copy */}
         <div>
           <motion.div {...anim} custom={0} variants={fadeUp} className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white">
               <GraduationCap className="h-3.5 w-3.5" aria-hidden />
               {collegeName ?? t.home.heroBadgeInstitute}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white/85 backdrop-blur">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium text-white/90">
               <HeartPulse className="h-3.5 w-3.5 text-crescent" aria-hidden />
               {t.home.heroBadgeUnit}
             </span>
@@ -162,7 +167,7 @@ export function Hero({
               asChild
               size="lg"
               variant="outline"
-              className="border-white/40 bg-white/5 text-white backdrop-blur hover:bg-white/15 hover:text-white"
+              className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
             >
               <Link href="/volunteer/login">
                 {t.home.becomeVolunteer}
@@ -178,7 +183,7 @@ export function Hero({
               { icon: GraduationCap, label: t.home.heroFeatureDisaster, sub: t.home.heroFeatureDisasterSub },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-2.5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/20 backdrop-blur">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 ring-1 ring-white/20">
                   <item.icon className="h-4.5 w-4.5 text-white" aria-hidden />
                 </span>
                 <span className="text-sm leading-tight text-white/90">
@@ -198,7 +203,10 @@ export function Hero({
           className="space-y-4"
         >
           {liveRequest && (
-            <div className="overflow-hidden rounded-2xl border border-crescent/50 bg-crescent shadow-2xl shadow-crescent/30">
+            <Link
+              href={`/blood-support/request/${liveRequest.id}`}
+              className="group block overflow-hidden rounded-2xl border border-crescent/50 bg-crescent shadow-2xl shadow-crescent/30 transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crescent"
+            >
               <div className="flex items-center justify-between gap-2 bg-crescent-dark/80 px-4 py-2">
                 <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-white">
                   <span className="relative flex h-2 w-2">
@@ -214,12 +222,19 @@ export function Hero({
                 {liveRequest.location && (
                   <p className="text-xs text-muted-foreground">{liveRequest.location}</p>
                 )}
+                <p className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-crescent">
+                  {t.home.liveNeedCta}
+                  <ArrowRight
+                    className="h-3 w-3 transition-transform group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
+                </p>
               </div>
-            </div>
+            </Link>
           )}
 
           {bloodHelpline && (
-            <div className="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur">
+            <div className="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 p-4 shadow-sm">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
                 <PhoneCall className="h-5 w-5 text-white" aria-hidden />
               </span>

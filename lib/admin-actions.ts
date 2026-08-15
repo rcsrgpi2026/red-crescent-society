@@ -14,19 +14,19 @@ function guard() {
 }
 
 // ---------------------------------------------------------------------------
-// Volunteers
+// Team members
 // ---------------------------------------------------------------------------
 
 /**
- * Server-action wrapper for the volunteer detail page's plain <form> buttons.
- * Keeps `updateVolunteerStatus` returning ActionResult (used by InlineStatus),
+ * Server-action wrapper for the team member detail page's plain <form> buttons.
+ * Keeps `updateTeamMemberStatus` returning ActionResult (used by InlineStatus),
  * while this one satisfies the form action's `Promise<void>` contract.
  */
-export async function submitVolunteerStatus(formData: FormData): Promise<void> {
-  await updateVolunteerStatus(formData);
+export async function submitTeamMemberStatus(formData: FormData): Promise<void> {
+  await updateTeamMemberStatus(formData);
 }
 
-export async function updateVolunteerStatus(formData: FormData): Promise<ActionResult> {
+export async function updateTeamMemberStatus(formData: FormData): Promise<ActionResult> {
   guard();
   const id = String(formData.get("id"));
   const status = String(formData.get("status"));
@@ -38,14 +38,14 @@ export async function updateVolunteerStatus(formData: FormData): Promise<ActionR
   const patch: Record<string, unknown> = { status };
 
   if (status === "APPROVED") {
-    // Generate a sequential member ID: RCR-YYYY-NNNN. Count only volunteers
+    // Generate a sequential member ID: RCR-YYYY-NNNN. Count only team members
     // that already carry this year's RCR id, so approving several members in
     // a row hands out unique ids — counting all rows would give the same
     // number twice (both records already exist) and the second approval
     // would silently fail on the unique member_id constraint.
     const year = new Date().getFullYear();
     const { count } = await supabase
-      .from("volunteers")
+      .from("team_members")
       .select("id", { count: "exact", head: true })
       .ilike("member_id", `RCR-${year}-%`);
     const next = (count ?? 0) + 1;
@@ -53,42 +53,42 @@ export async function updateVolunteerStatus(formData: FormData): Promise<ActionR
     patch.joined_at = new Date().toISOString();
   }
 
-  const { error } = await supabase.from("volunteers").update(patch).eq("id", id);
+  const { error } = await supabase.from("team_members").update(patch).eq("id", id);
   if (error) {
-    return { success: false, message: "Could not update the volunteer." };
+    return { success: false, message: "Could not update the team member." };
   }
   await logAudit(`volunteer_${status.toLowerCase()}`, "volunteer", id);
-  revalidatePath("/admin/volunteers");
-  revalidatePath("/volunteers");
+  revalidatePath("/admin/team");
+  revalidatePath("/team");
   updateTag("volunteers");
-  return { success: true, message: `Volunteer ${status.toLowerCase()}.` };
+  return { success: true, message: `Team member ${status.toLowerCase()}.` };
 }
 
-export async function deleteVolunteer(id: string): Promise<ActionResult> {
+export async function deleteTeamMember(id: string): Promise<ActionResult> {
   guard();
   const supabase = await createClient();
-  const { error } = await supabase.from("volunteers").delete().eq("id", id);
-  if (error) return { success: false, message: "Could not delete the volunteer." };
+  const { error } = await supabase.from("team_members").delete().eq("id", id);
+  if (error)    return { success: false, message: "Could not delete the team member." };
   await logAudit("volunteer_deleted", "volunteer", id);
-  revalidatePath("/admin/volunteers");
+  revalidatePath("/admin/team");
   updateTag("volunteers");
-  return { success: true, message: "Volunteer deleted." };
+  return { success: true, message: "Team member deleted." };
 }
 
 export async function addPoints(formData: FormData): Promise<ActionResult> {
   guard();
-  const volunteerId = String(formData.get("volunteerId"));
+  const teamMemberId = String(formData.get("teamMemberId"));
   const points = Number(formData.get("points"));
   const reason = String(formData.get("reason") ?? "");
   const category = String(formData.get("category") ?? "");
 
-  if (!volunteerId || !Number.isFinite(points) || points === 0) {
+  if (!teamMemberId || !Number.isFinite(points) || points === 0) {
     return { success: false, message: "Enter a valid point value." };
   }
 
   const supabase = await createClient();
   const { error: insertError } = await supabase.from("volunteer_points").insert({
-    volunteer_id: volunteerId,
+    volunteer_id: teamMemberId,
     points,
     reason: reason || null,
     category: category || null,
@@ -98,84 +98,33 @@ export async function addPoints(formData: FormData): Promise<ActionResult> {
   const { data: total } = await supabase
     .from("volunteer_points")
     .select("points")
-    .eq("volunteer_id", volunteerId);
+    .eq("volunteer_id", teamMemberId);
   const sum = (total ?? []).reduce((acc, row) => acc + row.points, 0);
-  await supabase.from("volunteers").update({ points: sum }).eq("id", volunteerId);
+  await supabase.from("team_members").update({ points: sum }).eq("id", teamMemberId);
 
-  await logAudit("points_added", "volunteer", volunteerId, { points, reason });
-  revalidatePath("/admin/volunteers");
+  await logAudit("points_added", "team_member", teamMemberId, { points, reason });
+  revalidatePath("/admin/team");
   updateTag("volunteers");
   return { success: true, message: `Added ${points} points.` };
 }
 
-export async function updateVolunteerPhoto(formData: FormData): Promise<ActionResult> {
+export async function updateTeamMemberPhoto(formData: FormData): Promise<ActionResult> {
   guard();
   const id = String(formData.get("id"));
   const photoUrl = String(formData.get("photoUrl") ?? "").trim();
-  if (!id) return { success: false, message: "Volunteer is required." };
+  if (!id) return { success: false, message: "Team member is required." };
 
   const supabase = await createClient();
   const { error } = await supabase
-    .from("volunteers")
+    .from("team_members")
     .update({ photo_url: photoUrl || null })
     .eq("id", id);
   if (error) return { success: false, message: "Could not update the photo." };
   await logAudit("volunteer_photo_updated", "volunteer", id);
-  revalidatePath(`/admin/volunteers/${id}`);
-  revalidatePath("/volunteers");
-  revalidatePath(`/volunteers/${id}`);
+  revalidatePath(`/admin/team/${id}`);
+  revalidatePath("/team");
   updateTag("volunteers");
   return { success: true, message: "Photo updated." };
-}
-
-// ---------------------------------------------------------------------------
-// Team members
-// ---------------------------------------------------------------------------
-
-export async function saveTeamMember(formData: FormData): Promise<ActionResult> {
-  guard();
-  const id = formData.get("id") ? String(formData.get("id")) : null;
-  const payload = {
-    name: String(formData.get("name") ?? ""),
-    position: String(formData.get("position") ?? ""),
-    department: String(formData.get("department") ?? "") || null,
-    semester: String(formData.get("semester") ?? "") || null,
-    bio: String(formData.get("bio") ?? "") || null,
-    photo_url: String(formData.get("photoUrl") ?? "") || null,
-    display_order: Number(formData.get("displayOrder") ?? 0) || 0,
-    is_active: formData.get("isActive") === "on" || formData.get("isActive") === "true",
-  };
-
-  if (!payload.name || !payload.position) {
-    return { success: false, message: "Name and position are required." };
-  }
-
-  const supabase = await createClient();
-  if (id) {
-    const { error } = await supabase.from("team_members").update(payload).eq("id", id);
-    if (error) return { success: false, message: "Could not update the member." };
-    await logAudit("team_updated", "team_member", id);
-  } else {
-    const { error } = await supabase.from("team_members").insert(payload);
-    if (error) return { success: false, message: "Could not create the member." };
-    await logAudit("team_created", "team_member");
-  }
-  revalidatePath("/admin/team");
-  revalidatePath("/");
-  updateTag("team");
-  return { success: true, message: "Team member saved." };
-}
-
-export async function deleteTeamMember(id: string): Promise<ActionResult> {
-  guard();
-  const supabase = await createClient();
-  const { error } = await supabase.from("team_members").delete().eq("id", id);
-  if (error) return { success: false, message: "Could not delete the member." };
-  await logAudit("team_deleted", "team_member", id);
-  revalidatePath("/admin/team");
-  revalidatePath("/");
-  updateTag("team");
-  return { success: true, message: "Team member deleted." };
 }
 
 // ---------------------------------------------------------------------------
@@ -190,6 +139,8 @@ export async function saveFounder(formData: FormData): Promise<ActionResult> {
     category: String(formData.get("category") ?? "FOUNDER"),
     title: String(formData.get("title") ?? "") || null,
     bio: String(formData.get("bio") ?? "") || null,
+    message: String(formData.get("message") ?? "") || null,
+    background: String(formData.get("background") ?? "") || null,
     photo_url: String(formData.get("photoUrl") ?? "") || null,
     display_order: Number(formData.get("displayOrder") ?? 0) || 0,
     is_active: formData.get("isActive") === "on" || formData.get("isActive") === "true",
@@ -656,9 +607,9 @@ export async function deleteAlbum(id: string): Promise<ActionResult> {
 
 export async function issueCertificate(formData: FormData): Promise<ActionResult> {
   guard();
-  const volunteerId = String(formData.get("volunteerId"));
+  const teamMemberId = String(formData.get("teamMemberId"));
   const title = String(formData.get("title") ?? "").trim();
-  if (!volunteerId || !title) return { success: false, message: "Volunteer and title are required." };
+  if (!teamMemberId || !title) return { success: false, message: "Team member and title are required." };
 
   const token = `CRT-${Date.now().toString(36).toUpperCase()}${Math.random()
     .toString(36)
@@ -667,14 +618,14 @@ export async function issueCertificate(formData: FormData): Promise<ActionResult
 
   const supabase = await createClient();
   const { error } = await supabase.from("certificates").insert({
-    volunteer_id: volunteerId,
+    volunteer_id: teamMemberId,
     title,
     issued_at: String(formData.get("issuedAt") ?? "") || new Date().toISOString().slice(0, 10),
     file_url: String(formData.get("fileUrl") ?? "") || null,
     verify_token: token,
   });
   if (error) return { success: false, message: "Could not issue the certificate." };
-  await logAudit("certificate_issued", "certificate", volunteerId, { title });
+  await logAudit("certificate_issued", "certificate", teamMemberId, { title });
   revalidatePath("/admin/certificates");
   updateTag("certificates");
   return {
@@ -701,20 +652,20 @@ export async function deleteCertificate(id: string): Promise<ActionResult> {
 export async function toggleAttendance(formData: FormData): Promise<ActionResult> {
   guard();
   const eventId = String(formData.get("eventId"));
-  const volunteerId = String(formData.get("volunteerId"));
+  const teamMemberId = String(formData.get("teamMemberId"));
   const mark = String(formData.get("mark")); // PRESENT or ABSENT
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("attendance")
     .upsert(
-      { event_id: eventId, volunteer_id: volunteerId, status: mark, scanned_at: new Date().toISOString() },
+      { event_id: eventId, volunteer_id: teamMemberId, status: mark, scanned_at: new Date().toISOString() },
       { onConflict: "event_id,volunteer_id" }
     )
     .eq("event_id", eventId)
-    .eq("volunteer_id", volunteerId);
+    .eq("volunteer_id", teamMemberId);
   if (error) return { success: false, message: "Could not update attendance." };
-  await logAudit("attendance_marked", "attendance", volunteerId, { eventId, mark });
+  await logAudit("attendance_marked", "attendance", teamMemberId, { eventId, mark });
   revalidatePath("/admin/attendance");
   return { success: true, message: `Marked ${mark.toLowerCase()}.` };
 }
@@ -751,10 +702,10 @@ export async function getUnreadMessageCount(): Promise<number> {
 
 export async function submitParticipationRequest(formData: FormData): Promise<ActionResult> {
   guard();
-  const volunteerId = String(formData.get("volunteerId"));
+  const teamMemberId = String(formData.get("teamMemberId"));
   const eventId = String(formData.get("eventId") ?? "");
   const activityId = String(formData.get("activityId") ?? "");
-  if (!volunteerId) return { success: false, message: "Volunteer is required." };
+  if (!teamMemberId) return { success: false, message: "Team member is required." };
   if (!eventId && !activityId) {
     return { success: false, message: "Choose an event or activity." };
   }
@@ -763,7 +714,7 @@ export async function submitParticipationRequest(formData: FormData): Promise<Ac
   const { data: existing } = await supabase
     .from("participation_requests")
     .select("id, status")
-    .eq("volunteer_id", volunteerId)
+    .eq("volunteer_id", teamMemberId)
     .eq(eventId ? "event_id" : "activity_id", eventId || activityId)
     .maybeSingle();
 
@@ -783,7 +734,7 @@ export async function submitParticipationRequest(formData: FormData): Promise<Ac
   }
 
   const { error } = await supabase.from("participation_requests").insert({
-    volunteer_id: volunteerId,
+    volunteer_id: teamMemberId,
     event_id: eventId || null,
     activity_id: activityId || null,
     status: "PENDING",

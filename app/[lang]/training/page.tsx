@@ -6,7 +6,6 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { getPublicTrainings } from "@/lib/queries";
 import { formatDate } from "@/lib/constants";
-import { TRAINING_CATEGORIES } from "@/lib/constants";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -33,16 +32,6 @@ export default async function TrainingPage() {
       />
       <section className="bg-white">
         <div className="container-site py-12 lg:py-16">
-          <div className="mb-8 flex flex-wrap gap-2">
-            {TRAINING_CATEGORIES.map((c) => (
-              <span
-                key={c}
-                className="rounded-full border border-line bg-mist px-3.5 py-1 text-xs font-medium text-muted-foreground"
-              >
-                {c}
-              </span>
-            ))}
-          </div>
           {trainings.length > 0 ? (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {trainings.map((training) => (

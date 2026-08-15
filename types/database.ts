@@ -8,7 +8,7 @@ export type UserRole =
   | "STUDENT"
   | "VOLUNTEER";
 
-export type VolunteerStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type TeamMemberStatus = "PENDING" | "APPROVED" | "REJECTED";
 export type BloodRequestStatus =
   | "PENDING"
   | "CONTACTING_DONOR"
@@ -44,11 +44,14 @@ export interface Student {
   department: string;
   phone: string;
   email: string;
+  photo_url?: string | null;
+  blood_group?: string | null;
+  address?: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface Volunteer {
+export interface TeamMember {
   id: string;
   user_id: string | null;
   member_id: string | null;
@@ -69,7 +72,7 @@ export interface Volunteer {
   motivation: string | null;
   photo_url: string | null;
   position: string;
-  status: VolunteerStatus;
+  status: TeamMemberStatus;
   public_profile: boolean;
   points: number;
   joined_at: string | null;
@@ -77,33 +80,18 @@ export interface Volunteer {
   updated_at: string;
 }
 
-/** Safe, public-facing volunteer record (view). */
-export interface PublicVolunteer {
+/** Safe, public-facing team member record (view) — private data like blood group, phone, email excluded. */
+export interface PublicTeamMember {
   id: string;
   member_id: string | null;
   name: string;
   department: string | null;
   semester: string | null;
-  blood_group: string | null;
   area: string | null;
   photo_url: string | null;
   position: string;
   points: number;
   joined_at: string | null;
-}
-
-export interface TeamMember {
-  id: string;
-  name: string;
-  photo_url: string | null;
-  position: string;
-  department: string | null;
-  semester: string | null;
-  bio: string | null;
-  display_order: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 export type FounderCategory = "FOUNDER" | "PRINCIPAL";
@@ -114,6 +102,10 @@ export interface Founder {
   photo_url: string | null;
   title: string | null;
   bio: string | null;
+  /** Personal message to students & volunteers, shown on the profile page. */
+  message: string | null;
+  /** Working / career background, shown on the profile page. */
+  background: string | null;
   category: FounderCategory;
   display_order: number;
   is_active: boolean;
@@ -334,7 +326,7 @@ export interface Attendance {
   created_at: string;
 }
 
-export interface VolunteerPoint {
+export interface TeamMemberPoint {
   id: string;
   volunteer_id: string;
   points: number;

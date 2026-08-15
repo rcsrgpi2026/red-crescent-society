@@ -1,5 +1,5 @@
 import { ClipboardCheck, UserCheck, UserX } from "lucide-react";
-import { adminGetEvents, adminGetVolunteers, adminGetAttendanceForEvent } from "@/lib/queries";
+import { adminGetEvents, adminGetTeamMembers, adminGetAttendanceForEvent } from "@/lib/queries";
 import { toggleAttendance } from "@/lib/admin-actions";
 import { AttendanceSheet } from "@/components/admin/attendance-sheet";
 import { AdminPageHeader } from "@/components/admin/page-header";
@@ -14,7 +14,7 @@ export default async function AdminAttendancePage({
   const { event: eventId } = await searchParams;
   const [events, volunteers] = await Promise.all([
     adminGetEvents(),
-    adminGetVolunteers({ status: "APPROVED" }),
+    adminGetTeamMembers({ status: "APPROVED" }),
   ]);
 
   const selectedEvent = eventId ? events.find((e) => e.id === eventId) : events[0];

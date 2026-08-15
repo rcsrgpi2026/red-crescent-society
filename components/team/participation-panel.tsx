@@ -16,12 +16,12 @@ interface Item {
 }
 
 export function ParticipationPanel({
-  volunteerId,
+  teamMemberId,
   events,
   activities,
   requests,
 }: {
-  volunteerId: string;
+  teamMemberId: string;
   events: Item[];
   activities: Item[];
   requests: ParticipationRequest[];
@@ -33,7 +33,7 @@ export function ParticipationPanel({
   async function request(kind: "event" | "activity", id: string) {
     setPendingId(id);
     const fd = new FormData();
-    fd.set("volunteerId", volunteerId);
+    fd.set("teamMemberId", teamMemberId);
     if (kind === "event") fd.set("eventId", id);
     else fd.set("activityId", id);
     const res = await submitParticipationRequest(fd);

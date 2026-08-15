@@ -1,181 +1,206 @@
-import Image from "next/image";
-import { Plus, Pencil, UserCog } from "lucide-react";
+import Link from "next/link";
+import { Download, Eye, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { adminGetTeam } from "@/lib/queries";
-import { saveTeamMember, deleteTeamMember } from "@/lib/admin-actions";
-import { AdminFormDialog, FieldError } from "@/components/admin/admin-form-dialog";
-import { ImageUploadField } from "@/components/admin/image-upload-field";
-import { ConfirmDelete } from "@/components/admin/confirm-delete";
-import { StatusBadge } from "@/components/shared/status-badge";
-import { AdminPageHeader } from "@/components/admin/page-header";
-import { Reveal } from "@/components/shared/reveal";
+import { Input } from "@/components/ui/input";
+import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
-import { Input, Label, Textarea, Checkbox } from "@/components/ui";
-import { TEAM_POSITIONS, DEPARTMENTS, SEMESTERS } from "@/lib/constants";
+import { InlineStatus } from "@/components/admin/inline-status";
+import { AdminPageHeader } from "@/components/admin/page-header";
+import {
+  ResponsiveTable,
+  type Column,
+} from "@/components/admin/responsive-table";
+import { Reveal } from "@/components/shared/reveal";
+import { adminGetTeamMembers } from "@/lib/queries";
+import { updateTeamMemberStatus } from "@/lib/admin-actions";
+import { formatDateTime } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
-export default async function AdminTeamPage() {
-  const team = await adminGetTeam();
+const STATUS_TABS = [
+  { value: "", label: "All" },
+  { value: "PENDING", label: "Pending" },
+  { value: "APPROVED", label: "Approved" },
+  { value: "REJECTED", label: "Rejected" },
+];
+
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: "Pending",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+};
+
+export default async function AdminTeamMembersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; search?: string }>;
+}) {
+  const params = await searchParams;
+  const volunteers = await adminGetTeamMembers({
+    status: params.status || undefined,
+    search: params.search,
+  });
+
+  const columns: Column<(typeof volunteers)[number]>[] = [
+    {
+      header: "Team Member",
+      render: (v) => (
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-dark text-sm font-bold text-white">
+            {v.name.charAt(0)}
+          </span>
+          <div>
+            <p className="font-medium text-foreground">{v.name}</p>
+            <p className="text-xs text-muted-foreground">{v.phone ?? "—"}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: "Member ID",
+      render: (v) => (
+        <span className="text-xs font-semibold text-brand-dark">
+          {v.member_id ?? "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Roll / Reg. No.",
+      render: (v) => (
+        <span className="text-xs text-muted-foreground">
+          {[v.roll, v.registration_no].filter(Boolean).join(" / ") || "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Department / Semester",
+      render: (v) => (
+        <span className="text-xs text-muted-foreground">
+          {[v.department, v.semester].filter(Boolean).join(" · ") || "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Blood",
+      render: (v) => (
+        <span className="inline-flex rounded-md bg-crescent-soft px-2 py-0.5 text-xs font-bold text-crescent">
+          {v.blood_group ?? "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Registered",
+      render: (v) => (
+        <span className="text-xs text-muted-foreground">
+          {formatDateTime(v.created_at)}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      render: (v) => (
+        <InlineStatus
+          action={updateTeamMemberStatus}
+          id={v.id}
+          value={v.status}
+          options={[
+            { value: "PENDING", label: "Pending" },
+            { value: "APPROVED", label: "Approve" },
+            { value: "REJECTED", label: "Reject" },
+          ]}
+        />
+      ),
+      mobileRender: (v) => (
+        <StatusBadge
+          label={STATUS_LABELS[v.status] ?? v.status}
+          tone={statusTone(v.status)}
+        />
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        icon={UserCog}
-        title="Team"
-        description="Faculty advisors and student leaders shown on the About page."
-        tone="bg-gradient-to-br from-poly to-[#0f4d80]"
+        icon={Users}
+        title="Team Members"
+        description="Review registrations, approve members and manage the team member directory."
         actions={
-          <AdminFormDialog
-            trigger={
-              <Button>
-                <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-                Add member
-              </Button>
-            }
-            title="Add team member"
-            description="The member appears on the About page in display order."
-            action={saveTeamMember}
-            submitLabel="Add member"
-          >
-            <TeamFields />
-          </AdminFormDialog>
+          <Button asChild variant="outline" size="sm">
+            <a href="/admin/team/export" download>
+              <Download className="mr-1.5 h-4 w-4" aria-hidden />
+              Download PDF
+            </a>
+          </Button>
         }
       />
 
-      {team.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {team.map((member, index) => (
-            <Reveal key={member.id} delay={Math.min(index * 0.05, 0.3)} className="h-full">
-            <div className="h-full rounded-2xl border border-line bg-white p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md hover:shadow-brand/10">
-              <div className="flex items-start gap-3">
-                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-brand-soft">
-                  {member.photo_url ? (
-                    <Image src={member.photo_url} alt={member.name} fill sizes="56px" className="object-cover" />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-xl font-bold text-brand/40">
-                      {member.name.charAt(0)}
-                    </span>
+      {/* Tabs + search */}
+      <Reveal>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-2">
+            {STATUS_TABS.map((tab) => {
+              const active = (params.status ?? "") === tab.value;
+              return (
+                <Link
+                  key={tab.value}
+                  href={tab.value ? `/admin/team?status=${tab.value}` : "/admin/team"}
+                  className={cn(
+                    "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+                    active
+                      ? "border-brand bg-brand text-white shadow-sm shadow-brand/20"
+                      : "border-line bg-white text-muted-foreground hover:border-brand/40 hover:text-brand-dark"
                   )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-foreground">{member.name}</p>
-                  <p className="text-xs font-medium text-brand">{member.position}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {[member.department, member.semester].filter(Boolean).join(" · ") || "—"}
-                  </p>
-                </div>
-                {!member.is_active && <StatusBadge label="Hidden" tone="neutral" />}
-              </div>
-              {member.bio && (
-                <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                  {member.bio}
-                </p>
-              )}
-              <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
-                <span className="text-xs text-muted-foreground">Order: {member.display_order}</span>
-                <div className="flex items-center gap-1">
-                  <AdminFormDialog
-                    trigger={
-                      <Button variant="ghost" size="sm">
-                        <Pencil className="h-3.5 w-3.5" aria-hidden />
-                      </Button>
-                    }
-                    title={`Edit ${member.name}`}
-                    action={saveTeamMember}
-                    submitLabel="Save changes"
-                  >
-                    <TeamFields member={member} />
-                  </AdminFormDialog>
-                  <ConfirmDelete
-                    action={deleteTeamMember}
-                    id={member.id}
-                    description={`Remove ${member.name} from the team?`}
-                  />
-                </div>
-              </div>
-            </div>
-            </Reveal>
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          icon={UserCog}
-          title="No team members yet"
-          description="Add the faculty advisor and student leaders."
-        />
-      )}
-    </div>
-  );
-}
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
 
-function TeamFields({
-  member,
-}: {
-  member?: { id: string; name: string; position: string; department: string | null; semester: string | null; bio: string | null; photo_url: string | null; display_order: number; is_active: boolean };
-}) {
-  return (
-    <>
-      {member && <input type="hidden" name="id" value={member.id} />}
-      <div>
-        <Label htmlFor="t-name">Full name</Label>
-        <Input id="t-name" name="name" defaultValue={member?.name} placeholder="e.g. Md. Rafiqul Islam" className="mt-1.5" />
-        <FieldError name="name" />
-      </div>
-      <div>
-        <Label htmlFor="t-position">Position</Label>
-        <select
-          id="t-position"
-          name="position"
-          defaultValue={member?.position ?? TEAM_POSITIONS[0]}
-          className="mt-1.5 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-        >
-          {TEAM_POSITIONS.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-        <FieldError name="position" />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="t-department">Department</Label>
-          <Input id="t-department" name="department" defaultValue={member?.department ?? ""} className="mt-1.5" list="departments" />
-          <datalist id="departments">
-            {DEPARTMENTS.map((d) => (
-              <option key={d} value={d} />
-            ))}
-          </datalist>
+          <form
+            method="get"
+            action="/admin/team"
+            className="relative w-full sm:max-w-xs"
+          >
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <Input
+              name="search"
+              placeholder="Search team members…"
+              defaultValue={params.search}
+              className="pl-9"
+              aria-label="Search team members"
+            />
+            {params.status && (
+              <input type="hidden" name="status" value={params.status} />
+            )}
+          </form>
         </div>
-        <div>
-          <Label htmlFor="t-semester">Semester</Label>
-          <Input id="t-semester" name="semester" defaultValue={member?.semester ?? ""} className="mt-1.5" list="semesters" />
-          <datalist id="semesters">
-            {SEMESTERS.map((s) => (
-              <option key={s} value={s} />
-            ))}
-          </datalist>
-        </div>
-      </div>
-      <ImageUploadField
-        name="photoUrl"
-        label="Photo"
-        defaultValue={member?.photo_url}
-        folder="team"
+      </Reveal>
+
+      <ResponsiveTable
+        columns={columns}
+        rows={volunteers}
+        keyFor={(v) => v.id}
+        minWidth="min-w-[760px]"
+        actions={(v) => (
+          <Button asChild variant="ghost" size="sm">
+            <Link href={`/admin/team/${v.id}`}>
+              <Eye className="h-3.5 w-3.5" aria-hidden />
+              <span className="ml-1">View</span>
+            </Link>
+          </Button>
+        )}
+        empty={
+          <EmptyState
+            icon={Users}
+            title={params.status === "PENDING" ? "No pending registrations" : "No team members found"}
+            description="New registrations and search results will appear here."
+          />
+        }
       />
-      <div>
-        <Label htmlFor="t-bio">Short bio</Label>
-        <Textarea id="t-bio" name="bio" defaultValue={member?.bio ?? ""} rows={3} className="mt-1.5" />
-      </div>
-      <div className="grid grid-cols-2 items-center gap-4">
-        <div>
-          <Label htmlFor="t-order">Display order</Label>
-          <Input id="t-order" name="displayOrder" type="number" defaultValue={member?.display_order ?? 0} className="mt-1.5" />
-        </div>
-        <label className="flex items-center gap-2 pt-5 text-sm">
-          <Checkbox name="isActive" defaultChecked={member ? member.is_active : true} />
-          Visible on site
-        </label>
-      </div>
-    </>
+    </div>
   );
 }

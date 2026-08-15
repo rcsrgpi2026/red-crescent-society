@@ -3,9 +3,9 @@ import Link from "next/link";
 import { Search, Users } from "lucide-react";
 import { PageHero } from "@/components/shared/page-hero";
 import { EmptyState } from "@/components/shared/empty-state";
-import { VolunteerCard } from "@/components/cards/volunteer-card";
-import { VolunteerFilters } from "@/components/volunteers/volunteer-filters";
-import { getPublicVolunteers } from "@/lib/queries";
+import { TeamMemberCard } from "@/components/cards/team-member-card";
+import { TeamMemberFilters } from "@/components/team/team-filters";
+import { getPublicTeamMembers } from "@/lib/queries";
 import { DEPARTMENTS, SEMESTERS } from "@/lib/constants";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 import { format } from "@/lib/i18n";
@@ -28,7 +28,7 @@ export default async function VolunteersPage({
     getServerLocale(),
     searchParams,
   ]);
-  const volunteers = await getPublicVolunteers({
+  const volunteers = await getPublicTeamMembers({
     search: params.search,
     department: params.department,
     semester: params.semester,
@@ -51,7 +51,7 @@ export default async function VolunteersPage({
       </PageHero>
       <section className="bg-white">
         <div className="container-site py-12 lg:py-16">
-          <VolunteerFilters
+          <TeamMemberFilters
             departments={DEPARTMENTS}
             semesters={SEMESTERS}
             current={{ ...params }}
@@ -64,9 +64,9 @@ export default async function VolunteersPage({
                   s: volunteers.length === 1 ? "" : "s",
                 })}
               </p>
-              <div className="mt-4 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
                 {volunteers.map((volunteer) => (
-                  <VolunteerCard key={volunteer.id} volunteer={volunteer} />
+                  <TeamMemberCard key={volunteer.id} teamMember={volunteer} />
                 ))}
               </div>
             </>

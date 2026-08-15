@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { FormShell, FieldError, SubmitButton } from "@/components/forms/form";
 import { volunteerSignUp } from "@/lib/auth-actions";
 import { BLOOD_GROUPS, DEPARTMENTS, SEMESTERS } from "@/lib/constants";
@@ -15,6 +16,28 @@ import {
 } from "@/components/ui";
 
 export function VolunteerRegisterForm() {
+  const [formData, setFormData] = useState({
+    name: "",
+    roll: "",
+    registrationNo: "",
+    department: "",
+    semester: "",
+    phone: "",
+    email: "",
+    password: "",
+    bloodGroup: "",
+    area: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
+    skills: "",
+    experience: "",
+    motivation: "",
+  });
+
+  const handleChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
   return (
     <FormShell action={volunteerSignUp}>
       {(errors) => (
@@ -25,6 +48,8 @@ export function VolunteerRegisterForm() {
               <Input
                 id="vl-name"
                 name="name"
+                value={formData.name}
+                onChange={(e) => handleChange("name", e.target.value)}
                 placeholder="e.g. Rakib Hasan"
                 className="mt-1.5"
                 required
@@ -36,29 +61,38 @@ export function VolunteerRegisterForm() {
               <Input
                 id="vl-roll"
                 name="roll"
+                value={formData.roll}
+                onChange={(e) => handleChange("roll", e.target.value)}
                 placeholder="e.g. 73014"
                 className="mt-1.5"
                 required
               />
               <FieldError errors={errors} name="roll" />
             </div>
-            <div>
-              <Label htmlFor="vl-registrationNo">College registration number</Label>
-              <Input
-                id="vl-registrationNo"
-                name="registrationNo"
-                placeholder="e.g. 2110000123"
-                className="mt-1.5"
-                required
-              />
-              <FieldError errors={errors} name="registrationNo" />
-            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="vl-registrationNo">College registration number</Label>
+            <Input
+              id="vl-registrationNo"
+              name="registrationNo"
+              value={formData.registrationNo}
+              onChange={(e) => handleChange("registrationNo", e.target.value)}
+              placeholder="e.g. 2110000123"
+              className="mt-1.5"
+              required
+            />
+            <FieldError errors={errors} name="registrationNo" />
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <Label htmlFor="vl-department">Department</Label>
-              <Select name="department">
+              <Select
+                name="department"
+                value={formData.department}
+                onValueChange={(val) => handleChange("department", val)}
+              >
                 <SelectTrigger id="vl-department" className="mt-1.5">
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
@@ -74,7 +108,11 @@ export function VolunteerRegisterForm() {
             </div>
             <div>
               <Label htmlFor="vl-semester">Semester</Label>
-              <Select name="semester">
+              <Select
+                name="semester"
+                value={formData.semester}
+                onValueChange={(val) => handleChange("semester", val)}
+              >
                 <SelectTrigger id="vl-semester" className="mt-1.5">
                   <SelectValue placeholder="Select semester" />
                 </SelectTrigger>
@@ -97,6 +135,8 @@ export function VolunteerRegisterForm() {
                 id="vl-phone"
                 name="phone"
                 type="tel"
+                value={formData.phone}
+                onChange={(e) => handleChange("phone", e.target.value)}
                 placeholder="017XXXXXXXX"
                 className="mt-1.5"
                 required
@@ -109,6 +149,8 @@ export function VolunteerRegisterForm() {
                 id="vl-email"
                 name="email"
                 type="email"
+                value={formData.email}
+                onChange={(e) => handleChange("email", e.target.value)}
                 autoComplete="email"
                 placeholder="you@example.com"
                 className="mt-1.5"
@@ -124,6 +166,8 @@ export function VolunteerRegisterForm() {
               id="vl-password"
               name="password"
               type="password"
+              value={formData.password}
+              onChange={(e) => handleChange("password", e.target.value)}
               autoComplete="new-password"
               placeholder="At least 6 characters"
               className="mt-1.5"
@@ -135,7 +179,11 @@ export function VolunteerRegisterForm() {
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <Label htmlFor="vl-bloodGroup">Blood group</Label>
-              <Select name="bloodGroup">
+              <Select
+                name="bloodGroup"
+                value={formData.bloodGroup}
+                onValueChange={(val) => handleChange("bloodGroup", val)}
+              >
                 <SelectTrigger id="vl-bloodGroup" className="mt-1.5">
                   <SelectValue placeholder="Select blood group" />
                 </SelectTrigger>
@@ -154,6 +202,8 @@ export function VolunteerRegisterForm() {
               <Input
                 id="vl-area"
                 name="area"
+                value={formData.area}
+                onChange={(e) => handleChange("area", e.target.value)}
                 placeholder="e.g. Kazla, Rajshahi"
                 className="mt-1.5"
                 required
@@ -168,6 +218,8 @@ export function VolunteerRegisterForm() {
               <Input
                 id="vl-emergencyName"
                 name="emergencyContactName"
+                value={formData.emergencyContactName}
+                onChange={(e) => handleChange("emergencyContactName", e.target.value)}
                 placeholder="e.g. Father / Guardian"
                 className="mt-1.5"
                 required
@@ -180,6 +232,8 @@ export function VolunteerRegisterForm() {
                 id="vl-emergencyPhone"
                 name="emergencyContactPhone"
                 type="tel"
+                value={formData.emergencyContactPhone}
+                onChange={(e) => handleChange("emergencyContactPhone", e.target.value)}
                 placeholder="017XXXXXXXX"
                 className="mt-1.5"
                 required
@@ -193,6 +247,8 @@ export function VolunteerRegisterForm() {
             <Input
               id="vl-skills"
               name="skills"
+              value={formData.skills}
+              onChange={(e) => handleChange("skills", e.target.value)}
               placeholder="e.g. First Aid, Photography, Public Speaking"
               className="mt-1.5"
               required
@@ -206,6 +262,8 @@ export function VolunteerRegisterForm() {
               id="vl-experience"
               name="experience"
               rows={3}
+              value={formData.experience}
+              onChange={(e) => handleChange("experience", e.target.value)}
               required
               placeholder="Have you volunteered before? Where and what did you do?"
               className="mt-1.5"
@@ -219,6 +277,8 @@ export function VolunteerRegisterForm() {
               id="vl-motivation"
               name="motivation"
               rows={4}
+              value={formData.motivation}
+              onChange={(e) => handleChange("motivation", e.target.value)}
               required
               placeholder="Tell us what drives you to serve…"
               className="mt-1.5"

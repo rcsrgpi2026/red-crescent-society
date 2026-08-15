@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured, isServiceRoleConfigured } from "@/lib/supabase/config";
 import { isAdminRole, homeForRole } from "@/lib/auth";
-import { studentSignupSchema, volunteerSignupSchema } from "@/lib/validation";
+import { studentSignupSchema, teamMemberSignupSchema } from "@/lib/validation";
 import type { ActionResult } from "@/lib/actions";
 
 export interface LoginResult extends ActionResult {
@@ -166,7 +166,7 @@ export async function volunteerSignUp(
   _prev: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
-  const parsed = volunteerSignupSchema.safeParse({
+  const parsed = teamMemberSignupSchema.safeParse({
     name: formData.get("name"),
     roll: formData.get("roll"),
     registrationNo: formData.get("registrationNo"),
@@ -224,9 +224,9 @@ export async function volunteerSignUp(
   const admin = createAdminClient();
   await admin.from("profiles").update({ role: "VOLUNTEER", full_name: v.name }).eq("id", userId);
 
-  // Volunteer applications start PENDING — the admin approves them in the
-  // admin panel before the volunteer portal unlocks.
-  const { error: insertError } = await admin.from("volunteers").insert({
+  // Team member applications start PENDING — the admin approves them in the
+  // admin panel before the team member portal unlocks.
+  const { error: insertError } = await admin.from("team_members").insert({
     user_id: userId,
     name: v.name,
     roll: v.roll,
@@ -243,10 +243,10 @@ export async function volunteerSignUp(
     experience: v.experience,
     motivation: v.motivation,
     status: "PENDING",
-    position: "Volunteer",
+    position: "Team Member",
   });
   if (insertError) {
-    console.error("volunteerSignUp insert error:", insertError);
+    console.error("teamMemberSignUp insert error:", insertError);
     return {
       success: false,
       message: "Something went wrong while submitting your application. Please try again.",

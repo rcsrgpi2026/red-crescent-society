@@ -25,7 +25,7 @@ export default async function AdminParticipantsPage() {
 
   const columns: Column<(typeof requests)[number]>[] = [
     {
-      header: "Volunteer",
+      header: "Team Member",
       render: (r) => (
         <div>
           <p className="font-medium text-foreground">{r.volunteer_name}</p>
@@ -79,7 +79,7 @@ export default async function AdminParticipantsPage() {
       <AdminPageHeader
         icon={UserCheck}
         title="Participation requests"
-        description="Volunteers request to join events and activities — approve or reject them here. Approved volunteers count as participants on the public pages."
+        description="Team members request to join events and activities — approve or reject them here. Approved team members count as participants on the public pages."
         tone="bg-gradient-to-br from-rose-400 to-red-600"
         actions={
           <span className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-3.5 py-1.5 text-sm font-medium text-foreground">
@@ -98,7 +98,7 @@ export default async function AdminParticipantsPage() {
           <EmptyState
             icon={UserCheck}
             title="No participation requests yet"
-            description="Volunteers will appear here when they request to join an event or activity."
+            description="Team members will appear here when they request to join an event or activity."
           />
         }
       />

@@ -11,7 +11,7 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import {
-  adminGetVolunteers,
+  adminGetTeamMembers,
   adminGetBloodRequests,
   adminGetEvents,
   adminGetMessages,
@@ -23,7 +23,7 @@ import { NumberTicker } from "@/components/ui/number-ticker";
 
 export default async function AdminDashboardPage() {
   const [volunteers, requests, events, messages] = await Promise.all([
-    adminGetVolunteers({ limit: 500 }),
+    adminGetTeamMembers({ limit: 500 }),
     adminGetBloodRequests(),
     adminGetEvents(),
     adminGetMessages(),
@@ -35,8 +35,8 @@ export default async function AdminDashboardPage() {
   const unreadMessages = messages.filter((m) => m.status === "NEW");
 
   const stats = [
-    { label: "Total volunteers", value: volunteers.length, icon: Users, href: "/admin/volunteers", tone: "bg-gradient-to-br from-brand to-brand-dark" },
-    { label: "Pending registrations", value: pendingVolunteers.length, icon: UserPlus, href: "/admin/volunteers?status=PENDING", tone: "bg-gradient-to-br from-amber-400 to-orange-500" },
+    { label: "Total team members", value: volunteers.length, icon: Users, href: "/admin/team", tone: "bg-gradient-to-br from-brand to-brand-dark" },
+    { label: "Pending registrations", value: pendingVolunteers.length, icon: UserPlus, href: "/admin/team?status=PENDING", tone: "bg-gradient-to-br from-amber-400 to-orange-500" },
     { label: "Open blood requests", value: requests.filter((r) => !["COMPLETED", "CANCELLED"].includes(r.status)).length, icon: HeartPulse, href: "/admin/blood-requests", tone: "bg-gradient-to-br from-crescent to-crescent-dark" },
     { label: "Upcoming events", value: upcomingEvents.length, icon: CalendarDays, href: "/admin/events", tone: "bg-gradient-to-br from-poly to-[#0f4d80]" },
     { label: "Unread messages", value: unreadMessages.length, icon: MessageSquare, href: "/admin/messages", tone: "bg-gradient-to-br from-emerald-400 to-emerald-600" },
@@ -82,12 +82,12 @@ export default async function AdminDashboardPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent volunteer registrations */}
+        {/* Recent team member registrations */}
         <Reveal delay={0.1}>
           <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm shadow-black/[0.02]">
             <div className="flex items-center justify-between border-b border-line bg-gradient-to-r from-brand-soft/70 to-transparent px-5 py-4">
               <h2 className="font-semibold text-foreground">Recent registrations</h2>
-              <Link href="/admin/volunteers?status=PENDING" className="flex items-center gap-1 text-xs font-semibold text-brand transition-colors hover:text-brand-dark">
+              <Link href="/admin/team?status=PENDING" className="flex items-center gap-1 text-xs font-semibold text-brand transition-colors hover:text-brand-dark">
                 Review
                 <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
               </Link>
@@ -110,7 +110,7 @@ export default async function AdminDashboardPage() {
                 ))}
               </ul>
             ) : (
-              <p className="px-5 py-10 text-center text-sm text-muted-foreground">No volunteers yet.</p>
+              <p className="px-5 py-10 text-center text-sm text-muted-foreground">No team members yet.</p>
             )}
           </div>
         </Reveal>
@@ -156,7 +156,7 @@ export default async function AdminDashboardPage() {
       <Reveal delay={0.2}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: "Approve volunteers", desc: `${pendingVolunteers.length} waiting`, href: "/admin/volunteers?status=PENDING", icon: UserPlus, tone: "bg-gradient-to-br from-brand to-brand-dark" },
+            { label: "Approve team members", desc: `${pendingVolunteers.length} waiting`, href: "/admin/team?status=PENDING", icon: UserPlus, tone: "bg-gradient-to-br from-brand to-brand-dark" },
             { label: "New event", desc: "Announce to everyone", href: "/admin/events?new=1", icon: CalendarDays, tone: "bg-gradient-to-br from-poly to-[#0f4d80]" },
             { label: "Post a notice", desc: "Notice board update", href: "/admin/notices?new=1", icon: Megaphone, tone: "bg-gradient-to-br from-amber-400 to-orange-500" },
             { label: "Blood requests", desc: `${pendingRequests.length} pending`, href: "/admin/blood-requests", icon: Droplets, tone: "bg-gradient-to-br from-crescent to-crescent-dark" },

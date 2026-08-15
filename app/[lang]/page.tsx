@@ -5,13 +5,13 @@ import {
   ArrowRight,
   Megaphone,
   Siren,
-  Award,
   PhoneCall,
   HeartPulse,
 } from "lucide-react";
 import { Hero } from "@/components/home/hero";
 import { Stats } from "@/components/home/stats";
 import { AboutSection } from "@/components/home/about-section";
+import { TeamSection } from "@/components/home/team-section";
 import { CommunitySection } from "@/components/home/community-section";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Reveal } from "@/components/shared/reveal";
@@ -20,7 +20,6 @@ import { Button } from "@/components/ui/button";
 import { EventCard } from "@/components/cards/event-card";
 import { ActivityStoryCard } from "@/components/cards/activity-story-card";
 import { NoticeCard } from "@/components/cards/notice-card";
-import { VolunteerCard } from "@/components/cards/volunteer-card";
 import { AlbumCard } from "@/components/cards/album-card";
 import {
   getSettings,
@@ -28,10 +27,9 @@ import {
   getUpcomingEvents,
   getPublishedNotices,
   getRecentActivities,
-  getTopVolunteers,
   getAlbums,
   getPublicBloodRequests,
-  getTeamMembers,
+  getPublicTeamMembers,
   getFounders,
   getCommunityMembers,
 } from "@/lib/queries";
@@ -52,7 +50,7 @@ function heroPhotos(images: (string | null | undefined)[]): string[] {
 }
 
 export default async function HomePage() {
-  const [t, settings, stats, events, notices, activities, volunteers, albums, requests, team, founders, members] =
+  const [t, settings, stats, events, notices, activities, albums, requests, team, founders, members] =
     await Promise.all([
       getServerMessages(),
       getSettings(),
@@ -60,10 +58,9 @@ export default async function HomePage() {
       getUpcomingEvents(3),
       getPublishedNotices(4),
       getRecentActivities(6),
-      getTopVolunteers(6),
       getAlbums(6),
       getPublicBloodRequests(),
-      getTeamMembers(),
+      getPublicTeamMembers({ limit: 18 }),
       getFounders(),
       getCommunityMembers(),
     ]);
@@ -163,8 +160,8 @@ export default async function HomePage() {
       </section>
       <Stats stats={stats} />
 
-      {/* Who we are — mission, history, team */}
-      <AboutSection t={t} team={team} founders={founders} />
+      {/* Who we are — introduction, mission, history, founders */}
+      <AboutSection t={t} founders={founders} />
 
       {/* Serve — stories from the field */}
       <section className="border-b border-line bg-mist/50">
@@ -240,76 +237,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* The people behind it — recognition */}
-      <section className="border-b border-line bg-mist/50">
-        <div className="container-site py-16 lg:py-24">
-          <Reveal>
-            <SectionHeader
-              eyebrow={t.home.recognitionEyebrow}
-              title={t.home.recognitionTitle}
-              description={t.home.recognitionDescription}
-            />
-          </Reveal>
-          {volunteers.length > 0 ? (
-            <div className="mt-10 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
-              {volunteers.map((volunteer, i) => (
-                <Reveal key={volunteer.id} delay={(i % 6) * 0.05}>
-                  <VolunteerCard volunteer={volunteer} />
-                </Reveal>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-10">
-              <EmptyState
-                icon={Award}
-                title={t.home.recognitionEmptyTitle}
-                description={t.home.recognitionEmptyText}
-              />
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Community — leadership tree */}
-      <CommunitySection t={t} members={members} />
-
-      {/* Gallery */}
-      <section className="border-b border-line bg-white">
-        <div className="container-site py-16 lg:py-24">
-          <Reveal>
-            <SectionHeader
-              eyebrow={t.home.galleryEyebrow}
-              title={t.home.galleryTitle}
-              description={t.home.galleryDescription}
-            />
-          </Reveal>
-          {albums.length > 0 ? (
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {albums.slice(0, 6).map((album, i) => (
-                <Reveal key={album.id} delay={(i % 3) * 0.06}>
-                  <AlbumCard album={album} />
-                </Reveal>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-10">
-              <EmptyState
-                title={t.home.galleryEmptyTitle}
-                description={t.home.galleryEmptyText}
-              />
-            </div>
-          )}
-          <Reveal className="mt-8 text-center">
-            <Button asChild variant="outline">
-              <Link href="/gallery">
-                {t.home.openGallery}
-                <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
-              </Link>
-            </Button>
-          </Reveal>
-        </div>
-      </section>
-
       {/* Notices + Join CTA */}
       <section className="border-b border-line bg-mist/50">
         <div className="container-site py-16 lg:py-24">
@@ -352,6 +279,49 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Community — leadership tree */}
+      <CommunitySection t={t} members={members} />
+
+      {/* Team */}
+      <TeamSection t={t} team={team} />
+
+      {/* Gallery */}
+      <section className="border-b border-line bg-white">
+        <div className="container-site py-16 lg:py-24">
+          <Reveal>
+            <SectionHeader
+              eyebrow={t.home.galleryEyebrow}
+              title={t.home.galleryTitle}
+              description={t.home.galleryDescription}
+            />
+          </Reveal>
+          {albums.length > 0 ? (
+            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {albums.slice(0, 6).map((album, i) => (
+                <Reveal key={album.id} delay={(i % 3) * 0.06}>
+                  <AlbumCard album={album} />
+                </Reveal>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-10">
+              <EmptyState
+                title={t.home.galleryEmptyTitle}
+                description={t.home.galleryEmptyText}
+              />
+            </div>
+          )}
+          <Reveal className="mt-8 text-center">
+            <Button asChild variant="outline">
+              <Link href="/gallery">
+                {t.home.openGallery}
+                <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
+              </Link>
+            </Button>
+          </Reveal>
+        </div>
+      </section>
+
       {/* Closing call — join the movement */}
       <section className="relative overflow-hidden bg-brand-dark">
         <div
@@ -378,7 +348,7 @@ export default async function HomePage() {
                   </Link>
                 </Button>
                 <Button asChild size="lg" className="bg-crescent hover:bg-crescent-dark">
-                  <Link href="/volunteers">{t.home.meetOurVolunteers}</Link>
+                  <Link href="/team">{t.home.meetOurTeam}</Link>
                 </Button>
               </div>
               <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-white/70">

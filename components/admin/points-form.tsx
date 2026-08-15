@@ -10,10 +10,10 @@ import { POINT_CATEGORIES } from "@/lib/constants";
 type PointKey = keyof typeof POINT_CATEGORIES;
 
 export function PointsForm({
-  volunteerId,
+  teamMemberId,
   pointValues,
 }: {
-  volunteerId: string;
+  teamMemberId: string;
   /** Per-category point values from Admin → Settings; falls back to defaults. */
   pointValues?: Partial<Record<PointKey, number>>;
 }) {
@@ -36,7 +36,7 @@ export function PointsForm({
     setBusy(true);
     try {
       const fd = new FormData(e.currentTarget);
-      fd.set("volunteerId", volunteerId);
+      fd.set("teamMemberId", teamMemberId);
       fd.set("category", category);
       const result = await addPoints(fd);
       if (result.success) {

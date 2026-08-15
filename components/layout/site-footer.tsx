@@ -18,7 +18,7 @@ import { getSettings } from "@/lib/queries";
 import { getServerMessages } from "@/lib/i18n/server";
 
 const QUICK_LINKS = [
-  { key: "volunteers", href: "/volunteers" },
+  { key: "team", href: "/team" },
   { key: "events", href: "/events" },
   { key: "activities", href: "/activities" },
   { key: "training", href: "/training" },

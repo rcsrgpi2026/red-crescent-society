@@ -10,7 +10,7 @@ import {
   ResponsiveTable,
   type Column,
 } from "@/components/admin/responsive-table";
-import { adminGetCertificates, adminGetVolunteers } from "@/lib/queries";
+import { adminGetCertificates, adminGetTeamMembers } from "@/lib/queries";
 import { issueCertificate, deleteCertificate } from "@/lib/admin-actions";
 import { formatDate } from "@/lib/constants";
 import { Input, Label } from "@/components/ui";
@@ -18,17 +18,17 @@ import { Input, Label } from "@/components/ui";
 export default async function AdminCertificatesPage() {
   const [certificates, volunteers] = await Promise.all([
     adminGetCertificates(),
-    adminGetVolunteers({ status: "APPROVED" }),
+    adminGetTeamMembers({ status: "APPROVED" }),
   ]);
 
   const volunteerNames = new Map(volunteers.map((v) => [v.id, v.name]));
 
   const columns: Column<(typeof certificates)[number]>[] = [
     {
-      header: "Volunteer",
+      header: "Team Member",
       render: (c) => (
         <span className="font-medium text-foreground">
-          {volunteerNames.get(c.volunteer_id) ?? "Volunteer"}
+          {volunteerNames.get(c.volunteer_id) ?? "Team Member"}
         </span>
       ),
     },
@@ -55,7 +55,7 @@ export default async function AdminCertificatesPage() {
       <AdminPageHeader
         icon={Award}
         title="Certificates"
-        description="Issue verifiable certificates to volunteers. Each one gets a unique public verification link."
+        description="Issue verifiable certificates to team members. Each one gets a unique public verification link."
         tone="bg-gradient-to-br from-amber-400 to-orange-500"
         actions={
           <AdminFormDialog
@@ -66,16 +66,16 @@ export default async function AdminCertificatesPage() {
               </Button>
             }
             title="Issue certificate"
-            description="The volunteer receives a unique verification URL."
+            description="The team member receives a unique verification URL."
             action={issueCertificate}
             submitLabel="Issue certificate"
           >
             <>
                 <div>
-                  <Label htmlFor="c-volunteer">Volunteer</Label>
+                  <Label htmlFor="c-volunteer">Team Member</Label>
                   <select
                     id="c-volunteer"
-                    name="volunteerId"
+                    name="teamMemberId"
                     className="mt-1.5 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
                     required
                   >

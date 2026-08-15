@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Phone, ChevronDown, HeartPulse, LogIn } from "lucide-react";
+import { Menu, Phone, ChevronDown, HeartPulse, LogIn, LayoutDashboard, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,13 +21,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SiteLogo } from "@/components/layout/site-logo";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { useLocale } from "@/components/providers/locale-provider";
 import { stripLocalePrefix } from "@/lib/i18n";
+import { createClient } from "@/lib/supabase/client";
 
 type NavKey = keyof typeof import("@/lib/i18n/messages").messages.nav;
 
 const NAV_LINKS: { key: NavKey; href: string; highlight?: boolean }[] = [
-  { key: "volunteers", href: "/volunteers" },
+  { key: "team", href: "/team" },
   { key: "bloodSupport", href: "/blood-support", highlight: true },
   { key: "events", href: "/events" },
   { key: "activities", href: "/activities" },
@@ -58,6 +60,7 @@ export function SiteHeader({
 }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ id: string; role: string | null } | null>(null);
   const pathname = usePathname();
   const { t } = useLocale();
 
@@ -68,11 +71,60 @@ export function SiteHeader({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    const supabase = createClient();
+    async function loadUser() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .maybeSingle();
+        setCurrentUser({ id: session.user.id, role: profile?.role ?? null });
+      } else {
+        setCurrentUser(null);
+      }
+    }
+    loadUser();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        loadUser();
+      } else {
+        setCurrentUser(null);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   const isActive = (href: string) => {
     const p = stripLocalePrefix(pathname);
     if (href === "/") return p === "/";
     return p.startsWith(href);
   };
+
+  const isStaff =
+    currentUser?.role === "SUPER_ADMIN" ||
+    currentUser?.role === "ADMIN" ||
+    currentUser?.role === "VOLUNTEER_MANAGER" ||
+    currentUser?.role === "EVENT_MANAGER" ||
+    currentUser?.role === "CONTENT_MANAGER";
+
+  const dashboardHref = isStaff
+    ? "/admin"
+    : currentUser?.role === "STUDENT"
+      ? "/student"
+      : "/volunteer";
+
+  const dashboardLabel = isStaff
+    ? "Admin Dashboard"
+    : currentUser?.role === "STUDENT"
+      ? "Student Portal"
+      : "Team Member Portal";
 
   return (
     <header className="sticky top-0 z-50">
@@ -101,16 +153,13 @@ export function SiteHeader({
       {/* Main bar */}
       <div
         className={cn(
-          "border-b bg-white/95 backdrop-blur transition-shadow",
+          "border-b bg-white transition-shadow",
           scrolled ? "border-line shadow-sm" : "border-transparent"
         )}
       >
         <div className="container-site flex h-16 items-center justify-between gap-4 lg:h-[4.5rem]">
-          {/* Identity — min-w-0 + truncate so the title can shrink instead of
-              forcing the header wider than the viewport on small phones. */}
+          {/* Identity */}
           <Link href="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label={t.nav.home}>
-            {/* The institute (RPI) logo only shows on sm+ — the society logo
-                is enough in the compact mobile header. */}
             <SiteLogo variant="institute" className="hidden w-8 shrink-0 sm:block sm:w-10" />
             <span className="hidden h-9 w-px bg-line sm:block" aria-hidden />
             <span className="flex min-w-0 items-center gap-2">
@@ -162,32 +211,44 @@ export function SiteHeader({
             <div className="hidden sm:block">
               <LanguageSwitcher />
             </div>
-            {/* One unified login button on every screen size — icon only, with
-                the Student and Volunteer portals inside its dropdown. The
-                language switcher lives in the hamburger menu on mobile. */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="rounded-lg border-line"
-                  aria-label={t.nav.login}
-                >
-                  <LogIn className="h-4.5 w-4.5" aria-hidden />
+
+            {currentUser ? (
+              <div className="hidden items-center gap-2 sm:flex">
+                <Button asChild size="sm" variant="outline" className="gap-1.5 border-line">
+                  <Link href={dashboardHref}>
+                    {isStaff ? <LayoutDashboard className="h-4 w-4 text-brand" /> : <User className="h-4 w-4 text-brand" />}
+                    {dashboardLabel}
+                  </Link>
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem asChild>
-                  <Link href="/student/login">{t.nav.studentPortal}</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/volunteer/login">{t.nav.volunteerPortal}</Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button asChild size="sm" className="hidden sm:inline-flex">
-              <Link href="/volunteer/login">{t.nav.joinUs}</Link>
-            </Button>
+                <SignOutButton size="sm" variant="ghost" className="text-muted-foreground hover:text-crescent" />
+              </div>
+            ) : (
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-lg border-line"
+                      aria-label={t.nav.login}
+                    >
+                      <LogIn className="h-4.5 w-4.5" aria-hidden />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem asChild>
+                      <Link href="/student/login">{t.nav.studentPortal}</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/volunteer/login">{t.nav.volunteerPortal}</Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button asChild size="sm" className="hidden sm:inline-flex">
+                  <Link href="/volunteer/login">{t.nav.joinUs}</Link>
+                </Button>
+              </>
+            )}
 
             {/* Mobile menu */}
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -242,11 +303,31 @@ export function SiteHeader({
                   <div className="mt-3">
                     <LanguageSwitcher />
                   </div>
-                  <Button asChild size="lg" className="mt-3">
-                    <Link href="/volunteer/login" onClick={() => setMenuOpen(false)}>
-                      {t.nav.joinUs}
-                    </Link>
-                  </Button>
+
+                  {currentUser ? (
+                    <div className="mt-4 space-y-2 border-t border-line pt-4">
+                      <Button asChild size="lg" className="w-full">
+                        <Link href={dashboardHref} onClick={() => setMenuOpen(false)}>
+                          {dashboardLabel}
+                        </Link>
+                      </Button>
+                      <SignOutButton className="w-full justify-center" />
+                    </div>
+                  ) : (
+                    <div className="mt-4 space-y-2 border-t border-line pt-4">
+                      <Button asChild size="lg" className="w-full">
+                        <Link href="/volunteer/login" onClick={() => setMenuOpen(false)}>
+                          {t.nav.joinUs}
+                        </Link>
+                      </Button>
+                      <Button asChild size="lg" variant="outline" className="w-full">
+                        <Link href="/student/login" onClick={() => setMenuOpen(false)}>
+                          {t.nav.studentPortal}
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
+
                   <Button asChild size="lg" variant="destructive" className="mt-2">
                     <Link href="/emergency" onClick={() => setMenuOpen(false)}>
                       {t.nav.emergencySupport}

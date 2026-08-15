@@ -7,16 +7,16 @@ export const messages = {
   meta: {
     siteName: "Rajshahi Polytechnic Institute Red Crescent Society",
     siteDescription:
-      "The Red Crescent Society unit of Rajshahi Polytechnic Institute — serving the community through blood support, first aid, disaster response, training and volunteerism.",
+      "The Red Crescent Society unit of Rajshahi Polytechnic Institute — serving the community through blood support, first aid, disaster response, training and community service.",
     home: {
       title: "Home",
       description:
-        "The Red Crescent Society unit of Rajshahi Polytechnic Institute — student volunteers serving through blood support, first aid, training and community service.",
+        "The Red Crescent Society unit of Rajshahi Polytechnic Institute — student team members serving through blood support, first aid, training and community service.",
     },
     about: {
       title: "About Us",
       description:
-        "Learn about the Rajshahi Polytechnic Institute Red Crescent Society — its mission, vision, history and the young volunteers behind it.",
+        "Learn about the Rajshahi Polytechnic Institute Red Crescent Society — its mission, vision, history and the young team members behind it.",
     },
     events: {
       title: "Events",
@@ -26,7 +26,7 @@ export const messages = {
     activities: {
       title: "Activities",
       description:
-        "Blood donation campaigns, first aid training, disaster preparedness and community service by the society's volunteers.",
+        "Blood donation campaigns, first aid training, disaster preparedness and community service by the society's team members.",
     },
     gallery: {
       title: "Gallery",
@@ -43,9 +43,9 @@ export const messages = {
         "First aid, CPR, disaster management and leadership training programs of the Red Crescent Society.",
     },
     volunteers: {
-      title: "Volunteers",
+      title: "Team",
       description:
-        "Meet the approved volunteers of the Rajshahi Polytechnic Institute Red Crescent Society.",
+        "Meet the approved team members of the Rajshahi Polytechnic Institute Red Crescent Society.",
     },
     community: {
       title: "Community",
@@ -70,7 +70,7 @@ export const messages = {
     emergency: {
       title: "Emergency Support",
       description:
-        "Emergency blood requests, volunteer help and emergency contacts for the Rajshahi Polytechnic Institute Red Crescent Society.",
+        "Emergency blood requests, team help and emergency contacts for the Rajshahi Polytechnic Institute Red Crescent Society.",
     },
     join: {
       title: "Join as a Volunteer",
@@ -192,20 +192,20 @@ export const messages = {
     contact: "Contact",
     bloodHelpline: "Blood Helpline: ",
     societyDefaultDescription:
-      "A student volunteer organization of Rajshahi Polytechnic Institute committed to humanity, service, blood support, first aid and disaster response.",
+      "A student service organization of Rajshahi Polytechnic Institute committed to humanity, service, blood support, first aid and disaster response.",
     anOfficialUnitOf: "An official society unit of",
-    volunteerServeRespond: "Volunteer. Serve. Respond. Make a Difference.",
+    volunteerServeRespond: "Serve. Respond. Make a Difference.",
     allRightsReserved: "All rights reserved.",
-    builtWithHumanity: "Built with humanity by the volunteers of the society.",
+    builtWithHumanity: "Built with humanity by the team of the society.",
   },
 
   home: {
     heroDefaultTitle: "Serve. Respond. Make a Difference.",
     heroDefaultSubtitle:
-      "We are the Red Crescent Society of Rajshahi Polytechnic Institute — student volunteers dedicated to humanity, blood support, first aid and disaster response in our community.",
+      "We are the Red Crescent Society of Rajshahi Polytechnic Institute — student team members dedicated to humanity, blood support, first aid and disaster response in our community.",
     heroBadgeInstitute: "Rajshahi Polytechnic Institute",
     heroBadgeUnit: "Bangladesh Red Crescent Society Unit",
-    becomeVolunteer: "Become a Volunteer",
+    becomeVolunteer: "Join the Team",
     bloodSupport: "Blood Support",
     heroFeatureBlood: "Blood Donation",
     heroFeatureBloodSub: "Every drop saves a life",
@@ -215,10 +215,11 @@ export const messages = {
     heroFeatureDisasterSub: "Ready to serve",
     humanityService: "Humanity · Service",
     servingSince: "Serving the campus and community since day one",
-    heroPhotoAlt: "Red Crescent volunteers serving the community",
-    heroPhotoAltN: "Red Crescent volunteers serving the community — photo {n}",
+    heroPhotoAlt: "Red Crescent team members serving the community",
+    heroPhotoAltN: "Red Crescent team members serving the community — photo {n}",
     heroSlideIndicator: "Slide {n} of {total}",
     liveNeed: "LIVE NEED",
+    liveNeedCta: "View status",
     bloodNeededAt: "{group} needed at {hospital}",
     bloodNeeded: "{group} blood needed",
     bloodDrive: "Blood Drive",
@@ -228,7 +229,7 @@ export const messages = {
     aboutEyebrow: "About the Society",
     aboutTitle: "A youth movement for humanity, right from our campus",
     aboutText:
-      "The Rajshahi Polytechnic Institute Red Crescent Society is the official humanitarian youth unit of Rajshahi Polytechnic Institute. Our volunteers organize blood donation camps, learn first aid and CPR, prepare for disasters, and serve the community around us — guided by the fundamental principles of the Red Cross and Red Crescent Movement.",
+      "The Rajshahi Polytechnic Institute Red Crescent Society is the official humanitarian youth unit of Rajshahi Polytechnic Institute. Our team members organize blood donation camps, learn first aid and CPR, prepare for disasters, and serve the community around us — guided by the fundamental principles of the Red Cross and Red Crescent Movement.",
     aboutTags: {
       bloodSupport: "Blood Support",
       firstAid: "First Aid",
@@ -257,7 +258,7 @@ export const messages = {
       },
     ],
     stats: {
-      activeVolunteers: "Active Volunteers",
+      activeVolunteers: "Active Team Members",
       activeBloodDonors: "Active Blood Donors",
       eventsCompleted: "Events Completed",
       bloodUnitsDonated: "Blood Units Donated",
@@ -271,15 +272,15 @@ export const messages = {
     activitiesEyebrow: "On the Ground",
     activitiesTitle: "Stories from the field",
     activitiesDescription:
-      "Reports from camps, trainings and campaigns — written by the volunteers who were there.",
+      "Reports from camps, trainings and campaigns — written by the team members who were there.",
     activitiesEmptyTitle: "No activities published yet",
     activitiesEmptyText:
-      "Our volunteers are out serving the community — activity reports will appear here.",
+      "Our team members are out serving the community — activity reports will appear here.",
     viewAllActivities: "View All Activities",
     bloodEyebrow: "Blood Support",
     bloodTitle: "Every drop of blood can be a lifeline",
     bloodText:
-      "Our blood support platform connects patients and families with volunteer donors from our campus and community. Find a donor, place an emergency request, or register yourself to save a life.",
+      "Our blood support platform connects patients and families with donors from our campus and community. Find a donor, place an emergency request, or register yourself to save a life.",
     bloodBullets: [
       "Search donors by blood group and area",
       "Place urgent blood requests — status tracked transparently",
@@ -292,8 +293,8 @@ export const messages = {
     bloodEmergencySub: "Act fast — every minute matters",
     bloodCardNeedBlood: "Need blood?",
     bloodCardNeedBloodText: "Submit an emergency request and we mobilize donors.",
-    bloodCardNeedVolunteers: "Need volunteers?",
-    bloodCardNeedVolunteersText: "Request volunteer help for any humanitarian need.",
+    bloodCardNeedVolunteers: "Need team help?",
+    bloodCardNeedVolunteersText: "Request team help for any humanitarian need.",
     bloodCardEmergencyContact: "Emergency contact",
     bloodCardContactFallback: "Contact info is set from the admin panel.",
     bloodHelplineLabel: "Blood helpline: {n}",
@@ -309,7 +310,7 @@ export const messages = {
     trainingEyebrow: "Be Ready",
     trainingTitle: "Training that prepares you to help",
     trainingDescription:
-      "From first aid to disaster management — training builds the skills our volunteers serve with.",
+      "From first aid to disaster management — training builds the skills our team members serve with.",
     trainingItems: [
       {
         title: "First Aid",
@@ -330,11 +331,11 @@ export const messages = {
     ],
     exploreTraining: "Explore Training Programs",
     joinEyebrow: "Join the movement",
-    joinTitle: "Become a Red Crescent volunteer",
+    joinTitle: "Become a Red Crescent team member",
     joinText:
-      "Join hundreds of students learning to serve. As a volunteer you receive training, earn points for every contribution, get a digital membership card, and become part of a team that makes a real difference.",
+      "Join hundreds of students learning to serve. As a team member you receive training, earn points for every contribution, get a digital membership card, and become part of a team that makes a real difference.",
     applyToJoin: "Apply to Join",
-    meetOurVolunteers: "Meet Our Volunteers",
+    meetOurTeam: "Meet the Team",
     howPointsWork: "How points work",
     pointsRows: [
       { label: "Event participation" },
@@ -362,7 +363,7 @@ export const messages = {
     noticesEyebrow: "Notice Board",
     noticesTitle: "Official announcements",
     noticesText:
-      "Meetings, calls for volunteers, blood drives and society updates are published here by the society leadership.",
+      "Meetings, calls for team members, blood drives and society updates are published here by the society leadership.",
     viewAllNotices: "View All Notices",
     noticesEmptyTitle: "No notices published yet",
     noticesEmptyText:
@@ -370,14 +371,14 @@ export const messages = {
     contactEyebrow: "Contact Us",
     contactTitle: "Want to know more or partner with us?",
     contactText:
-      "Reach the society leadership through the contact page — whether you are a student who wants to join, an organization seeking volunteers, or a blood bank coordinating a camp.",
+      "Reach the society leadership through the contact page — whether you are a student who wants to join, an organization seeking team help, or a blood bank coordinating a camp.",
     contactEmail: "Email: ",
     contactPhone: "Phone: ",
     contactLocation: "Location: ",
     contactAddressFallback: "Rajshahi Polytechnic Institute, Rajshahi",
     contactEmergencyTitle: "Emergency?",
     contactEmergencyText:
-      "Blood needed, or volunteers required at short notice? Use the emergency section — it is monitored by the society leadership.",
+      "Blood needed, or team members required at short notice? Use the emergency section — it is monitored by the society leadership.",
     openEmergencySupport: "Open Emergency Support",
   },
 
@@ -385,23 +386,23 @@ export const messages = {
     heroEyebrow: "About Us",
     heroTitle: "A humanitarian youth society, rooted in the campus",
     heroDescription:
-      "The Red Crescent Society of Rajshahi Polytechnic Institute is a student volunteer unit of the Bangladesh Red Crescent Society — serving our campus and community.",
+      "The Red Crescent Society of Rajshahi Polytechnic Institute is a student service unit of the Bangladesh Red Crescent Society — serving our campus and community.",
     introLabel: "Humanitarian Youth Unit",
     introText:
       "Guided by the seven fundamental principles of the Red Cross and Red Crescent Movement.",
     introEyebrow: "Introduction",
     introTitle: "Students serving with humanity",
     introText1:
-      "The society brings together students of Rajshahi Polytechnic Institute who share one conviction — that young people can make their community safer, healthier and more caring. Through blood donation camps, first aid training, disaster preparedness and awareness campaigns, our volunteers put that conviction into action every semester.",
+      "The society brings together students of Rajshahi Polytechnic Institute who share one conviction — that young people can make their community safer, healthier and more caring. Through blood donation camps, first aid training, disaster preparedness and awareness campaigns, our team members put that conviction into action every semester.",
     introText2:
       "Working under the banner of the Bangladesh Red Crescent Society and with the support of the institute administration, the society is a place to learn real skills, take real responsibility, and serve real people.",
     missionTitle: "Our Mission",
     missionText:
-      "To develop a generation of student volunteers who prevent and alleviate human suffering — through blood support, first aid, disaster preparedness, health awareness and community service.",
+      "To develop a generation of student team members who prevent and alleviate human suffering — through blood support, first aid, disaster preparedness, health awareness and community service.",
     visionTitle: "Our Vision",
     visionText:
       "A campus and community where every student knows how to help, every patient in need of blood finds a donor, and humanity comes first in every emergency.",
-    whatVolunteersDoTitle: "What volunteers do",
+    whatVolunteersDoTitle: "What team members do",
     whatVolunteersDo: [
       "Organize and support blood donation campaigns",
       "Serve as first aid responders at campus events",
@@ -434,12 +435,12 @@ export const messages = {
     foundersEmptyTitle: "Founders & principal will be listed here",
     foundersEmptyText:
       "Add the founders and the institute principal from the admin panel.",
-    teamEyebrow: "Leadership",
+    teamEyebrow: "Our team members",
     teamTitle: "Meet the team",
-    teamDescription: "Faculty advisors and student leaders who guide the society.",
-    teamEmptyTitle: "Team members will be listed here",
+    teamDescription: "The approved team members of the society who serve the campus and community.",
+    teamEmptyTitle: "No team members yet",
     teamEmptyText:
-      "The society leadership can manage team members from the admin panel.",
+      "Approved team members will appear here as they join the society.",
     wantToBePart: "Want to be part of the team?",
   },
 
@@ -464,7 +465,7 @@ export const messages = {
     eventCompletedText: "Thanks to everyone who participated!",
     registrationClosed: "Registration is closed",
     registrationClosedText: "Check the notice board for updates.",
-    volunteersParticipating: "Volunteers participating",
+    volunteersParticipating: "Team members participating",
     eventReport: "Event report",
     descriptionFallback: "{title} — event of the Red Crescent Society.",
   },
@@ -473,7 +474,7 @@ export const messages = {
     heroEyebrow: "In Action",
     heroTitle: "Our activities",
     heroDescription:
-      "Everything our volunteers do — from blood camps to campus cleanups — documented with real reports.",
+      "Everything our team members do — from blood camps to campus cleanups — documented with real reports.",
     emptyTitle: "No activities published yet",
     emptyText: "The first activity report will appear here once published.",
     allActivities: "All activities",
@@ -481,9 +482,9 @@ export const messages = {
     impact: "Impact",
     wantToJoin: "Want to join the next one?",
     wantToJoinText:
-      "Volunteers are always welcome. Apply to join the society and get notified about upcoming activities.",
-    becomeVolunteer: "Become a volunteer →",
-    volunteersParticipating: "Volunteers participating",
+      "Team members are always welcome. Apply to join the society and get notified about upcoming activities.",
+    becomeVolunteer: "Join the team →",
+    volunteersParticipating: "Team members participating",
     morePhotos: "More photos",
   },
 
@@ -501,7 +502,7 @@ export const messages = {
     heroEyebrow: "Notice Board",
     heroTitle: "Official announcements",
     heroDescription:
-      "Meetings, blood drives, calls for volunteers and society updates — straight from the leadership.",
+      "Meetings, blood drives, calls for team members and society updates — straight from the leadership.",
     emptyTitle: "No notices published yet",
     emptyText: "Announcements from the society will appear here.",
     allNotices: "All notices",
@@ -515,54 +516,52 @@ export const messages = {
     heroEyebrow: "Be Ready",
     heroTitle: "Training programs",
     heroDescription:
-      "Practical skills that turn volunteers into responders — first aid, CPR, disaster management and leadership.",
+      "Practical skills that turn team members into responders — first aid, CPR, disaster management and leadership.",
     emptyTitle: "No training programs scheduled",
     emptyText: "Training sessions will be announced here and on the notice board.",
     certificatesNote:
-      "volunteers who complete training receive certificates with a unique verification link that can be shared and verified publicly.",
+      "team members who complete training receive certificates with a unique verification link that can be shared and verified publicly.",
     certificatesLabel: "Certificates:",
     joinToAccess: "Join to access training",
   },
 
   volunteers: {
-    heroEyebrow: "Our People",
-    heroTitle: "Volunteers of the society",
+    heroEyebrow: "Our Team",
+    heroTitle: "Meet the Team",
     heroDescription:
-      "Approved volunteers with public profiles. Search by name, department or semester — or join them.",
-    becomeVolunteer: "Become a Volunteer",
+      "Approved team members with public profiles. Search by name, department or semester — or join them.",
+    becomeVolunteer: "Join the Team",
     searchPlaceholder: "Search by name…",
-    searchAria: "Search volunteers by name",
+    searchAria: "Search team members by name",
     allDepartments: "All departments",
     allSemesters: "All semesters",
-    showing: "Showing {n} volunteer{s}",
-    emptyTitle: "No volunteers found",
-    emptyText: "Try different filters, or check back soon — approved volunteers appear here.",
+    showing: "Showing {n} team member{s}",
+    emptyTitle: "No team members found",
+    emptyText: "Try different filters, or check back soon — approved team members appear here.",
     clear: "Clear",
     memberIdLabel: "Member ID: ",
-    verifiedVolunteer: "Verified volunteer",
+    verifiedVolunteer: "Team member",
     verifiedText:
       "This profile belongs to an approved member of the Rajshahi Polytechnic Institute Red Crescent Society.",
     privacyNote: "Privacy note",
     privacyText:
-      "Contact details are never shown on public profiles. To reach this volunteer, contact the society team through the blood support desk or the contact page.",
-    becomeVolunteerToo: "Become a volunteer too",
+      "Contact details are never shown on public profiles. To reach this team member, contact the society team through the blood support desk or the contact page.",
+    becomeVolunteerToo: "Join the team too",
     joined: "Joined: ",
     bloodGroupLabel: "Blood group: ",
-    volunteerPoints: "Volunteer points: ",
+    volunteerPoints: "Points: ",
     achievements: "Achievements",
     community: "Community",
     basedIn: "Based in {area} — part of the society's community service network.",
     memberOfSociety: "Member of the society",
-    memberIdCard: "Member ID Card",
-    scanToOpen: "Scan to open this volunteer's public profile",
-    volunteerOf: "{name} — volunteer of {position}",
+    volunteerOf: "{name} — team member of {position}",
   },
 
   blood: {
     heroEyebrow: "Blood Support",
     heroTitle: "Find a donor. Be a donor.",
     heroDescription:
-      "A safe platform connecting patients with volunteer blood donors from our campus and community. Phone numbers are never exposed publicly.",
+      "A safe platform connecting patients with blood donors from our campus and community. Phone numbers are never exposed publicly.",
     requestBlood: "Request Blood",
     registerAsDonor: "Register as Donor",
     availableDonors: "Available donors",
@@ -584,7 +583,7 @@ export const messages = {
     donateLife: "Donate Life",
     registerTitle: "Register as a blood donor",
     registerText:
-      "One donation can save up to three lives. By registering, you join a network of volunteers ready to help patients in our community. The society team will only contact you when your blood group is needed.",
+      "One donation can save up to three lives. By registering, you join a network of donors ready to help patients in our community. The society team will only contact you when your blood group is needed.",
     registerBullets: [
       "You must be healthy and at least 18 years old",
       "Minimum 56 days between donations (safe interval)",
@@ -644,7 +643,7 @@ export const messages = {
       "During institute hours — check the notice board for meeting schedules",
     dropByTitle: "Drop by in person",
     dropByText:
-      "Visit the society's corner in the campus common room, or find us at our blood camps and awareness stalls — volunteers are always happy to talk.",
+      "Visit the society's corner in the campus common room, or find us at our blood camps and awareness stalls — team members are always happy to talk.",
     sendUsMessage: "Send us a message",
     sendUsMessageText: "Messages go directly to the society leadership dashboard.",
   },
@@ -659,10 +658,10 @@ export const messages = {
     needBloodTitle: "Need blood?",
     needBloodText:
       "Submit an emergency blood request. Our team contacts matching donors and keeps you updated on the status.",
-    needVolunteersTitle: "Need volunteer help?",
+    needVolunteersTitle: "Need team help?",
     needVolunteersText:
-      "Organizing a blood camp, an event, or a community drive? Our volunteers can help. Send us the details through the contact page.",
-    requestVolunteerHelp: "Request Volunteer Help",
+      "Organizing a blood camp, an event, or a community drive? Our team members can help. Send us the details through the contact page.",
+    requestVolunteerHelp: "Request Team Help",
     emergencyContacts: "Emergency contacts",
     bloodHelpline: "Blood helpline",
     societyContact: "Society contact",

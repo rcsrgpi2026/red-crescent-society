@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, BadgeCheck, Camera, PhoneCall, UserRound, Sparkles } from "lucide-react";
-import { adminGetVolunteer, adminGetPoints, getSettings } from "@/lib/queries";
-import { submitVolunteerStatus, deleteVolunteer, updateVolunteerPhoto } from "@/lib/admin-actions";
+import { adminGetTeamMember, adminGetPoints, getSettings } from "@/lib/queries";
+import { submitTeamMemberStatus, deleteTeamMember, updateTeamMemberPhoto } from "@/lib/admin-actions";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
 import { AdminFormDialog } from "@/components/admin/admin-form-dialog";
@@ -12,14 +12,14 @@ import { PointsForm } from "@/components/admin/points-form";
 import { Reveal } from "@/components/shared/reveal";
 import { POINT_CATEGORIES, formatDateTime } from "@/lib/constants";
 
-export default async function AdminVolunteerDetailPage({
+export default async function AdminTeamMemberDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
   const [volunteer, settings] = await Promise.all([
-    adminGetVolunteer(id),
+    adminGetTeamMember(id),
     getSettings(),
   ]);
   if (!volunteer) notFound();
@@ -62,11 +62,11 @@ export default async function AdminVolunteerDetailPage({
     <div className="space-y-6">
       <Reveal>
         <Link
-          href="/admin/volunteers"
+          href="/admin/team"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-brand-dark"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
-          All volunteers
+          All team members
         </Link>
       </Reveal>
 
@@ -91,8 +91,8 @@ export default async function AdminVolunteerDetailPage({
                   <Camera className="h-3.5 w-3.5" aria-hidden />
                 </button>
               }
-              title="Volunteer photo"
-              action={updateVolunteerPhoto}
+              title="Team member photo"
+              action={updateTeamMemberPhoto}
               submitLabel="Save photo"
             >
               <>
@@ -102,7 +102,7 @@ export default async function AdminVolunteerDetailPage({
                   label="Photo"
                   defaultValue={volunteer.photo_url}
                   folder="volunteers"
-                  description="Shown on the public volunteer profile."
+                  description="Shown on the public team member profile."
                 />
               </>
             </AdminFormDialog>
@@ -119,7 +119,7 @@ export default async function AdminVolunteerDetailPage({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {volunteer.status !== "APPROVED" && (
-            <form action={submitVolunteerStatus}>
+            <form action={submitTeamMemberStatus}>
               <input type="hidden" name="id" value={volunteer.id} />
               <input type="hidden" name="status" value="APPROVED" />
               <button
@@ -133,7 +133,7 @@ export default async function AdminVolunteerDetailPage({
           )}
           {volunteer.status !== "REJECTED" && volunteer.status !== "PENDING" && null}
           {volunteer.status === "PENDING" && (
-            <form action={submitVolunteerStatus}>
+            <form action={submitTeamMemberStatus}>
               <input type="hidden" name="id" value={volunteer.id} />
               <input type="hidden" name="status" value="REJECTED" />
               <button
@@ -145,11 +145,11 @@ export default async function AdminVolunteerDetailPage({
             </form>
           )}
           <ConfirmDelete
-            action={deleteVolunteer}
+            action={deleteTeamMember}
             id={volunteer.id}
             label="Remove"
-            description="Delete this volunteer record and all linked data? This cannot be undone."
-            redirectTo="/admin/volunteers"
+            description="Delete this team member record and all linked data? This cannot be undone."
+            redirectTo="/admin/team"
           />
         </div>
       </div>
@@ -197,14 +197,14 @@ export default async function AdminVolunteerDetailPage({
           <div className="rounded-2xl border border-line bg-white p-6">
             <h2 className="flex items-center gap-2 font-semibold text-foreground">
               <Sparkles className="h-4 w-4 text-amber-500" aria-hidden />
-              Volunteer points
+              Points
             </h2>
             <p className="mt-1 text-3xl font-bold text-brand-dark">
               {volunteer.points}
               <span className="ml-1 text-sm font-medium text-muted-foreground">total</span>
             </p>
             <div className="mt-5">
-              <PointsForm volunteerId={volunteer.id} pointValues={pointValues} />
+              <PointsForm teamMemberId={volunteer.id} pointValues={pointValues} />
             </div>
             {points.length > 0 && (
               <ul className="mt-5 divide-y divide-line">
@@ -230,7 +230,7 @@ export default async function AdminVolunteerDetailPage({
             <div className="flex items-start gap-3 rounded-2xl border border-line bg-mist/50 p-5 text-sm text-muted-foreground">
               <PhoneCall className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
               <p>
-                Contact this volunteer directly at{" "}
+                Contact this team member directly at{" "}
                 <span className="font-semibold text-foreground">{volunteer.phone}</span>. Never
                 share contact details publicly.
               </p>

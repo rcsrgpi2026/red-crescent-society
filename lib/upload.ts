@@ -39,6 +39,14 @@ export async function uploadImageToStorage(
   folder: string,
   options: UploadOptions = {}
 ): Promise<string> {
+  if (file.size > MAX_IMAGE_SIZE) {
+    throw new Error(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is 5 MB.`);
+  }
+
+  if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+    throw new Error(`Invalid file type (${file.type || "unknown"}). Allowed formats: ${ACCEPTED_IMAGE_LABEL}.`);
+  }
+
   const uploadFile =
     options.compress === false
       ? file
@@ -47,8 +55,9 @@ export async function uploadImageToStorage(
         });
 
   const supabase = createClient();
-  const ext = uploadFile.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const ext = uploadFile.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "webp";
+  const sanitizedFolder = folder.replace(/[^a-zA-Z0-9_-]/g, "");
+  const path = `${sanitizedFolder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const { error } = await supabase.storage.from("images").upload(path, uploadFile, {
     cacheControl: "3600",
     upsert: false,
@@ -67,10 +76,18 @@ export async function uploadLogoToStorage(
   file: File,
   slot: "rpi" | "rcs"
 ): Promise<string> {
+  if (file.size > MAX_IMAGE_SIZE) {
+    throw new Error(`Logo file is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is 5 MB.`);
+  }
+
+  if (!ACCEPTED_LOGO_TYPES.includes(file.type)) {
+    throw new Error(`Invalid logo file type. Allowed formats: ${ACCEPTED_LOGO_LABEL}.`);
+  }
+
   const uploadFile = await compressImage(file, { maxDimension: 1024, quality: 0.9 });
 
   const supabase = createClient();
-  const ext = uploadFile.name.split(".").pop()?.toLowerCase() || "png";
+  const ext = uploadFile.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
   const path = `logos/${slot === "rpi" ? "rpi-logo" : "rcr-logo"}.${ext}`;
   const { error } = await supabase.storage.from("logos").upload(path, uploadFile, {
     cacheControl: "3600",

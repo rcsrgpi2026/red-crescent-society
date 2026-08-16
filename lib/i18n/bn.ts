@@ -205,6 +205,8 @@ export const bn: Messages = {
     volunteerServeRespond: "সেবা করুন। সাড়া দিন। পরিবর্তন আনুন।",
     allRightsReserved: "সর্বস্বত্ব সংরক্ষিত।",
     builtWithHumanity: "সোসাইটির টিমের মানবিকতায় তৈরি।",
+    foundBug: "বাগ পেয়েছেন? ডেভেলপারের সাথে যোগাযোগ করুন",
+    here: "এখানে",
   },
 
   home: {
@@ -214,6 +216,7 @@ export const bn: Messages = {
     heroBadgeInstitute: "রাজশাহী পলিটেকনিক ইনস্টিটিউট",
     heroBadgeUnit: "বাংলাদেশ রেড ক্রিসেন্ট সোসাইটি ইউনিট",
     becomeVolunteer: "টিমে যোগ দিন",
+    becomeDonor: "দাতা হোন",
     bloodSupport: "রক্ত সহায়তা",
     heroFeatureBlood: "রক্তদান",
     heroFeatureBloodSub: "প্রতিটি ফোঁটা বাঁচায় একটি জীবন",

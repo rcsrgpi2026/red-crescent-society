@@ -203,6 +203,8 @@ export const messages = {
     volunteerServeRespond: "Serve. Respond. Make a Difference.",
     allRightsReserved: "All rights reserved.",
     builtWithHumanity: "Built with humanity by the team of the society.",
+    foundBug: "Found a bug? Contact the developer",
+    here: "here",
   },
 
   home: {
@@ -212,6 +214,7 @@ export const messages = {
     heroBadgeInstitute: "Rajshahi Polytechnic Institute",
     heroBadgeUnit: "Bangladesh Red Crescent Society Unit",
     becomeVolunteer: "Join the Team",
+    becomeDonor: "Be a Donor",
     bloodSupport: "Blood Support",
     heroFeatureBlood: "Blood Donation",
     heroFeatureBloodSub: "Every drop saves a life",

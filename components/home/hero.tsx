@@ -156,7 +156,7 @@ export function Hero({
             {heroSubtitle}
           </motion.p>
 
-          <motion.div {...anim} custom={3} variants={fadeUp} className="mt-8 flex flex-wrap items-center gap-3">
+          <motion.div {...anim} custom={3} variants={fadeUp} className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Button asChild size="lg" className="bg-crescent hover:bg-crescent-dark">
               <Link href="/blood-support/request">
                 <Droplets className="mr-1.5 h-4 w-4" aria-hidden />
@@ -169,8 +169,8 @@ export function Hero({
               variant="outline"
               className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
             >
-              <Link href="/volunteer/login">
-                {t.home.becomeVolunteer}
+              <Link href="/blood-support#donor-registration">
+                {t.home.becomeDonor}
                 <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
               </Link>
             </Button>

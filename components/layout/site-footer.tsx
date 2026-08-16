@@ -242,6 +242,17 @@ export async function SiteFooter() {
             © {new Date().getFullYear()} {societyName ?? t.meta.siteName}.{" "}
             {t.footer.allRightsReserved}
           </p>
+          <p className="text-center sm:text-left">
+            {t.footer.foundBug}{" "}
+            <a
+              href="https://wa.me/8801300124952"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-yellow-300 underline underline-offset-2 transition-colors hover:text-yellow-200"
+            >
+              {t.footer.here}
+            </a>
+          </p>
           <p className="hidden items-center gap-1.5 sm:flex">{t.footer.builtWithHumanity}</p>
         </div>
       </div>

@@ -1,13 +1,5 @@
 import Link from "next/link";
-import {
-  Droplets,
-  Users,
-  ArrowRight,
-  Megaphone,
-  Siren,
-  PhoneCall,
-  HeartPulse,
-} from "lucide-react";
+import { Droplets, ArrowRight, Megaphone, Siren, HeartPulse } from "lucide-react";
 import { Hero } from "@/components/home/hero";
 import { Stats } from "@/components/home/stats";
 import { AboutSection } from "@/components/home/about-section";
@@ -66,7 +58,6 @@ export default async function HomePage() {
     ]);
 
   const homepage = settings.homepage ?? {};
-  const contact = settings.contact ?? {};
   const emergency = settings.emergency ?? {};
   const society = settings.society ?? {};
   const collegeName =
@@ -90,8 +81,6 @@ export default async function HomePage() {
     typeof emergency.bloodHelpline === "string" && emergency.bloodHelpline
       ? emergency.bloodHelpline
       : null;
-  const societyPhone =
-    typeof contact.phone === "string" && contact.phone ? contact.phone : null;
 
   return (
     <>
@@ -352,27 +341,11 @@ export default async function HomePage() {
                 </Button>
               </div>
               <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-white/70">
-                {societyPhone && (
-                  <span className="flex items-center gap-2">
-                    <PhoneCall className="h-4 w-4 text-white/50" aria-hidden />
-                    <a href={`tel:${societyPhone}`} className="hover:text-white">
-                      {societyPhone}
-                    </a>
-                  </span>
-                )}
                 {bloodHelpline && (
                   <span className="flex items-center gap-2">
                     <HeartPulse className="h-4 w-4 text-crescent" aria-hidden />
                     <a href={`tel:${bloodHelpline}`} className="font-semibold hover:text-white">
                       {format(t.home.bloodHelplineLabel, { n: bloodHelpline })}
-                    </a>
-                  </span>
-                )}
-                {typeof contact.email === "string" && contact.email && (
-                  <span className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-white/50" aria-hidden />
-                    <a href={`mailto:${contact.email}`} className="hover:text-white">
-                      {contact.email}
                     </a>
                   </span>
                 )}

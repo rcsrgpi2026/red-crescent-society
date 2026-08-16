@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  HeartPulse,
-  MapPin,
   Clock,
   Droplets,
   Building2,
@@ -126,6 +124,12 @@ export default async function BloodRequestStatusPage({
                   {request.status === "CANCELLED" &&
                     "This request was marked as cancelled."}
                 </p>
+                {request.status === "COMPLETED" && request.donation_confirmed && (
+                  <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                    Donation confirmed by the society — {(request.units_donated ?? request.units)}{(request.units_donated ?? request.units) === 1 ? " unit" : " units"} donated and counted toward Blood Units Donated.
+                  </p>
+                )}
               </div>
 
               {/* Details grid */}

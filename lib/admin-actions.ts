@@ -305,6 +305,89 @@ export async function updateBloodRequestStatus(formData: FormData): Promise<Acti
   return { success: true, message: "Request status updated." };
 }
 
+/**
+ * Server-action wrappers for the blood requests table's plain <form> buttons —
+ * same pattern as `submitTeamMemberStatus`. Keeps the actions returning
+ * ActionResult while these satisfy the form action's Promise<void>.
+ */
+export async function submitConfirmBloodDonation(formData: FormData): Promise<void> {
+  await confirmBloodDonation(formData);
+}
+
+export async function submitUnconfirmBloodDonation(formData: FormData): Promise<void> {
+  await unconfirmBloodDonation(formData);
+}
+
+/**
+ * Confirms a donation on a COMPLETED blood request, recording how many units
+ * were actually donated. A confirmed request counts toward the homepage
+ * "Blood Units Donated" statistic using `units_donated`.
+ */
+export async function confirmBloodDonation(formData: FormData): Promise<ActionResult> {
+  guard();
+  const id = String(formData.get("id"));
+  if (!id) return { success: false, message: "Blood request is required." };
+
+  const unitsDonated = Number(formData.get("unitsDonated"));
+  if (!Number.isInteger(unitsDonated) || unitsDonated < 1) {
+    return {
+      success: false,
+      message: "Enter the number of units actually donated (at least 1).",
+    };
+  }
+
+  const supabase = await createClient();
+  const { data: current } = await supabase
+    .from("blood_requests")
+    .select("units")
+    .eq("id", id)
+    .maybeSingle();
+  if (!current) return { success: false, message: "Blood request not found." };
+  if (unitsDonated > current.units) {
+    return {
+      success: false,
+      message: `Units donated cannot exceed the ${current.units} requested.`,
+    };
+  }
+
+  const { error } = await supabase
+    .from("blood_requests")
+    .update({ donation_confirmed: true, units_donated: unitsDonated })
+    .eq("id", id);
+  if (error) {
+    return { success: false, message: "Could not confirm the donation." };
+  }
+  await logAudit("blood_donation_confirmed", "blood_request", id, { units_donated: unitsDonated });
+  revalidatePath("/admin/blood-requests");
+  revalidatePath("/blood-support");
+  updateTag("blood");
+  return {
+    success: true,
+    message: `Donation confirmed — ${unitsDonated} unit${unitsDonated === 1 ? "" : "s"} now count${unitsDonated === 1 ? "s" : ""} toward Blood Units Donated.`,
+  };
+}
+
+/** Removes the confirmation (keeps the recorded units for reference). */
+export async function unconfirmBloodDonation(formData: FormData): Promise<ActionResult> {
+  guard();
+  const id = String(formData.get("id"));
+  if (!id) return { success: false, message: "Blood request is required." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("blood_requests")
+    .update({ donation_confirmed: false })
+    .eq("id", id);
+  if (error) {
+    return { success: false, message: "Could not remove the donation confirmation." };
+  }
+  await logAudit("blood_donation_unconfirmed", "blood_request", id);
+  revalidatePath("/admin/blood-requests");
+  revalidatePath("/blood-support");
+  updateTag("blood");
+  return { success: true, message: "Donation confirmation removed." };
+}
+
 // ---------------------------------------------------------------------------
 // Events
 // ---------------------------------------------------------------------------
@@ -359,6 +442,42 @@ export async function deleteEvent(id: string): Promise<ActionResult> {
   return { success: true, message: "Event deleted." };
 }
 
+/**
+ * Updates a single event registration's status — used to mark attendance
+ * (REGISTERED → ATTENDED) or cancel a registration (→ CANCELLED) directly
+ * from the registrations dialog.
+ */
+export async function updateEventRegistrationStatus(formData: FormData): Promise<ActionResult> {
+  guard();
+  const id = String(formData.get("id"));
+  const status = String(formData.get("status"));
+  if (!["REGISTERED", "ATTENDED", "CANCELLED"].includes(status)) {
+    return { success: false, message: "Invalid registration status." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("event_registrations")
+    .update({ status })
+    .eq("id", id);
+  if (error) {
+    return { success: false, message: "Could not update the registration." };
+  }
+  await logAudit("event_registration_status", "event_registration", id, { status });
+  revalidatePath("/admin/events");
+  revalidatePath("/events");
+  updateTag("events");
+  return {
+    success: true,
+    message:
+      status === "ATTENDED"
+        ? "Marked as attended."
+        : status === "CANCELLED"
+          ? "Registration cancelled."
+          : "Registration status reset to registered.",
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Activities
 // ---------------------------------------------------------------------------
@@ -396,7 +515,7 @@ export async function saveActivity(formData: FormData): Promise<ActionResult> {
     await logAudit("activity_created", "activity", payload.title);
   }
   revalidatePath("/admin/activities");
-  revalidatePath("/activities");
+  revalidatePath("/gallery");
   updateTag("activities");
   return { success: true, message: "Activity saved." };
 }
@@ -408,7 +527,7 @@ export async function deleteActivity(id: string): Promise<ActionResult> {
   if (error) return { success: false, message: "Could not delete the activity." };
   await logAudit("activity_deleted", "activity", id);
   revalidatePath("/admin/activities");
-  revalidatePath("/activities");
+  revalidatePath("/gallery");
   updateTag("activities");
   return { success: true, message: "Activity deleted." };
 }
@@ -430,8 +549,6 @@ export async function saveNotice(formData: FormData): Promise<ActionResult> {
     category: String(formData.get("category") ?? "") || null,
     pinned: formData.get("pinned") === "on",
     published: formData.get("published") === "on",
-    publish_at: String(formData.get("publishAt") ?? "") || null,
-    expires_at: String(formData.get("expiresAt") ?? "") || null,
   };
 
   const supabase = await createClient();

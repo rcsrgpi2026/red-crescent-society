@@ -32,13 +32,12 @@ const NAV_LINKS: { key: NavKey; href: string; highlight?: boolean }[] = [
   { key: "team", href: "/team" },
   { key: "bloodSupport", href: "/blood-support", highlight: true },
   { key: "events", href: "/events" },
-  { key: "activities", href: "/activities" },
+  { key: "activitiesGallery", href: "/gallery" },
   { key: "contact", href: "/contact" },
 ];
 
 const MORE_LINKS: { key: NavKey; href: string }[] = [
   { key: "training", href: "/training" },
-  { key: "gallery", href: "/gallery" },
   { key: "notices", href: "/notices" },
   { key: "emergency", href: "/emergency" },
 ];
@@ -262,8 +261,8 @@ export function SiteHeader({
                   <Menu className="h-5 w-5" aria-hidden />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[20rem] p-0">
-                <SheetHeader className="border-b px-5 py-4">
+              <SheetContent side="right" className="w-[20rem] overflow-hidden p-0">
+                <SheetHeader className="shrink-0 border-b px-5 py-4">
                   <SheetTitle className="flex items-center gap-2 text-left">
                     <SiteLogo variant="society" className="w-8" />
                     <span className="whitespace-nowrap text-sm leading-tight text-brand-dark">
@@ -274,7 +273,7 @@ export function SiteHeader({
                     </span>
                   </SheetTitle>
                 </SheetHeader>
-                <nav className="flex flex-col gap-1 p-4" aria-label="Mobile navigation">
+                <nav className="flex min-h-0 flex-1 scrollbar-thin flex-col gap-1 overflow-y-auto p-4" aria-label="Mobile navigation">
                   <MobileLink
                     href="/"
                     label={t.nav.home}

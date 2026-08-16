@@ -148,26 +148,26 @@ export async function submitBloodRequest(
   const v = parsed.data;
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("blood_requests")
-    .insert({
-      patient_name: v.patientName,
-      blood_group: v.bloodGroup,
-      units: v.units,
-      hospital: v.hospital || null,
-      location: v.location,
-      required_date: v.requiredDate || null,
-      required_time: v.requiredTime || null,
-      requester_name: v.requesterName,
-      contact: v.contact,
-      emergency_level: v.emergencyLevel,
-      additional_info: v.additionalInfo || null,
-      status: "PENDING",
-    })
-    .select("id")
-    .single();
+  // Insert via a security-definer RPC: the row is written by the
+  // function (bypassing RLS) and only the id is returned. A plain
+  // insert + select("id") would ask PostgREST to re-read the row,
+  // which needs a SELECT policy the table intentionally does not
+  // have (requester contact info is private).
+  const { data: id, error } = await supabase.rpc("submit_blood_request", {
+    p_patient_name: v.patientName,
+    p_blood_group: v.bloodGroup,
+    p_units: v.units,
+    p_hospital: v.hospital || null,
+    p_location: v.location,
+    p_required_date: v.requiredDate || null,
+    p_required_time: v.requiredTime || null,
+    p_requester_name: v.requesterName,
+    p_contact: v.contact,
+    p_emergency_level: v.emergencyLevel,
+    p_additional_info: v.additionalInfo || null,
+  });
 
-  if (error || !data) {
+  if (error || !id) {
     console.error("submitBloodRequest error:", error);
     return {
       success: false,
@@ -179,7 +179,7 @@ export async function submitBloodRequest(
     success: true,
     message:
       "Request submitted successfully! Tracking your request in the status interface.",
-    data: { id: data.id },
+    data: { id: String(id) },
   };
 }
 
@@ -193,6 +193,8 @@ export async function registerDonor(
     area: formData.get("area"),
     phone: formData.get("phone"),
     lastDonationDate: formData.get("lastDonationDate"),
+    passcode: formData.get("passcode"),
+    phonePublic: formData.get("phonePublic") === "on",
   });
 
   if (!parsed.success) {
@@ -214,24 +216,28 @@ export async function registerDonor(
   } = await supabase.auth.getUser();
 
   let volunteerId: string | null = null;
+  let studentId: string | null = null;
   if (user) {
-    const { data: vol } = await supabase
-      .from("team_members")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    volunteerId = vol?.id ?? null;
+    const [vol, stu] = await Promise.all([
+      supabase.from("team_members").select("id").eq("user_id", user.id).maybeSingle(),
+      supabase.from("students").select("id").eq("user_id", user.id).maybeSingle(),
+    ]);
+    volunteerId = vol.data?.id ?? null;
+    studentId = stu.data?.id ?? null;
   }
 
-  const { error } = await supabase.from("blood_donors").insert({
-    volunteer_id: volunteerId,
-    name: v.name,
-    blood_group: v.bloodGroup,
-    area: v.area,
-    phone: v.phone,
-    last_donation_date: v.lastDonationDate || null,
-    availability: "AVAILABLE",
-    is_active: true,
+  // Registered via a security-definer RPC so the passcode can be
+  // bcrypt-hashed in the database before it is ever stored.
+  const { error } = await supabase.rpc("register_donor", {
+    p_name: v.name,
+    p_blood_group: v.bloodGroup,
+    p_area: v.area,
+    p_phone: v.phone,
+    p_last_donation_date: v.lastDonationDate || null,
+    p_passcode: v.passcode,
+    p_volunteer_id: volunteerId,
+    p_student_id: studentId,
+    p_phone_public: v.phonePublic,
   });
 
   if (error) {
@@ -245,7 +251,263 @@ export async function registerDonor(
   return {
     success: true,
     message:
-      "You are now registered as a blood donor. Thank you for being a lifesaver! Your number stays private and is only visible to the society team.",
+      "You are now registered as a blood donor. Thank you for being a lifesaver! Your passcode keeps your listing safe — use your name, number and passcode to manage it (including changing your number's visibility) anytime.",
+  };
+}
+
+export interface DonorListingInfo {
+  id: string;
+  name: string;
+  blood_group: string;
+  area: string | null;
+  availability: string;
+  /** True when the listing was registered before passcodes existed. */
+  needsPasscode: boolean;
+  /** Whether the donor opted in to showing their number publicly. */
+  phonePublic: boolean;
+}
+
+/**
+ * Finds a donor listing by the name, phone and passcode used at
+ * registration. Verification happens inside the security-definer SQL
+ * function, which never exposes the stored phone number or passcode.
+ */
+export async function findMyDonorListing(
+  phone: string,
+  name: string,
+  passcode: string
+): Promise<ActionResult<DonorListingInfo>> {
+  if (!isSupabaseConfigured) {
+    return { success: false, message: "The database is not configured yet." };
+  }
+
+  const pPhone = String(phone ?? "").trim();
+  const pName = String(name ?? "").trim();
+  const pPasscode = String(passcode ?? "").trim();
+  if (!pPhone || !pName) {
+    return {
+      success: false,
+      message: "Enter both your name and the phone number you registered with.",
+    };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("find_my_donor", {
+    p_phone: pPhone,
+    p_name: pName,
+    p_passcode: pPasscode,
+  });
+
+  if (error) {
+    console.error("findMyDonorListing error:", error);
+    return { success: false, message: "Something went wrong. Please try again." };
+  }
+
+  // The RPC returns snake_case columns — map them to the camelCase
+  // shape the UI expects.
+  const rows = (data ?? []) as {
+    id: string;
+    name: string;
+    blood_group: string;
+    area: string | null;
+    availability: string;
+    needs_passcode: boolean;
+    phone_public: boolean;
+  }[];
+  if (rows.length === 0) {
+    return {
+      success: false,
+      message:
+        "No donor listing found with that name and phone number. Check your details or register below.",
+    };
+  }
+
+  const row = rows[0];
+  return {
+    success: true,
+    data: {
+      id: row.id,
+      name: row.name,
+      blood_group: row.blood_group,
+      area: row.area,
+      availability: row.availability,
+      needsPasscode: row.needs_passcode,
+      phonePublic: row.phone_public,
+    },
+  };
+}
+
+/**
+ * Opts the caller's listing in / out of showing the number publicly.
+ * Returns the new state.
+ */
+export async function toggleDonorPhonePublic(
+  donorId: string,
+  phone: string,
+  name: string,
+  passcode: string
+): Promise<ActionResult<boolean>> {
+  if (!isSupabaseConfigured) {
+    return { success: false, message: "The database is not configured yet." };
+  }
+
+  const pPhone = String(phone ?? "").trim();
+  const pName = String(name ?? "").trim();
+  const pPasscode = String(passcode ?? "").trim();
+  if (!donorId || !pPhone || !pName) {
+    return { success: false, message: "Missing donor details. Please search for your listing again." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("toggle_my_donor_phone_public", {
+    p_donor_id: donorId,
+    p_phone: pPhone,
+    p_name: pName,
+    p_passcode: pPasscode,
+  });
+
+  if (error) {
+    console.error("toggleDonorPhonePublic error:", error);
+    return { success: false, message: "Something went wrong. Please try again." };
+  }
+  if (data === null || data === undefined) {
+    return {
+      success: false,
+      message: "Could not verify your listing. Check your name, number and passcode.",
+    };
+  }
+  return { success: true, data: Boolean(data) };
+}
+
+/**
+ * Sets a passcode on a listing that was registered before passcodes
+ * existed (verified by name + phone only).
+ */
+export async function setMyDonorPasscode(
+  donorId: string,
+  phone: string,
+  name: string,
+  passcode: string
+): Promise<ActionResult<boolean>> {
+  if (!isSupabaseConfigured) {
+    return { success: false, message: "The database is not configured yet." };
+  }
+
+  const pPhone = String(phone ?? "").trim();
+  const pName = String(name ?? "").trim();
+  const pPasscode = String(passcode ?? "").trim();
+  if (!donorId || !pPhone || !pName) {
+    return { success: false, message: "Missing donor details. Please search for your listing again." };
+  }
+  if (!/^\d{4,6}$/.test(pPasscode)) {
+    return { success: false, message: "Enter a 4–6 digit passcode (numbers only)." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("set_my_donor_passcode", {
+    p_donor_id: donorId,
+    p_phone: pPhone,
+    p_name: pName,
+    p_passcode: pPasscode,
+  });
+
+  if (error) {
+    console.error("setMyDonorPasscode error:", error);
+    return { success: false, message: "Something went wrong. Please try again." };
+  }
+  if (!data) {
+    return {
+      success: false,
+      message: "Could not set your passcode. Make sure the name and number match your listing.",
+    };
+  }
+  return { success: true, data: true };
+}
+
+/**
+ * Toggles the caller's own listing between available and unavailable, keyed
+ * by the name + phone used at registration. Returns the new availability.
+ */
+export async function toggleDonorAvailabilityByPhone(
+  donorId: string,
+  phone: string,
+  name: string,
+  passcode: string
+): Promise<ActionResult<string>> {
+  if (!isSupabaseConfigured) {
+    return { success: false, message: "The database is not configured yet." };
+  }
+
+  const pPhone = String(phone ?? "").trim();
+  const pName = String(name ?? "").trim();
+  const pPasscode = String(passcode ?? "").trim();
+  if (!donorId || !pPhone || !pName) {
+    return { success: false, message: "Missing donor details. Please search for your listing again." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("toggle_my_donor_availability", {
+    p_donor_id: donorId,
+    p_phone: pPhone,
+    p_name: pName,
+    p_passcode: pPasscode,
+  });
+
+  if (error) {
+    console.error("toggleDonorAvailabilityByPhone error:", error);
+    return { success: false, message: "Something went wrong. Please try again." };
+  }
+  if (!data) {
+    return {
+      success: false,
+      message: "Could not verify your listing. Check your name and phone number.",
+    };
+  }
+  return { success: true, data: String(data) };
+}
+
+/**
+ * Permanently removes the caller's own donor listing, keyed by the name +
+ * phone used at registration.
+ */
+export async function removeDonorListingByPhone(
+  donorId: string,
+  phone: string,
+  name: string,
+  passcode: string
+): Promise<ActionResult> {
+  if (!isSupabaseConfigured) {
+    return { success: false, message: "The database is not configured yet." };
+  }
+
+  const pPhone = String(phone ?? "").trim();
+  const pName = String(name ?? "").trim();
+  const pPasscode = String(passcode ?? "").trim();
+  if (!donorId || !pPhone || !pName) {
+    return { success: false, message: "Missing donor details. Please search for your listing again." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("remove_my_donor_listing", {
+    p_donor_id: donorId,
+    p_phone: pPhone,
+    p_name: pName,
+    p_passcode: pPasscode,
+  });
+
+  if (error) {
+    console.error("removeDonorListingByPhone error:", error);
+    return { success: false, message: "Something went wrong. Please try again." };
+  }
+  if (!data) {
+    return {
+      success: false,
+      message: "Could not verify your listing. Check your name and phone number.",
+    };
+  }
+  return {
+    success: true,
+    message: "Your donor listing has been removed. You can register again anytime.",
   };
 }
 
@@ -348,8 +610,28 @@ export async function registerForEvent(
   const v = parsed.data;
   const supabase = await createClient();
 
+  // Tag the registration with the signed-in user's own identity, so the
+  // admin panel can show whether a registrant is a team member (member ID)
+  // or a student (roll). The RLS insert policy only allows the caller's own
+  // volunteer_id / student_id, so a visitor can't misattribute someone else.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  let volunteerId: string | null = null;
+  let studentId: string | null = null;
+  if (user) {
+    const [teamRes, studentRes] = await Promise.all([
+      supabase.from("team_members").select("id").eq("user_id", user.id).maybeSingle(),
+      supabase.from("students").select("id").eq("user_id", user.id).maybeSingle(),
+    ]);
+    volunteerId = teamRes.data?.id ?? null;
+    studentId = studentRes.data?.id ?? null;
+  }
+
   const { error } = await supabase.from("event_registrations").insert({
     event_id: eventId,
+    volunteer_id: volunteerId,
+    student_id: studentId,
     name: v.name,
     phone: v.phone,
     department: v.department || null,
@@ -426,12 +708,17 @@ export async function submitContact(
 export async function requestDonorContact(
   _prev: ActionResult,
   formData: FormData
-): Promise<ActionResult> {
+): Promise<ActionResult<{ id: string }>> {
   const parsed = donorContactSchema.safeParse({
     donorId: formData.get("donorId"),
     requesterName: formData.get("requesterName"),
     requesterContact: formData.get("requesterContact"),
+    patientName: formData.get("patientName"),
+    bloodGroupNeeded: formData.get("bloodGroupNeeded"),
+    hospital: formData.get("hospital"),
+    email: formData.get("email"),
     message: formData.get("message"),
+    passcode: formData.get("passcode"),
   });
 
   if (!parsed.success) {
@@ -449,15 +736,22 @@ export async function requestDonorContact(
   const v = parsed.data;
   const supabase = await createClient();
 
-  const { error } = await supabase.from("blood_contact_requests").insert({
-    donor_id: v.donorId,
-    requester_name: v.requesterName,
-    requester_contact: v.requesterContact,
-    message: v.message || null,
-    status: "PENDING",
+  // Insert via a security-definer RPC so we can return the id for the
+  // tracking link (a plain insert + select("id") would need a SELECT
+  // policy the table intentionally does not have).
+  const { data: id, error } = await supabase.rpc("submit_contact_request", {
+    p_donor_id: v.donorId,
+    p_requester_name: v.requesterName,
+    p_requester_contact: v.requesterContact,
+    p_patient_name: v.patientName,
+    p_blood_group: v.bloodGroupNeeded,
+    p_hospital: v.hospital || null,
+    p_email: v.email || null,
+    p_message: v.message || null,
+    p_passcode: v.passcode,
   });
 
-  if (error) {
+  if (error || !id) {
     console.error("requestDonorContact error:", error);
     return { success: false, message: "Something went wrong. Please try again." };
   }
@@ -465,6 +759,136 @@ export async function requestDonorContact(
   return {
     success: true,
     message:
-      "Contact request sent! Our team will verify it and connect you with the donor. Donor numbers are never shown publicly.",
+      "Contact request sent! Keep this tracking link and your passcode — the donor's number will appear here once the society team approves it.",
+    data: { id: String(id) },
+  };
+}
+
+export interface ContactRequestTrackingInfo {
+  requestId: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  donorName: string;
+  donorBloodGroup: string;
+  donorArea: string | null;
+  donorPhone: string | null;
+}
+
+/**
+ * Tracks a contact request by its id plus the contact number the
+ * requester submitted (the number doubles as the credential). The
+ * donor's phone is only returned once the admin has approved the
+ * request — the verification happens inside the security-definer
+ * SQL function, which never exposes the stored contact number.
+ */
+export async function trackMyContactRequest(
+  requestId: string,
+  contact: string,
+  passcode: string
+): Promise<ActionResult<ContactRequestTrackingInfo>> {
+  if (!isSupabaseConfigured) {
+    return { success: false, message: "The database is not configured yet." };
+  }
+
+  const pId = String(requestId ?? "").trim();
+  const pContact = String(contact ?? "").trim();
+  const pPasscode = String(passcode ?? "").trim();
+  if (!pId || !pContact) {
+    return {
+      success: false,
+      message: "Enter the contact number you used when submitting the request.",
+    };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_my_contact_request", {
+    p_request_id: pId,
+    p_contact: pContact,
+    p_passcode: pPasscode,
+  });
+
+  if (error) {
+    console.error("trackMyContactRequest error:", error);
+    return { success: false, message: "Could not load your request. Please try again." };
+  }
+
+  const row = Array.isArray(data) ? data[0] : undefined;
+  if (!row) {
+    return {
+      success: false,
+      message:
+        "No request found for this tracking link and contact number. Check the number and try again.",
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      requestId: row.request_id,
+      status: row.status,
+      donorName: row.donor_name,
+      donorBloodGroup: row.donor_blood_group,
+      donorArea: row.donor_area,
+      donorPhone: row.donor_phone,
+    },
+  };
+}
+
+export interface ContactRequestRecoveryInfo {
+  requestId: string;
+  donorName: string;
+  donorBloodGroup: string;
+  donorArea: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  createdAt: string;
+}
+
+/**
+ * Recovers a requester's contact request ids after losing the
+ * tracking link. Verification (name + contact number) happens inside
+ * the security-definer SQL function — the donor's phone is never
+ * returned here, only the tracking ids and statuses.
+ */
+export async function findMyContactRequests(
+  name: string,
+  contact: string,
+  passcode: string
+): Promise<ActionResult<ContactRequestRecoveryInfo[]>> {
+  if (!isSupabaseConfigured) {
+    return { success: false, message: "The database is not configured yet." };
+  }
+
+  const pName = String(name ?? "").trim();
+  const pContact = String(contact ?? "").trim();
+  const pPasscode = String(passcode ?? "").trim();
+  if (!pName || !pContact) {
+    return {
+      success: false,
+      message: "Enter both your name and the contact number you submitted.",
+    };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("find_my_contact_requests", {
+    p_name: pName,
+    p_contact: pContact,
+    p_passcode: pPasscode,
+  });
+
+  if (error) {
+    console.error("findMyContactRequests error:", error);
+    return { success: false, message: "Could not look up your requests. Please try again." };
+  }
+
+  const rows = Array.isArray(data) ? data : [];
+  return {
+    success: true,
+    data: rows.map((row) => ({
+      requestId: row.request_id,
+      donorName: row.donor_name,
+      donorBloodGroup: row.donor_blood_group,
+      donorArea: row.donor_area,
+      status: row.status,
+      createdAt: row.created_at,
+    })),
   };
 }

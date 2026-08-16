@@ -37,7 +37,7 @@ const NAV = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Team Members", href: "/admin/team", icon: Users },
   { label: "Students", href: "/admin/students", icon: GraduationCap },
-  { label: "Founders", href: "/admin/founders", icon: Handshake },
+  { label: "Directors", href: "/admin/founders", icon: Handshake },
   { label: "Community", href: "/admin/community", icon: Network },
   { label: "Blood Donors", href: "/admin/donors", icon: Droplets },
   { label: "Blood Requests", href: "/admin/blood-requests", icon: HeartPulse },
@@ -75,13 +75,15 @@ export function AdminSidebar({
 
   return (
     <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-gradient-to-b from-brand-dark to-[#043c28] text-white">
-      {/* Decorative glow */}
+      {/* Decorative glow — radial gradients, not filter blur: the drawer
+          slides in via transform, and blur filters force a GPU re-rasterize
+          every frame during the animation (very laggy on phones). */}
       <div
-        className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/5 blur-3xl"
+        className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_65%)]"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-crescent/10 blur-3xl"
+        className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-[radial-gradient(circle_at_center,rgba(237,28,36,0.12),transparent_65%)]"
         aria-hidden
       />
 
@@ -105,7 +107,7 @@ export function AdminSidebar({
 
       {/* Scrollable navigation — the only scroll container in the sidebar */}
       <nav
-        className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-4"
+        className="relative min-h-0 flex-1 scrollbar-thin overflow-y-auto overflow-x-hidden px-3 py-4"
         aria-label="Admin navigation"
       >
         {NAV.map((item) => {
@@ -196,11 +198,12 @@ export function MobileAdminNav({
       {/* Backdrop */}
       <button
         onClick={onClose}
-        className="absolute inset-0 animate-in fade-in bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 animate-in fade-in bg-black/50"
         aria-label="Close menu"
       />
-      {/* Drawer panel */}
-      <div className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] animate-in slide-in-from-left duration-300 ease-out shadow-2xl">
+      {/* Drawer panel — transform-only animation (slide), composited on its
+          own layer so the phone never repaints the whole subtree. */}
+      <div className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] animate-in slide-in-from-left duration-300 ease-out will-change-transform shadow-2xl">
         <AdminSidebar onClose={onClose} unreadMessages={unreadMessages} />
       </div>
     </div>,

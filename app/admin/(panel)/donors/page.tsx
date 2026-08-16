@@ -36,7 +36,20 @@ export default async function AdminDonorsPage() {
     {
       header: "Donor",
       render: (d) => (
-        <span className="font-medium text-foreground">{d.name}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-foreground">{d.name}</span>
+          <span
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
+              d.volunteer_id
+                ? "bg-brand-soft text-brand-dark"
+                : d.student_id
+                  ? "bg-poly-soft text-poly"
+                  : "bg-mist text-muted-foreground"
+            }`}
+          >
+            {d.volunteer_id ? "Team member" : d.student_id ? "Student" : "Community"}
+          </span>
+        </div>
       ),
     },
     {
@@ -54,9 +67,20 @@ export default async function AdminDonorsPage() {
       ),
     },
     {
-      header: "Phone (private)",
+      header: "Phone",
       render: (d) => (
-        <span className="text-xs text-muted-foreground">{d.phone ?? "—"}</span>
+        <div className="text-xs text-muted-foreground">
+          <p>{d.phone ?? "—"}</p>
+          <span
+            className={`mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
+              d.phone_public
+                ? "bg-emerald-100 text-emerald-800"
+                : "bg-mist text-muted-foreground"
+            }`}
+          >
+            {d.phone_public ? "Public" : "Private"}
+          </span>
+        </div>
       ),
     },
     {
@@ -104,6 +128,33 @@ export default async function AdminDonorsPage() {
 
   const contactColumns: Column<(typeof contactRequests)[number]>[] = [
     {
+      header: "Donor",
+      render: (r) => (
+        <span className="font-medium text-foreground">
+          {r.blood_donors?.name ?? "Unknown donor"}
+          <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+            {r.blood_donors?.blood_group ?? ""}
+          </span>
+        </span>
+      ),
+    },
+    {
+      header: "Patient / Need",
+      render: (r) => (
+        <div className="min-w-0">
+          <p className="truncate font-medium text-foreground">{r.patient_name ?? "—"}</p>
+          <p className="text-xs text-muted-foreground">
+            {r.blood_group ? (
+              <span className="mr-1.5 inline-flex rounded-md bg-crescent-soft px-1.5 py-0.5 text-[10px] font-bold text-crescent">
+                {r.blood_group}
+              </span>
+            ) : null}
+            {r.hospital ?? ""}
+          </p>
+        </div>
+      ),
+    },
+    {
       header: "Requester",
       render: (r) => (
         <span className="font-medium text-foreground">{r.requester_name}</span>
@@ -112,7 +163,10 @@ export default async function AdminDonorsPage() {
     {
       header: "Contact",
       render: (r) => (
-        <span className="text-xs text-muted-foreground">{r.requester_contact}</span>
+        <div className="text-xs text-muted-foreground">
+          <p>{r.requester_contact}</p>
+          {r.email && <p className="truncate">{r.email}</p>}
+        </div>
       ),
     },
     {

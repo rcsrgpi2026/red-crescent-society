@@ -163,36 +163,36 @@ export default async function HomePage() {
       {/* Who we are — introduction, mission, history, founders */}
       <AboutSection t={t} founders={founders} />
 
-      {/* Serve — stories from the field */}
-      <section className="border-b border-line bg-mist/50">
+      {/* Gallery — photo albums */}
+      <section className="border-b border-line bg-white">
         <div className="container-site py-16 lg:py-24">
           <Reveal>
             <SectionHeader
-              eyebrow={t.home.activitiesEyebrow}
-              title={t.home.activitiesTitle}
-              description={t.home.activitiesDescription}
+              eyebrow={t.home.galleryEyebrow}
+              title={t.home.galleryTitle}
+              description={t.home.galleryDescription}
             />
           </Reveal>
-          {activities.length > 0 ? (
-            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {activities.slice(0, 6).map((activity, i) => (
-                <Reveal key={activity.id} delay={(i % 3) * 0.06}>
-                  <ActivityStoryCard activity={activity} />
+          {albums.length > 0 ? (
+            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {albums.slice(0, 6).map((album, i) => (
+                <Reveal key={album.id} delay={(i % 3) * 0.06}>
+                  <AlbumCard album={album} />
                 </Reveal>
               ))}
             </div>
           ) : (
             <div className="mt-10">
               <EmptyState
-                title={t.home.activitiesEmptyTitle}
-                description={t.home.activitiesEmptyText}
+                title={t.home.galleryEmptyTitle}
+                description={t.home.galleryEmptyText}
               />
             </div>
           )}
           <Reveal className="mt-8 text-center">
             <Button asChild variant="outline">
-              <Link href="/activities">
-                {t.home.viewAllActivities}
+              <Link href="/gallery">
+                {t.home.openGallery}
                 <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
               </Link>
             </Button>
@@ -285,36 +285,36 @@ export default async function HomePage() {
       {/* Team */}
       <TeamSection t={t} team={team} />
 
-      {/* Gallery */}
-      <section className="border-b border-line bg-white">
+      {/* Serve — stories from the field */}
+      <section className="border-b border-line bg-mist/50">
         <div className="container-site py-16 lg:py-24">
           <Reveal>
             <SectionHeader
-              eyebrow={t.home.galleryEyebrow}
-              title={t.home.galleryTitle}
-              description={t.home.galleryDescription}
+              eyebrow={t.home.activitiesEyebrow}
+              title={t.home.activitiesTitle}
+              description={t.home.activitiesDescription}
             />
           </Reveal>
-          {albums.length > 0 ? (
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {albums.slice(0, 6).map((album, i) => (
-                <Reveal key={album.id} delay={(i % 3) * 0.06}>
-                  <AlbumCard album={album} />
+          {activities.length > 0 ? (
+            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {activities.slice(0, 6).map((activity, i) => (
+                <Reveal key={activity.id} delay={(i % 3) * 0.06}>
+                  <ActivityStoryCard activity={activity} />
                 </Reveal>
               ))}
             </div>
           ) : (
             <div className="mt-10">
               <EmptyState
-                title={t.home.galleryEmptyTitle}
-                description={t.home.galleryEmptyText}
+                title={t.home.activitiesEmptyTitle}
+                description={t.home.activitiesEmptyText}
               />
             </div>
           )}
           <Reveal className="mt-8 text-center">
             <Button asChild variant="outline">
               <Link href="/gallery">
-                {t.home.openGallery}
+                {t.home.viewAllActivities}
                 <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
               </Link>
             </Button>

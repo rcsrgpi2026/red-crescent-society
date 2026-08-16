@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Users, TrendingUp } from "lucide-react";
+import { GalleryGrid } from "@/components/gallery/gallery-grid";
 import { getPublicActivities, getParticipationCounts } from "@/lib/queries";
 import { formatDate } from "@/lib/constants";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
@@ -51,11 +52,11 @@ export default async function ActivityDetailPage({
       <section className="border-b border-line bg-white">
         <div className="container-site py-10 lg:py-14">
           <Link
-            href="/activities"
+            href="/gallery"
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-brand-dark"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />
-            {t.activities.allActivities}
+            {t.nav.activitiesGallery}
           </Link>
           <div className="mt-6 max-w-3xl">
             {activity.category && (
@@ -129,18 +130,18 @@ export default async function ActivityDetailPage({
           {gallery.length > 0 && (
             <div className="mt-12">
               <h2 className="text-lg font-bold text-foreground">{t.activities.morePhotos}</h2>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {gallery.map((src, i) => (
-                  <div key={i} className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-mist">
-                    <Image
-                      src={src}
-                      alt={`${activity.title} photo ${i + 2}`}
-                      fill
-                      sizes="(max-width: 640px) 100vw, 33vw"
-                      className="object-cover"
-                    />
-                  </div>
-                ))}
+              <div className="mt-4">
+                <GalleryGrid
+                  images={gallery.map((url, i) => ({
+                    id: `${activity.id}-${i}`,
+                    album_id: activity.id,
+                    url,
+                    caption: null,
+                    sort: i,
+                    created_at: activity.created_at,
+                  }))}
+                  albumTitle={activity.title}
+                />
               </div>
             </div>
           )}

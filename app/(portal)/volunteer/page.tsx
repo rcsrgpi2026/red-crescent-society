@@ -6,13 +6,19 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { requireTeamMember } from "@/lib/auth";
-import { getUpcomingEvents, getPublicActivities, getTeamMemberParticipation } from "@/lib/queries";
+import {
+  getUpcomingEvents,
+  getPublicActivities,
+  getTeamMemberParticipation,
+  getMyDonorContactRequests,
+} from "@/lib/queries";
 import { TEAM_MEMBER_STATUS_LABELS } from "@/lib/constants";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { SiteLogo } from "@/components/layout/site-logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { ParticipationPanel } from "@/components/team/participation-panel";
 import { TeamMemberProfileEditor } from "@/components/team/team-member-profile-editor";
+import { DonorContactNotifications } from "@/components/portal/donor-contact-notifications";
 
 export const metadata: Metadata = {
   title: "Team Member Portal & Profile",
@@ -26,6 +32,7 @@ export default async function TeamMemberPortalPage() {
   let participationEvents: { id: string; title: string; date: string | null }[] = [];
   let participationActivities: { id: string; title: string; date: string | null }[] = [];
   let requests: Awaited<ReturnType<typeof getTeamMemberParticipation>> = [];
+  const notifications = await getMyDonorContactRequests();
 
   if (teamMember.status === "APPROVED") {
     const [events, activities, ownRequests] = await Promise.all([
@@ -78,6 +85,7 @@ export default async function TeamMemberPortalPage() {
         </Link>
 
         <div className="mt-6 space-y-6">
+          <DonorContactNotifications requests={notifications} />
           {teamMember.status === "PENDING" && <PendingNotice />}
           {teamMember.status === "REJECTED" && <RejectedNotice />}
 

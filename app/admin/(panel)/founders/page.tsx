@@ -20,8 +20,8 @@ export default async function AdminFoundersPage() {
     <div className="space-y-6">
       <AdminPageHeader
         icon={Handshake}
-        title="Founders & Principal"
-        description="The founders of the society and the institute principal, shown in the About page section. Add the principal with the “Principal” category to feature their photo prominently."
+        title="Our Directors"
+        description="The directors of the society and the institute principal, shown in the About page section. Add the principal with the “Principal” category to feature their photo prominently."
         tone="bg-gradient-to-br from-amber-500 to-orange-600"
         actions={
           <AdminFormDialog
@@ -31,7 +31,7 @@ export default async function AdminFoundersPage() {
                 Add person
               </Button>
             }
-            title="Add founder / principal"
+            title="Add director"
             description="This person appears on the About page in display order."
             action={saveFounder}
             submitLabel="Add person"
@@ -101,8 +101,8 @@ export default async function AdminFoundersPage() {
       ) : (
         <EmptyState
           icon={Handshake}
-          title="No founders or principal added yet"
-          description="Add the people who founded the society and the principal of the institute."
+          title="No directors added yet"
+          description="Add the directors of the society and the principal of the institute."
         />
       )}
     </div>

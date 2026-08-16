@@ -20,9 +20,8 @@ import { getServerMessages } from "@/lib/i18n/server";
 const QUICK_LINKS = [
   { key: "team", href: "/team" },
   { key: "events", href: "/events" },
-  { key: "activities", href: "/activities" },
+  { key: "activitiesGallery", href: "/gallery" },
   { key: "training", href: "/training" },
-  { key: "gallery", href: "/gallery" },
   { key: "notices", href: "/notices" },
 ] as const;
 

@@ -39,12 +39,18 @@ export const bloodRequestSchema = z.object({
 
 export type BloodRequestFormValues = z.infer<typeof bloodRequestSchema>;
 
+const passcodeRegex = /^\d{4,6}$/;
+
 export const bloodDonorSchema = z.object({
   name: z.string().min(2, "Your name is required").max(100),
   bloodGroup: z.string().min(1, "Select your blood group"),
   area: z.string().min(2, "Your area is required").max(200),
   phone: z.string().regex(phoneRegex, "Enter a valid Bangladeshi mobile number"),
   lastDonationDate: z.string().optional().or(z.literal("")),
+  passcode: z
+    .string()
+    .regex(passcodeRegex, "Enter a 4–6 digit passcode (numbers only)"),
+  phonePublic: z.boolean().optional().default(false),
 });
 
 export type BloodDonorFormValues = z.infer<typeof bloodDonorSchema>;
@@ -73,7 +79,18 @@ export const donorContactSchema = z.object({
   requesterContact: z
     .string()
     .regex(phoneRegex, "Enter a valid Bangladeshi mobile number"),
+  patientName: z.string().min(2, "Patient name is required").max(100),
+  bloodGroupNeeded: z.string().min(1, "Select the blood group needed"),
+  hospital: z.string().max(200).optional().or(z.literal("")),
+  email: z
+    .string()
+    .regex(emailRegex, "Enter a valid email address")
+    .optional()
+    .or(z.literal("")),
   message: z.string().max(1000).optional().or(z.literal("")),
+  passcode: z
+    .string()
+    .regex(passcodeRegex, "Enter a 4–6 digit passcode (numbers only)"),
 });
 
 export const loginSchema = z.object({

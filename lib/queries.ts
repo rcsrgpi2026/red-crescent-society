@@ -22,6 +22,7 @@ import type {
   Notice,
   NoticeAttachment,
   ParticipationRequest,
+  DonorContactNotification,
   PublicBloodDonor,
   PublicBloodRequest,
   PublicTeamMember,
@@ -84,8 +85,9 @@ const EMPTY_STATS: HomeStats = {
   studentsReached: 0,
 };
 
-export const getHomeStats = unstable_cache(
-  async (): Promise<HomeStats> => {
+// Home stats are fetched live (uncached) so the blood counters update
+// the moment a request is confirmed or a donor registers.
+export async function getHomeStats(): Promise<HomeStats> {
     const supabase = getPublicClient();
     if (!supabase) return EMPTY_STATS;
     const [teamMembers, donors, events, trainings, requests, activities] = await Promise.all([
@@ -96,11 +98,22 @@ export const getHomeStats = unstable_cache(
         .eq("availability", "AVAILABLE"),
       supabase.from("events").select("id", { count: "exact", head: true }).eq("status", "COMPLETED"),
       supabase.from("training").select("id", { count: "exact", head: true }).eq("status", "COMPLETED"),
-      supabase.from("public_blood_requests").select("units").eq("status", "COMPLETED"),
+      // Only count units after the admin confirmed the donation happened —
+      // a COMPLETED request alone is not enough. Sum the units actually
+      // donated (recorded at confirmation), falling back to the requested
+      // units for requests confirmed before that field existed.
+      supabase
+        .from("public_blood_requests")
+        .select("units, units_donated")
+        .eq("status", "COMPLETED")
+        .eq("donation_confirmed", true),
       supabase.from("activities").select("participants"),
     ]);
 
-    const bloodUnits = (requests.data ?? []).reduce((sum, r) => sum + (r.units ?? 0), 0);
+    const bloodUnits = (requests.data ?? []).reduce(
+      (sum, r) => sum + (r.units_donated ?? r.units ?? 0),
+      0
+    );
     const reached = (activities.data ?? []).reduce((sum, a) => sum + (a.participants ?? 0), 0);
 
     return {
@@ -111,17 +124,7 @@ export const getHomeStats = unstable_cache(
       bloodDonations: bloodUnits,
       studentsReached: reached,
     };
-  },
-  ["home-stats"],
-  // The stats aggregate across every content type (volunteers, donors,
-  // events, trainings, blood requests, activities), so it must be tagged with
-  // all of them — otherwise admin saves update their own tag but the homepage
-  // counters stay stale for up to `revalidate` (60s) seconds.
-  {
-    tags: ["home", "volunteers", "blood", "events", "training", "activities"],
-    revalidate: 60,
   }
-);
 
 export const getFounders = unstable_cache(
   async (): Promise<Founder[]> => {
@@ -359,8 +362,13 @@ export const getTeamMemberParticipationHistory = unstable_cache(
 // Blood support (public)
 // ---------------------------------------------------------------------------
 
-export const getDonors = unstable_cache(
-  async (params?: { bloodGroup?: string; area?: string }): Promise<PublicBloodDonor[]> => {
+// Blood queries are fetched live (uncached) so new donors, requests and
+// status changes appear immediately — including public self-service actions
+// that don't run through the admin tag-revalidation path.
+export async function getDonors(params?: {
+  bloodGroup?: string;
+  area?: string;
+}): Promise<PublicBloodDonor[]> {
     const supabase = getPublicClient();
     if (!supabase) return [];
     let query = supabase
@@ -377,13 +385,9 @@ export const getDonors = unstable_cache(
 
     const { data } = await query.order("name", { ascending: true });
     return data ?? [];
-  },
-  ["donors"],
-  { tags: ["blood"], revalidate: 60 }
-);
+  }
 
-export const getPublicBloodRequests = unstable_cache(
-  async (): Promise<PublicBloodRequest[]> => {
+export async function getPublicBloodRequests(): Promise<PublicBloodRequest[]> {
     const supabase = getPublicClient();
     if (!supabase) return [];
     const { data } = await supabase
@@ -392,13 +396,9 @@ export const getPublicBloodRequests = unstable_cache(
       .order("created_at", { ascending: false })
       .limit(30);
     return data ?? [];
-  },
-  ["public-blood-requests"],
-  { tags: ["blood"], revalidate: 60 }
-);
+  }
 
-export const getPublicBloodRequestById = unstable_cache(
-  async (id: string): Promise<PublicBloodRequest | null> => {
+export async function getPublicBloodRequestById(id: string): Promise<PublicBloodRequest | null> {
     const supabase = getPublicClient();
     if (!supabase) return null;
     const { data } = await supabase
@@ -407,10 +407,7 @@ export const getPublicBloodRequestById = unstable_cache(
       .eq("id", id)
       .maybeSingle();
     return data;
-  },
-  ["public-blood-request-by-id"],
-  { tags: ["blood"], revalidate: 30 }
-);
+  }
 
 // ---------------------------------------------------------------------------
 // Events (public)
@@ -681,7 +678,7 @@ export async function adminGetContactRequests(): Promise<BloodContactRequest[]> 
   if (!supabase) return [];
   const { data } = await supabase
     .from("blood_contact_requests")
-    .select("*")
+    .select("*, blood_donors(name, blood_group)")
     .order("created_at", { ascending: false });
   return data ?? [];
 }
@@ -698,7 +695,7 @@ export async function adminGetEventRegistrations(eventId: string): Promise<Event
   if (!supabase) return [];
   const { data } = await supabase
     .from("event_registrations")
-    .select("*")
+    .select("*, team_members(member_id, name), students(roll, name)")
     .eq("event_id", eventId)
     .order("created_at", { ascending: true });
   return data ?? [];
@@ -898,6 +895,24 @@ export async function getTeamMemberParticipation(
     .eq("volunteer_id", teamMemberId)
     .order("created_at", { ascending: false });
   return data ?? [];
+}
+
+/**
+ * Pending "Request Contact" submissions for the current user's own
+ * donor listing(s) — shown as a notification in their portal. The
+ * RPC is security-definer and resolves the donor via the session
+ * user's team member / student account, so it never leaks another
+ * donor's requests.
+ */
+export async function getMyDonorContactRequests(): Promise<DonorContactNotification[]> {
+  const supabase = await db();
+  if (!supabase) return [];
+  const { data, error } = await supabase.rpc("get_my_donor_contact_requests");
+  if (error) {
+    console.error("getMyDonorContactRequests error:", error);
+    return [];
+  }
+  return (data ?? []) as DonorContactNotification[];
 }
 
 export async function adminGetAuditLogs(limit = 50) {

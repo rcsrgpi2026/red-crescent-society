@@ -129,6 +129,7 @@ export interface CommunityMember {
 export interface BloodDonor {
   id: string;
   volunteer_id: string | null;
+  student_id: string | null;
   name: string;
   blood_group: string;
   area: string | null;
@@ -136,6 +137,7 @@ export interface BloodDonor {
   last_donation_date: string | null;
   phone: string | null;
   is_active: boolean;
+  phone_public: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -148,6 +150,10 @@ export interface PublicBloodDonor {
   area: string | null;
   availability: Availability;
   last_donation_date: string | null;
+  /** Identity tag — team member / student / community (non-registered). */
+  donor_type: "TEAM_MEMBER" | "STUDENT" | "COMMUNITY";
+  /** Phone number — present only when the donor made it public. */
+  phone: string | null;
 }
 
 export interface BloodRequest {
@@ -164,6 +170,10 @@ export interface BloodRequest {
   emergency_level: EmergencyLevel;
   additional_info: string | null;
   status: BloodRequestStatus;
+  /** Admin confirmed the donation happened — only then does it count toward the blood-donated stat. */
+  donation_confirmed: boolean;
+  /** Units actually donated (set by the admin when confirming); falls back to `units` when null. */
+  units_donated: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -180,6 +190,10 @@ export interface PublicBloodRequest {
   required_time: string | null;
   emergency_level: EmergencyLevel;
   status: BloodRequestStatus;
+  /** Admin confirmed the donation happened — only then does it count toward the blood-donated stat. */
+  donation_confirmed: boolean;
+  /** Units actually donated (set by the admin when confirming); falls back to `units` when null. */
+  units_donated: number | null;
   created_at: string;
 }
 
@@ -188,8 +202,24 @@ export interface BloodContactRequest {
   donor_id: string;
   requester_name: string;
   requester_contact: string;
+  patient_name: string | null;
+  blood_group: string | null;
+  hospital: string | null;
+  email: string | null;
   message: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
+  created_at: string;
+  /** Joined donor (admin view) — name and blood group from blood_donors. */
+  blood_donors?: { name: string; blood_group: string } | null;
+}
+
+/** Pending contact request shown to the donor's own portal profile. */
+export interface DonorContactNotification {
+  request_id: string;
+  requester_name: string;
+  patient_name: string | null;
+  blood_group: string | null;
+  hospital: string | null;
   created_at: string;
 }
 
@@ -216,11 +246,17 @@ export interface EventRegistration {
   id: string;
   event_id: string;
   volunteer_id: string | null;
+  /** Links a registration to the student's account (like volunteer_id for team members). */
+  student_id: string | null;
   name: string;
   phone: string;
   department: string | null;
   status: "REGISTERED" | "ATTENDED" | "CANCELLED";
   created_at: string;
+  /** Joined team member (admin view) — member id and name from team_members. */
+  team_members?: { member_id: string | null; name: string } | null;
+  /** Joined student (admin view) — roll and name from students. */
+  students?: { roll: string; name: string } | null;
 }
 
 export type ParticipationStatus = "PENDING" | "APPROVED" | "REJECTED";
@@ -257,8 +293,6 @@ export interface Notice {
   category: string | null;
   pinned: boolean;
   published: boolean;
-  publish_at: string | null;
-  expires_at: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -2,8 +2,14 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { Camera, Loader2, CheckCircle2, AlertCircle, Trash2 } from "lucide-react";
-import { uploadImageToStorage, ACCEPTED_IMAGE_LABEL } from "@/lib/upload";
+import { Camera, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  uploadImageToStorage,
+  ACCEPTED_IMAGE_LABEL,
+  ACCEPTED_IMAGE_TYPES,
+  MAX_IMAGE_SIZE,
+} from "@/lib/upload";
+import { PhotoCropDialog } from "@/components/admin/photo-crop-dialog";
 import { Button } from "@/components/ui/button";
 
 export function PortalAvatarUploader({
@@ -18,66 +24,80 @@ export function PortalAvatarUploader({
   onPhotoSaved: (url: string) => Promise<{ success: boolean; message?: string }>;
 }) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(initialPhotoUrl ?? null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(
     null
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Allow picking the same file again after an error or cancel.
+    e.target.value = "";
     setFeedback(null);
-    setUploading(true);
 
-    // Show temporary local object URL preview
-    const tempUrl = URL.createObjectURL(file);
-    setPreviewUrl(tempUrl);
-
-    try {
-      // 1. Upload to Supabase images bucket
-      const uploadedUrl = await uploadImageToStorage(file, folder, {
-        maxDimension: 800,
-        compress: true,
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setFeedback({
+        type: "error",
+        message: `Invalid file type (${file.type || "unknown"}). Allowed formats: ${ACCEPTED_IMAGE_LABEL}.`,
       });
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setFeedback({
+        type: "error",
+        message: `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is 5 MB.`,
+      });
+      return;
+    }
+
+    // Open the crop dialog — the cropped photo is what gets uploaded.
+    setCropFile(file);
+  }
+
+  async function handleCropped(blob: Blob) {
+    setUploading(true);
+    try {
+      // 1. Upload the cropped photo to the Supabase images bucket
+      const uploadedUrl = await uploadImageToStorage(
+        new File([blob], "profile.webp", { type: blob.type }),
+        folder
+      );
 
       // 2. Persist to database
       const result = await onPhotoSaved(uploadedUrl);
-      if (result.success) {
-        setPhotoUrl(uploadedUrl);
-        setFeedback({
-          type: "success",
-          message: "Profile picture updated successfully!",
-        });
-      } else {
+      if (!result.success) {
         throw new Error(result.message || "Failed to update profile picture in database.");
       }
-    } catch (err: any) {
+
+      setPhotoUrl(uploadedUrl);
+      setFeedback({
+        type: "success",
+        message: "Profile picture updated successfully!",
+      });
+    } catch (err) {
       console.error("Avatar upload error:", err);
-      setPreviewUrl(null);
       setFeedback({
         type: "error",
-        message: err.message || "Could not upload image. Please try again.",
+        message:
+          err instanceof Error ? err.message : "Could not upload image. Please try again.",
       });
     } finally {
       setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      setCropFile(null);
     }
   }
-
-  const activeDisplayUrl = previewUrl || photoUrl;
 
   return (
     <div className="flex flex-col items-center sm:flex-row sm:items-start gap-5">
       <div className="relative group">
         <div className="relative h-28 w-28 sm:h-32 sm:w-32 overflow-hidden rounded-3xl border-2 border-line bg-brand-soft shadow-sm transition-all group-hover:border-brand/50">
-          {activeDisplayUrl ? (
+          {photoUrl ? (
             <Image
-              src={activeDisplayUrl}
+              src={photoUrl}
               alt={`${name}'s profile picture`}
               fill
               sizes="128px"
@@ -138,7 +158,7 @@ export function PortalAvatarUploader({
             ) : (
               <Camera className="mr-1.5 h-3.5 w-3.5" />
             )}
-            {activeDisplayUrl ? "Change Photo" : "Upload Photo"}
+            {photoUrl ? "Change Photo" : "Upload Photo"}
           </Button>
         </div>
 
@@ -159,6 +179,18 @@ export function PortalAvatarUploader({
           </div>
         )}
       </div>
+
+      <PhotoCropDialog
+        open={!!cropFile}
+        onOpenChange={(open) => {
+          if (!open) setCropFile(null);
+        }}
+        file={cropFile}
+        onSave={handleCropped}
+        aspectRatio={1}
+        exportSize={800}
+        title="Crop profile picture"
+      />
     </div>
   );
 }

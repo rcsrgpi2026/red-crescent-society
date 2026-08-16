@@ -7,6 +7,8 @@ import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { DonorSearch } from "@/components/blood/donor-search";
 import { DonorCard } from "@/components/blood/donor-card";
 import { DonorRegisterForm } from "@/components/forms/donor-register-form";
+import { DonorSelfService } from "@/components/forms/donor-self-service";
+import { ContactRequestRecovery } from "@/components/blood/contact-request-recovery";
 import { getDonors, getPublicBloodRequests } from "@/lib/queries";
 import { formatDate } from "@/lib/constants";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
@@ -59,6 +61,32 @@ export default async function BloodSupportPage({
           </a>
         </div>
       </PageHero>
+
+      {/* How it works guide */}
+      <section className="border-b border-line bg-mist/50">
+        <div className="container-site py-12 lg:py-16">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-crescent">
+            {t.blood.guideEyebrow}
+          </p>
+          <h2 className="mt-3 text-balance text-2xl font-bold tracking-tight text-foreground lg:text-3xl">
+            {t.blood.guideTitle}
+          </h2>
+          <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {t.blood.guideSteps.map((step, i) => (
+              <li
+                key={step.title}
+                className="rounded-2xl border border-line bg-white p-5 shadow-sm"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-crescent text-sm font-bold text-white shadow-sm shadow-crescent/20">
+                  {i + 1}
+                </span>
+                <h3 className="mt-3 font-semibold text-foreground">{step.title}</h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{step.text}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
 
       {/* Donor directory */}
       <section className="border-b border-line bg-white">
@@ -181,7 +209,8 @@ export default async function BloodSupportPage({
 
       {/* Donor registration */}
       <section id="donor-registration" className="bg-white scroll-mt-24">
-        <div className="container-site grid gap-12 py-14 lg:grid-cols-2 lg:py-20">
+        <div className="container-site py-14 lg:py-20">
+        <div className="grid gap-12 lg:grid-cols-2">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-crescent">
               {t.blood.donateLife}
@@ -208,6 +237,25 @@ export default async function BloodSupportPage({
               <DonorRegisterForm />
             </div>
           </div>
+        </div>
+
+        {/* Manage an existing listing */}
+        <div className="mt-6 rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8">
+          <h2 className="text-lg font-bold text-foreground">{t.blood.manageListingTitle}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t.blood.manageListingText}</p>
+          <div className="mt-5">
+            <DonorSelfService />
+          </div>
+        </div>
+
+        {/* Recover a lost contact-request tracking link */}
+        <div className="mt-6 rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8">
+          <h2 className="text-lg font-bold text-foreground">{t.blood.lostLinkTitle}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t.blood.lostLinkText}</p>
+          <div className="mt-5">
+            <ContactRequestRecovery strings={t.contactRequest} />
+          </div>
+        </div>
         </div>
       </section>
     </>

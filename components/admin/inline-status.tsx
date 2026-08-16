@@ -2,6 +2,7 @@
 
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import type { ActionResult } from "@/lib/actions";
 
 interface InlineStatusProps {
@@ -10,9 +11,18 @@ interface InlineStatusProps {
   value: string;
   options: { value: string; label: string }[];
   name?: string;
+  /** Optional width classes for the trigger — defaults to a compact fixed width. */
+  triggerClassName?: string;
 }
 
-export function InlineStatus({ action, id, value, options, name = "status" }: InlineStatusProps) {
+export function InlineStatus({
+  action,
+  id,
+  value,
+  options,
+  name = "status",
+  triggerClassName,
+}: InlineStatusProps) {
   async function onChange(next: string) {
     const fd = new FormData();
     fd.set("id", id);
@@ -27,7 +37,10 @@ export function InlineStatus({ action, id, value, options, name = "status" }: In
 
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="h-8 w-36 text-xs" aria-label="Update status">
+      <SelectTrigger
+        className={cn("h-8 text-xs", triggerClassName ?? "w-36")}
+        aria-label="Update status"
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

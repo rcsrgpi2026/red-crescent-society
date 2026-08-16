@@ -34,7 +34,7 @@ export function PortalShell({
       ];
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
+    <div className="grid h-svh overflow-hidden lg:grid-cols-2">
       {/* Brand side */}
       <div className="relative hidden overflow-hidden bg-brand-dark lg:flex lg:flex-col lg:justify-between lg:p-12">
         <div
@@ -84,9 +84,10 @@ export function PortalShell({
         </p>
       </div>
 
-      {/* Form side */}
-      <div className="flex items-center justify-center bg-white px-6 py-16">
-        <div className="w-full max-w-md">
+      {/* Form side — fixed to the viewport; the card scrolls internally
+          when the (register) form is taller than the screen. */}
+      <div className="flex overflow-y-auto bg-white px-6">
+        <div className="m-auto w-full max-w-md py-10">
           <Link
             href="/"
             className="mb-8 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-brand-dark"

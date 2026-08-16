@@ -29,9 +29,9 @@ export const messages = {
         "Blood donation campaigns, first aid training, disaster preparedness and community service by the society's team members.",
     },
     gallery: {
-      title: "Gallery",
+      title: "Gallery of Activities",
       description:
-        "Photos from blood donation camps, trainings, awareness campaigns and campus activities of the Red Crescent Society.",
+        "Photos and reports from blood donation camps, trainings, awareness campaigns and campus activities of the Red Crescent Society.",
     },
     notices: {
       title: "Notice Board",
@@ -61,6 +61,11 @@ export const messages = {
       title: "Request Blood",
       description:
         "Submit an urgent blood request to the Rajshahi Polytechnic Institute Red Crescent Society blood support team.",
+    },
+    bloodContact: {
+      title: "Donor Contact Request Status",
+      description:
+        "Track your donor contact request and receive the donor's number once the society team approves it.",
     },
     contact: {
       title: "Contact Us",
@@ -93,6 +98,7 @@ export const messages = {
     events: "Events",
     activities: "Activities",
     gallery: "Gallery",
+    activitiesGallery: "Gallery of Activities",
     notices: "Notices",
     contact: "Contact",
     more: "More",
@@ -427,12 +433,12 @@ export const messages = {
       ["Universality", "The Movement is worldwide, and all societies have equal status."],
     ],
     foundersEyebrow: "Our legacy",
-    foundersTitle: "Founders & Principal",
+    foundersTitle: "Our Directors",
     foundersDescription:
-      "The people who founded the society and the principal of the institute who supports our mission.",
+      "The directors of the society and the principal of the institute who supports our mission.",
     foundersPrincipalLabel: "Principal",
-    foundersListLabel: "Founders",
-    foundersEmptyTitle: "Founders & principal will be listed here",
+    foundersListLabel: "Directors",
+    foundersEmptyTitle: "Our directors will be listed here",
     foundersEmptyText:
       "Add the founders and the institute principal from the admin panel.",
     teamEyebrow: "Our team members",
@@ -489,12 +495,19 @@ export const messages = {
   },
 
   gallery: {
-    heroEyebrow: "Gallery",
+    heroEyebrow: "Gallery of Activities",
     heroTitle: "Moments of service",
     heroDescription:
       "Real photographs from our camps, trainings and campaigns across the campus and community.",
-    emptyTitle: "No albums yet",
-    emptyText: "Photos from our events will be organized into albums here.",
+    emptyTitle: "No activities published yet",
+    emptyText: "Photos and reports from our events and campaigns will appear here.",
+    fieldActivitiesTitle: "Field Activities & Stories",
+    fieldActivitiesText:
+      "Completed humanitarian operations and youth initiatives, with photos and reports.",
+    albumsTitle: "Photo Albums",
+    albumsText: "Moments captured from our camps, trainings and campaigns.",
+    albumsEmptyTitle: "No albums yet",
+    albumsEmptyText: "Photos from our events will be organized into albums here.",
     allAlbums: "All albums",
   },
 
@@ -588,14 +601,40 @@ export const messages = {
       "You must be healthy and at least 18 years old",
       "Minimum 56 days between donations (safe interval)",
       "Your number stays private — visible only to the society team",
-      "You can mark yourself unavailable any time through the team",
+      "You can mark yourself unavailable or remove your listing anytime (self-service with your name and number)",
     ],
     donorRegistration: "Donor registration",
     donorRegistrationSub: "Takes less than a minute. Be a lifesaver.",
+    manageListingTitle: "Already registered? Manage your listing",
+    manageListingText:
+      "Use the name and phone number you registered with to mark yourself unavailable, show your number publicly, or remove your listing anytime.",
+    lostLinkTitle: "Lost your contact-request link?",
+    lostLinkText:
+      "If you requested a donor's contact but lost the tracking link, find your requests again with the name and number you submitted.",
     searchAreaPlaceholder: "Search by area (e.g. Kazla, Rajshahi)…",
     searchAreaAria: "Search donors by area",
     filterBloodGroupAria: "Filter by blood group",
     allBloodGroups: "All blood groups",
+    guideEyebrow: "How it works",
+    guideTitle: "From finding a donor to managing your listing",
+    guideSteps: [
+      {
+        title: "Register or request",
+        text: "Register as a donor with your name, number and a 4–6 digit passcode, or submit a blood request.",
+      },
+      {
+        title: "Request a donor's contact",
+        text: "Found a donor? Request their contact — you'll get a private tracking page and a passcode to view it.",
+      },
+      {
+        title: "Track and get the number",
+        text: "Check your tracking page with your number and passcode. The donor's number appears once the society team approves.",
+      },
+      {
+        title: "Manage your listing",
+        text: "Mark yourself unavailable or remove your listing anytime using your name, number and passcode.",
+      },
+    ],
   },
 
   bloodRequest: {
@@ -620,6 +659,59 @@ export const messages = {
     formTitle: "Blood request form",
     formNote:
       "In a life-threatening emergency, always call the nearest blood bank or ambulance service first — this form is monitored by the society team but may not be instant.",
+  },
+
+  contactRequest: {
+    heroEyebrow: "Blood Support",
+    heroTitle: "Track your contact request",
+    heroDescription:
+      "Check the status of your request for a donor's contact. Once the society team approves it, the donor's number appears here.",
+    trackingTitle: "Contact request status",
+    trackingId: "Tracking ID",
+    backToBloodSupport: "Back to Blood Support",
+    contactLabel: "Contact number used at submission",
+    contactPlaceholder: "017XXXXXXXX",
+    checkStatus: "Check status",
+    approvedLabel: "Approved",
+    pendingLabel: "Under review",
+    rejectedLabel: "Declined",
+    donorPhoneLabel: "Donor contact number",
+    approvedPhoneNote:
+      "The society team approved sharing this number with you. Please mention the Red Crescent Blood Support team when you call.",
+    pendingText:
+      "Your request is with the society team for review. Once approved, the donor's contact number will appear right here. Check back again soon.",
+    rejectedText:
+      "This contact request was declined by the society team. You can reach out through the blood support page for alternatives.",
+    verifyNote:
+      "Only the contact number and passcode you set at submission can view this request. The donor's number is revealed only after the society team approves the request.",
+    notFoundText:
+      "No request found for this tracking link and contact number. Check the number and try again.",
+    privacyTitle: "Privacy first",
+    privacyText:
+      "Your contact number doubles as your private key to this page — only you can view it. The donor's number is revealed only after the society team approves your request.",
+    howItWorksTitle: "How it works",
+    howItWorksStep1: "Submit the request and keep the tracking link.",
+    howItWorksStep2: "The society team reviews and approves the request.",
+    howItWorksStep3: "Come back to this page and the donor's number will be here.",
+    needHelpTitle: "Need something else?",
+    needHelpText: "Browse available donors or submit a blood request.",
+    pageGuideTitle: "How to use this page",
+    pageGuideSteps: [
+      "Enter the contact number and the passcode you set when submitting the request.",
+      "See your request's status — under review, approved, or declined.",
+      "Once approved, the donor's number appears here — tap it to call.",
+    ],
+    nameLabel: "Full name",
+    namePlaceholder: "Name used at submission",
+    phoneLabel: "Contact number",
+    phonePlaceholder: "017XXXXXXXX",
+    passcodeLabel: "Passcode",
+    passcodePlaceholder: "Your 4–6 digit code",
+    find: "Find my requests",
+    notFound: "No requests found for this name, contact number and passcode. Check them and try again.",
+    note: "Only the name, contact number and passcode you set at submission can recover these links. The donor's number is never shown here — it stays behind the tracking page.",
+    view: "View",
+    submittedLabel: "Submitted",
   },
 
   donorCard: {

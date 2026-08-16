@@ -55,7 +55,6 @@ export default async function AdminNoticesPage() {
       render: (notice) => (
         <div className="flex gap-1.5">
           {notice.pinned && <StatusBadge label="Pinned" tone="crescent" />}
-          {notice.publish_at && <StatusBadge label="Scheduled" tone="poly" />}
         </div>
       ),
     },
@@ -75,7 +74,7 @@ export default async function AdminNoticesPage() {
       <AdminPageHeader
         icon={Megaphone}
         title="Notices"
-        description="Publish and schedule announcements for the notice board."
+        description="Publish announcements for the notice board — they go live the moment you publish."
         tone="bg-gradient-to-br from-amber-400 to-orange-500"
         actions={
           <AdminFormDialog
@@ -147,8 +146,6 @@ function NoticeFields({
     category: string | null;
     pinned: boolean;
     published: boolean;
-    publish_at: string | null;
-    expires_at: string | null;
   };
   attachments?: { url: string }[];
 }) {
@@ -178,20 +175,10 @@ function NoticeFields({
         <Label htmlFor="n-content">Content</Label>
         <Textarea id="n-content" name="content" defaultValue={notice?.content ?? ""} rows={6} className="mt-1.5" />
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="n-publishAt">Publish at (schedule)</Label>
-          <Input id="n-publishAt" name="publishAt" type="datetime-local" defaultValue={notice?.publish_at?.slice(0, 16) ?? ""} className="mt-1.5" />
-        </div>
-        <div>
-          <Label htmlFor="n-expiresAt">Expires at</Label>
-          <Input id="n-expiresAt" name="expiresAt" type="datetime-local" defaultValue={notice?.expires_at?.slice(0, 16) ?? ""} className="mt-1.5" />
-        </div>
-      </div>
       <div className="flex gap-6">
         <label className="flex items-center gap-2 text-sm">
           <Checkbox name="published" defaultChecked={notice?.published ?? true} />
-          Published
+          Published (visible immediately)
         </label>
         <label className="flex items-center gap-2 text-sm">
           <Checkbox name="pinned" defaultChecked={notice?.pinned} />

@@ -66,6 +66,7 @@ export default async function AdminEventsPage() {
       header: "Registrations",
       render: (event) => (
         <EventRegistrations
+          eventId={event.id}
           eventTitle={event.title}
           registrations={registrationsByEvent.get(event.id) ?? []}
         />

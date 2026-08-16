@@ -82,6 +82,18 @@ const nextConfig: NextConfig = {
         destination: "/:locale/team/:path*",
         permanent: true,
       },
+      // Activities listing merged into the Gallery of Activities (/gallery).
+      // Activity detail pages stay at /activities/:slug.
+      {
+        source: "/activities",
+        destination: "/gallery",
+        permanent: true,
+      },
+      {
+        source: "/:locale(en|bn)/activities",
+        destination: "/:locale/gallery",
+        permanent: true,
+      },
       // Admin panel moved from /admin/volunteers to /admin/team
       {
         source: "/admin/volunteers",

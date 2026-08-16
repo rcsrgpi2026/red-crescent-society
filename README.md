@@ -5,8 +5,8 @@ unit of Rajshahi Polytechnic Institute. Built with **Next.js (App Router)**, **T
 **Tailwind CSS**, **shadcn/ui** and **Supabase**.
 
 > A real institutional website, volunteer management platform, blood support platform,
-> event system, activity & training portal, notice board, gallery, digital volunteer
-> profiles and an admin dashboard — no fake data, no fake buttons.
+> event system, activity & training portal, notice board, gallery of activities, digital
+> volunteer profiles and an admin dashboard — no fake data, no fake buttons.
 
 ---
 
@@ -14,7 +14,7 @@ unit of Rajshahi Polytechnic Institute. Built with **Next.js (App Router)**, **T
 
 ### Public website
 - **Homepage** — hero, society principles, live statistics, activities, upcoming events,
-  blood support, training, volunteer recognition, gallery, notices and emergency contact.
+  blood support, training, volunteer recognition, notices and emergency contact.
 - **About** — mission, vision, what volunteers do, history, the seven fundamental
   principles and the leadership team.
 - **Volunteers** — searchable/filterable directory of approved volunteers, plus public
@@ -23,9 +23,11 @@ unit of Rajshahi Polytechnic Institute. Built with **Next.js (App Router)**, **T
   status tracking, donor registration, and a privacy-safe **“Request Contact”** flow
   (donor phone numbers are never public).
 - **Events** — event listing with categories, event detail pages and online registration.
-- **Activities** — activity reports with photos and impact data.
-- **Notices** — notice board with pinned notices, scheduling and attachments.
-- **Gallery** — albums with a lightbox viewer.
+- **Gallery of Activities** — field activities presented as a photo gallery; each
+  activity opens into its full report with a lightbox viewer (the former separate
+  “Activities” and “Gallery” pages are merged here; `/activities` redirects to
+  `/gallery`).
+- **Notices** — notice board with pinned notices that publish instantly, plus attachments.
 - **Training** — first aid / CPR / disaster training programs.
 - **Emergency** — configurable emergency section (numbers are set by admins, never invented).
 - **Certificate verification** — `/verify/certificate/<token>` public verification pages.
@@ -191,8 +193,9 @@ public/logos/         # Replace with the official logos
 
 - Public forms (join, blood request, contact, …) are English-only for now; the pages
   around them are fully translated.
-- Image uploads: admin forms currently accept image **URLs**; file uploads to Supabase
-  Storage can be added with an upload widget (buckets are documented above).
+- Image uploads: admin forms and portal avatars upload to Supabase Storage (the `images`
+  bucket) with client-side cropping and compression; a few legacy fields still accept image
+  URLs directly.
 - Volunteer-to-account linking: volunteers are linked to auth users by email when they
   sign in; the public join form does not require an account.
 - The `points` settings values are informational on the homepage — award points manually

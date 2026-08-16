@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requireStudent } from "@/lib/auth";
+import { getMyDonorContactRequests } from "@/lib/queries";
 import { SiteLogo } from "@/components/layout/site-logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { StudentProfileEditor } from "@/components/student/student-profile-editor";
+import { DonorContactNotifications } from "@/components/portal/donor-contact-notifications";
 
 export const metadata: Metadata = {
   title: "My Student Profile & Portal",
@@ -14,6 +16,7 @@ export const metadata: Metadata = {
 
 export default async function StudentPortalPage() {
   const { student } = await requireStudent();
+  const notifications = await getMyDonorContactRequests();
 
   return (
     <div className="min-h-screen bg-mist">
@@ -52,7 +55,8 @@ export default async function StudentPortalPage() {
           Back to website
         </Link>
 
-        <div className="mt-6">
+        <div className="mt-6 space-y-6">
+          <DonorContactNotifications requests={notifications} />
           <StudentProfileEditor student={student} />
         </div>
       </main>

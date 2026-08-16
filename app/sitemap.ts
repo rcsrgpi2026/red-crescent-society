@@ -13,7 +13,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/blood-support",
     "/blood-support/request",
     "/events",
-    "/activities",
     "/notices",
     "/gallery",
     "/training",
@@ -32,11 +31,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const supabase = await createClient();
 
-  const [events, activities, notices, albums] = await Promise.all([
+  const [events, activities, notices] = await Promise.all([
     supabase.from("events").select("slug, updated_at").neq("status", "DRAFT"),
     supabase.from("activities").select("slug, updated_at"),
     supabase.from("notices").select("slug, updated_at"),
-    supabase.from("gallery_albums").select("slug"),
   ]);
 
   const dynamicRoutes: MetadataRoute.Sitemap = [
@@ -57,12 +55,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(n.updated_at),
       changeFrequency: "monthly" as const,
       priority: 0.5,
-    })),
-    ...(albums.data ?? []).map((a) => ({
-      url: `${baseUrl}/gallery/${a.slug}`,
-      lastModified: new Date(),
-      changeFrequency: "monthly" as const,
-      priority: 0.4,
     })),
   ];
 

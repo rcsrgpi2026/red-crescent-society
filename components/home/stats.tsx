@@ -5,9 +5,16 @@ import type { HomeStats } from "@/lib/queries";
 import { Users, Droplets, CalendarCheck, GraduationCap, HeartPulse, HandHeart } from "lucide-react";
 import { useLocale } from "@/components/providers/locale-provider";
 
-export function Stats({ stats }: { stats: HomeStats }) {
+export function Stats({
+  stats,
+  isAdmin = true,
+}: {
+  stats: HomeStats;
+  /** Team-related stats (Active Team Members) are admin-only. */
+  isAdmin?: boolean;
+}) {
   const { t } = useLocale();
-  const STAT_ITEMS: { key: keyof HomeStats; label: string; icon: React.ElementType }[] = [
+  const ALL_STAT_ITEMS: { key: keyof HomeStats; label: string; icon: React.ElementType }[] = [
     { key: "totalVolunteers", label: t.home.stats.activeVolunteers, icon: Users },
     { key: "activeDonors", label: t.home.stats.activeBloodDonors, icon: Droplets },
     { key: "eventsCompleted", label: t.home.stats.eventsCompleted, icon: CalendarCheck },
@@ -15,6 +22,9 @@ export function Stats({ stats }: { stats: HomeStats }) {
     { key: "trainingSessions", label: t.home.stats.trainingSessions, icon: GraduationCap },
     { key: "studentsReached", label: t.home.stats.studentsReached, icon: HandHeart },
   ];
+  const STAT_ITEMS = isAdmin
+    ? ALL_STAT_ITEMS
+    : ALL_STAT_ITEMS.filter((item) => item.key !== "totalVolunteers");
 
   return (
     <section className="border-b border-line bg-brand-dark">

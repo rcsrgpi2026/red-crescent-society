@@ -170,6 +170,7 @@ export async function volunteerSignUp(
     name: formData.get("name"),
     roll: formData.get("roll"),
     registrationNo: formData.get("registrationNo"),
+    session: formData.get("session"),
     department: formData.get("department"),
     semester: formData.get("semester"),
     phone: formData.get("phone"),
@@ -231,6 +232,7 @@ export async function volunteerSignUp(
     name: v.name,
     roll: v.roll,
     registration_no: v.registrationNo,
+    session: v.session,
     department: v.department,
     semester: v.semester,
     phone: v.phone,
@@ -243,7 +245,7 @@ export async function volunteerSignUp(
     experience: v.experience,
     motivation: v.motivation,
     status: "PENDING",
-    position: "Team Member",
+    position: "General Member",
   });
   if (insertError) {
     console.error("teamMemberSignUp insert error:", insertError);

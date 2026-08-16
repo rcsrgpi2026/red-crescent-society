@@ -3,13 +3,18 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { AdminFormDialog, FieldError } from "@/components/admin/admin-form-dialog";
+import { TrainingParticipants } from "@/components/admin/training-participants";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import {
   ResponsiveTable,
   type Column,
 } from "@/components/admin/responsive-table";
-import { adminGetTrainings } from "@/lib/queries";
+import {
+  adminGetTrainings,
+  adminGetTrainingParticipants,
+  adminGetTrainingCertificateCounts,
+} from "@/lib/queries";
 import { saveTraining, deleteTraining } from "@/lib/admin-actions";
 import { TRAINING_CATEGORIES, formatDate } from "@/lib/constants";
 import { Input, Label, Textarea } from "@/components/ui";
@@ -20,8 +25,40 @@ const TRAINING_STATUS = [
   { value: "COMPLETED", label: "Completed" },
 ];
 
+function CountChip({
+  tone,
+  children,
+}: {
+  tone: "neutral" | "brand" | "warning" | "success" | "crescent";
+  children: React.ReactNode;
+}) {
+  const styles = {
+    neutral: "bg-mist text-muted-foreground border-line",
+    brand: "bg-brand-soft text-brand-dark",
+    warning: "bg-amber-50 text-amber-700",
+    success: "bg-emerald-50 text-emerald-700",
+    crescent: "bg-crescent-soft text-crescent",
+  }[tone];
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${styles}`}
+    >
+      {children}
+    </span>
+  );
+}
+
 export default async function AdminTrainingPage() {
   const trainings = await adminGetTrainings();
+  const [participantsByTraining, certificateCounts] = await Promise.all([
+    (async () =>
+      new Map(
+        await Promise.all(
+          trainings.map(async (t) => [t.id, await adminGetTrainingParticipants(t.id)] as const)
+        )
+      ))(),
+    adminGetTrainingCertificateCounts(),
+  ]);
 
   const columns: Column<(typeof trainings)[number]>[] = [
     {
@@ -63,6 +100,25 @@ export default async function AdminTrainingPage() {
         <StatusBadge label={training.status} tone={statusTone(training.status)} />
       ),
     },
+    {
+      header: "Participants",
+      render: (training) => {
+        const participants = participantsByTraining.get(training.id) ?? [];
+        const approved = participants.filter((p) => p.status === "APPROVED").length;
+        const pending = participants.filter((p) => p.status === "PENDING").length;
+        const completed = participants.filter((p) => p.status === "COMPLETED").length;
+        const certificates = certificateCounts[training.id] ?? 0;
+        return (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <CountChip tone="neutral">{participants.length}</CountChip>
+            {approved > 0 && <CountChip tone="brand">{approved} enrolled</CountChip>}
+            {pending > 0 && <CountChip tone="warning">{pending} pending</CountChip>}
+            {completed > 0 && <CountChip tone="success">{completed} done</CountChip>}
+            {certificates > 0 && <CountChip tone="crescent">{certificates} cert{certificates === 1 ? "" : "s"}</CountChip>}
+          </div>
+        );
+      },
+    },
   ];
 
   return (
@@ -93,9 +149,14 @@ export default async function AdminTrainingPage() {
         columns={columns}
         rows={trainings}
         keyFor={(training) => training.id}
-        minWidth="min-w-[680px]"
+        minWidth="min-w-[840px]"
         actions={(training) => (
           <>
+            <TrainingParticipants
+              trainingId={training.id}
+              trainingTitle={training.title}
+              participants={participantsByTraining.get(training.id) ?? []}
+            />
             <AdminFormDialog
               trigger={
                 <Button variant="ghost" size="sm" aria-label={`Edit ${training.title}`}>

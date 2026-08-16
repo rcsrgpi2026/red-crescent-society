@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { EventCard } from "@/components/cards/event-card";
 import { ActivityStoryCard } from "@/components/cards/activity-story-card";
+import { TrainingCard } from "@/components/cards/training-card";
 import { NoticeCard } from "@/components/cards/notice-card";
 import { AlbumCard } from "@/components/cards/album-card";
 import {
@@ -19,14 +20,16 @@ import {
   getUpcomingEvents,
   getPublishedNotices,
   getRecentActivities,
+  getPublicTrainings,
   getAlbums,
   getPublicBloodRequests,
   getPublicTeamMembers,
   getFounders,
   getCommunityMembers,
 } from "@/lib/queries";
-import { getServerMessages } from "@/lib/i18n/server";
+import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 import { format } from "@/lib/i18n";
+import { getProfile, isAdminRole } from "@/lib/auth";
 
 /** Real photos from activities and albums, deduplicated, newest first. */
 function heroPhotos(images: (string | null | undefined)[]): string[] {
@@ -42,20 +45,27 @@ function heroPhotos(images: (string | null | undefined)[]): string[] {
 }
 
 export default async function HomePage() {
-  const [t, settings, stats, events, notices, activities, albums, requests, team, founders, members] =
+  // Team content (section + links) is visible only to admin roles — volunteers
+  // and students should not see the team on the home page.
+  const profile = await getProfile();
+  const isAdmin = isAdminRole(profile?.role);
+
+  const [t, locale, settings, stats, events, notices, activities, trainings, albums, requests, founders, members] =
     await Promise.all([
       getServerMessages(),
+      getServerLocale(),
       getSettings(),
       getHomeStats(),
       getUpcomingEvents(3),
       getPublishedNotices(4),
       getRecentActivities(6),
+      getPublicTrainings(),
       getAlbums(6),
       getPublicBloodRequests(),
-      getPublicTeamMembers({ limit: 18 }),
       getFounders(),
       getCommunityMembers(),
     ]);
+  const team = isAdmin ? await getPublicTeamMembers({ limit: 18 }) : [];
 
   const homepage = settings.homepage ?? {};
   const emergency = settings.emergency ?? {};
@@ -147,7 +157,7 @@ export default async function HomePage() {
           </Reveal>
         </div>
       </section>
-      <Stats stats={stats} />
+      <Stats stats={stats} isAdmin={isAdmin} />
 
       {/* Who we are — introduction, mission, history, founders */}
       <AboutSection t={t} founders={founders} />
@@ -271,39 +281,39 @@ export default async function HomePage() {
       {/* Community — leadership tree */}
       <CommunitySection t={t} members={members} />
 
-      {/* Team */}
-      <TeamSection t={t} team={team} />
+      {/* Team — visible only to admin roles */}
+      {isAdmin && <TeamSection t={t} team={team} />}
 
-      {/* Serve — stories from the field */}
+      {/* Serve — training programs */}
       <section className="border-b border-line bg-mist/50">
         <div className="container-site py-16 lg:py-24">
           <Reveal>
             <SectionHeader
-              eyebrow={t.home.activitiesEyebrow}
-              title={t.home.activitiesTitle}
-              description={t.home.activitiesDescription}
+              eyebrow={t.home.trainingEyebrow}
+              title={t.home.trainingTitle}
+              description={t.home.trainingDescription}
             />
           </Reveal>
-          {activities.length > 0 ? (
+          {trainings.length > 0 ? (
             <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {activities.slice(0, 6).map((activity, i) => (
-                <Reveal key={activity.id} delay={(i % 3) * 0.06}>
-                  <ActivityStoryCard activity={activity} />
+              {trainings.slice(0, 6).map((training, i) => (
+                <Reveal key={training.id} delay={(i % 3) * 0.06}>
+                  <TrainingCard training={training} locale={locale} />
                 </Reveal>
               ))}
             </div>
           ) : (
             <div className="mt-10">
               <EmptyState
-                title={t.home.activitiesEmptyTitle}
-                description={t.home.activitiesEmptyText}
+                title={t.home.trainingEmptyTitle}
+                description={t.home.trainingEmptyText}
               />
             </div>
           )}
           <Reveal className="mt-8 text-center">
             <Button asChild variant="outline">
-              <Link href="/gallery">
-                {t.home.viewAllActivities}
+              <Link href="/training">
+                {t.home.exploreTraining}
                 <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
               </Link>
             </Button>
@@ -336,9 +346,11 @@ export default async function HomePage() {
                     <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
                   </Link>
                 </Button>
-                <Button asChild size="lg" className="bg-crescent hover:bg-crescent-dark">
-                  <Link href="/team">{t.home.meetOurTeam}</Link>
-                </Button>
+                {isAdmin && (
+                  <Button asChild size="lg" className="bg-crescent hover:bg-crescent-dark">
+                    <Link href="/team">{t.home.meetOurTeam}</Link>
+                  </Button>
+                )}
               </div>
               <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-white/70">
                 {bloodHelpline && (

@@ -21,6 +21,42 @@ export const DEPARTMENTS = [
 
 export const SEMESTERS = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"] as const;
 
+export const SESSIONS = ["22-23", "23-24", "24-25", "25-26", "26-27"] as const;
+
+/** Leadership hierarchy — the admin declares each member's position. */
+export const TEAM_POSITIONS = [
+  "Team Leader",
+  "Deputy Team Leader",
+  "Group Leader",
+  "Assistant Group Leader",
+  "General Member",
+] as const;
+
+/**
+ * Society-wide leadership positions that are not tied to any RCY department —
+ * Team Leader and Deputy Team Leader oversee all wings, so they never get a
+ * department assignment.
+ */
+export const NON_DEPARTMENT_POSITIONS = ["Team Leader", "Deputy Team Leader"] as const;
+
+/** Red Crescent Youth internal departments — the admin assigns one to each member. */
+export const RCY_DEPARTMENTS = [
+  "Administration, Organisation & Recruitment",
+  "Training and Co-Curriculum",
+  "ICT Media & Communication",
+  "Disaster & Humanitarian Response",
+  "Health & Services",
+  "Resource Mobilization",
+] as const;
+
+export const TRAINING_PARTICIPANT_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Pending approval",
+  APPROVED: "Enrolled",
+  REJECTED: "Not approved",
+  COMPLETED: "Completed",
+  DROPPED: "Not enrolled",
+};
+
 export const EVENT_CATEGORIES = [
   "Blood Donation",
   "First Aid",

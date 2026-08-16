@@ -320,6 +320,9 @@ export const messages = {
     trainingTitle: "Training that prepares you to help",
     trainingDescription:
       "From first aid to disaster management — training builds the skills our team members serve with.",
+    trainingEmptyTitle: "No training programs scheduled",
+    trainingEmptyText:
+      "Training sessions will be announced here and on the notice board.",
     trainingItems: [
       {
         title: "First Aid",
@@ -523,6 +526,7 @@ export const messages = {
     emptyText: "Announcements from the society will appear here.",
     allNotices: "All notices",
     pinnedNotice: "Pinned notice",
+    readNotice: "Read notice",
     noContent: "No additional content for this notice.",
     attachments: "Attachments",
     allNoticesBack: "All notices",
@@ -539,6 +543,12 @@ export const messages = {
       "team members who complete training receive certificates with a unique verification link that can be shared and verified publicly.",
     certificatesLabel: "Certificates:",
     joinToAccess: "Join to access training",
+    joinTraining: "Join this training",
+    requestAgain: "Request again",
+    statusPending: "Pending approval",
+    statusEnrolled: "Enrolled",
+    statusCompleted: "Completed",
+    statusDropped: "Dropped",
   },
 
   volunteers: {

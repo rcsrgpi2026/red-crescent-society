@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLocale } from "@/lib/i18n/config";
 
 export async function updateSession(request: NextRequest) {
   // Without Supabase credentials there is no session to refresh — let requests
@@ -47,7 +48,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Exact per-segment matching: "/team" (public directory) is NOT the
+  // Exact per-segment matching: "/team" (now admin-only) is NOT the
   // "/volunteer" portal area, and "/admins"/"/students" don't exist anyway.
   const isAdminArea = pathname === "/admin" || pathname.startsWith("/admin/");
   const isStudentArea =
@@ -57,11 +58,26 @@ export async function updateSession(request: NextRequest) {
     (pathname === "/volunteer" || pathname.startsWith("/volunteer/")) &&
     pathname !== "/volunteer/login";
 
+  // The team directory is admin-only. Strip the locale segment so "/team"
+  // and "/:locale/team" are matched the same way.
+  const segments = pathname.split("/").filter(Boolean);
+  const hasLocale = segments.length > 0 && isLocale(segments[0]);
+  const basePath = hasLocale ? `/${segments[0]}` : "/";
+  const teamRest = (hasLocale ? segments.slice(1) : segments).join("/");
+  const isTeamArea = teamRest === "team" || teamRest.startsWith("team/");
+
   // Protect the admin, student and volunteer areas.
   if ((isAdminArea || isStudentArea || isVolunteerArea) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = isStudentArea ? "/student/login" : "/volunteer/login";
     url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // Logged-out visitors are sent home from the team directory.
+  if (isTeamArea && !user) {
+    const url = request.nextUrl.clone();
+    url.pathname = basePath;
     return NextResponse.redirect(url);
   }
 
@@ -95,6 +111,14 @@ export async function updateSession(request: NextRequest) {
 
     // Protect admin area from non-staff roles
     if (isAdminArea && !isStaff) {
+      const url = request.nextUrl.clone();
+      url.pathname = role === "STUDENT" ? "/student" : "/volunteer";
+      return NextResponse.redirect(url);
+    }
+
+    // Team directory is admin-only — students and volunteers are sent to
+    // their own portal.
+    if (isTeamArea && !isStaff) {
       const url = request.nextUrl.clone();
       url.pathname = role === "STUDENT" ? "/student" : "/volunteer";
       return NextResponse.redirect(url);

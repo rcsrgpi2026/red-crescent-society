@@ -7,6 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Reveal } from "@/components/shared/reveal";
+import { cn } from "@/lib/utils";
 
 export interface Column<T> {
   header: string;
@@ -32,6 +33,8 @@ interface ResponsiveTableProps<T> {
   empty?: React.ReactNode;
   /** Min-width (px) for the desktop table so it keeps readable columns. */
   minWidth?: string;
+  /** Columns in the mobile card field grid — 1 stacks each field full-width. */
+  mobileCardColumns?: 1 | 2;
   className?: string;
 }
 
@@ -45,6 +48,7 @@ export function ResponsiveTable<T>({
   actionsHeader,
   empty,
   minWidth = "min-w-[640px]",
+  mobileCardColumns = 2,
   className,
 }: ResponsiveTableProps<T>) {
   const cardColumns = columns.filter((c) => !c.hideOnMobile);
@@ -120,16 +124,20 @@ export function ResponsiveTable<T>({
                       </div>
                     )}
                     {cardColumns.length > 1 && (
-                      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5">
+                      <dl
+                        className={cn(
+                          "mt-3 grid gap-x-4 gap-y-2.5",
+                          mobileCardColumns === 1
+                            ? "grid-cols-1 sm:grid-cols-2"
+                            : "grid-cols-2 [&:nth-last-child(-n+2):only-child]:col-span-2"
+                        )}
+                      >
                         {cardColumns.slice(1).map((col) => (
-                          <div
-                            key={col.header}
-                            className="min-w-0 [&:nth-last-child(-n+2):only-child]:col-span-2"
-                          >
+                          <div key={col.header} className="min-w-0">
                             <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                               {col.header}
                             </dt>
-                            <dd className="mt-0.5 text-sm text-foreground">
+                            <dd className="mt-0.5 break-words text-sm text-foreground">
                               {col.mobileRender ? col.mobileRender(row) : col.render(row)}
                             </dd>
                           </div>

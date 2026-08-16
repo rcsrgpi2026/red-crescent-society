@@ -127,6 +127,7 @@ export const teamMemberSignupSchema = z.object({
   name: z.string().min(3, "Please enter your full name").max(100),
   roll: z.string().min(1, "Roll number is required").max(30),
   registrationNo: z.string().min(1, "College registration number is required").max(30),
+  session: z.string().min(1, "Select your session").max(20),
   department: z.string().min(1, "Select your department"),
   semester: z.string().min(1, "Select your semester"),
   phone: z.string().regex(phoneRegex, "Enter a valid Bangladeshi mobile number (e.g. 017XXXXXXXX)"),

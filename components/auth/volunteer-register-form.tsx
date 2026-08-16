@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FormShell, FieldError, SubmitButton } from "@/components/forms/form";
 import { volunteerSignUp } from "@/lib/auth-actions";
-import { BLOOD_GROUPS, DEPARTMENTS, SEMESTERS } from "@/lib/constants";
+import { BLOOD_GROUPS, DEPARTMENTS, SEMESTERS, SESSIONS } from "@/lib/constants";
 import {
   Label,
   Input,
@@ -20,6 +20,7 @@ export function VolunteerRegisterForm() {
     name: "",
     roll: "",
     registrationNo: "",
+    session: "",
     department: "",
     semester: "",
     phone: "",
@@ -71,18 +72,40 @@ export function VolunteerRegisterForm() {
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="vl-registrationNo">College registration number</Label>
-            <Input
-              id="vl-registrationNo"
-              name="registrationNo"
-              value={formData.registrationNo}
-              onChange={(e) => handleChange("registrationNo", e.target.value)}
-              placeholder="e.g. 2110000123"
-              className="mt-1.5"
-              required
-            />
-            <FieldError errors={errors} name="registrationNo" />
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="vl-registrationNo">College registration number</Label>
+              <Input
+                id="vl-registrationNo"
+                name="registrationNo"
+                value={formData.registrationNo}
+                onChange={(e) => handleChange("registrationNo", e.target.value)}
+                placeholder="e.g. 2110000123"
+                className="mt-1.5"
+                required
+              />
+              <FieldError errors={errors} name="registrationNo" />
+            </div>
+            <div>
+              <Label htmlFor="vl-session">Session</Label>
+              <Select
+                name="session"
+                value={formData.session}
+                onValueChange={(val) => handleChange("session", val)}
+              >
+                <SelectTrigger id="vl-session" className="mt-1.5">
+                  <SelectValue placeholder="Select session" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SESSIONS.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldError errors={errors} name="session" />
+            </div>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">

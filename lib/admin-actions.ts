@@ -4,7 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { logAudit } from "@/lib/auth";
-import { slugify } from "@/lib/constants";
+import { slugify, TEAM_POSITIONS, RCY_DEPARTMENTS, NON_DEPARTMENT_POSITIONS } from "@/lib/constants";
 import type { ActionResult } from "@/lib/actions";
 
 function guard() {
@@ -73,6 +73,72 @@ export async function deleteTeamMember(id: string): Promise<ActionResult> {
   revalidatePath("/admin/team");
   updateTag("volunteers");
   return { success: true, message: "Team member deleted." };
+}
+
+/**
+ * Declares a member's leadership position from the admin team list. Used by
+ * the inline position select — the member sees it on their profile and on
+ * the ID-style membership card.
+ */
+export async function updateTeamMemberPosition(formData: FormData): Promise<ActionResult> {
+  guard();
+  const id = String(formData.get("id"));
+  const position = String(formData.get("position"));
+  if (!id) return { success: false, message: "Team member is required." };
+  if (!TEAM_POSITIONS.includes(position as (typeof TEAM_POSITIONS)[number])) {
+    return { success: false, message: "Invalid position." };
+  }
+
+  const supabase = await createClient();
+  // Leadership positions are society-wide — they are never tied to an RCY
+  // department, so assigning one clears any previous department.
+  const isLeader = (NON_DEPARTMENT_POSITIONS as readonly string[]).includes(position);
+  const { error } = await supabase
+    .from("team_members")
+    .update({ position, rcy_department: isLeader ? null : undefined })
+    .eq("id", id);
+  if (error) return { success: false, message: "Could not update the position." };
+  await logAudit("position_changed", "team_member", id, { position, ...(isLeader ? { rcy_department: null } : {}) });
+  revalidatePath("/admin/team");
+  revalidatePath("/team");
+  updateTag("volunteers");
+  return { success: true, message: `Position set to ${position}.` };
+}
+
+/**
+ * Assigns a member's RCY department (society wing) from the admin team list.
+ * The sentinel "__none" clears it — the member sees the department on their
+ * profile and on the ID-style membership card.
+ */
+export async function updateTeamMemberRcyDepartment(formData: FormData): Promise<ActionResult> {
+  guard();
+  const id = String(formData.get("id"));
+  const rcyDepartment = String(formData.get("rcyDepartment"));
+  if (!id) return { success: false, message: "Team member is required." };
+
+  let value: string | null;
+  if (rcyDepartment === "__none") {
+    value = null;
+  } else if (RCY_DEPARTMENTS.includes(rcyDepartment as (typeof RCY_DEPARTMENTS)[number])) {
+    value = rcyDepartment;
+  } else {
+    return { success: false, message: "Invalid RCY department." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("team_members")
+    .update({ rcy_department: value })
+    .eq("id", id);
+  if (error) return { success: false, message: "Could not update the RCY department." };
+  await logAudit("rcy_department_changed", "team_member", id, { rcy_department: value });
+  revalidatePath("/admin/team");
+  revalidatePath("/team");
+  updateTag("volunteers");
+  return {
+    success: true,
+    message: value ? `RCY department set to ${value}.` : "RCY department cleared.",
+  };
 }
 
 export async function addPoints(formData: FormData): Promise<ActionResult> {
@@ -608,6 +674,74 @@ export async function deleteNotice(id: string): Promise<ActionResult> {
 // ---------------------------------------------------------------------------
 // Training
 // ---------------------------------------------------------------------------
+
+const TRAINING_PARTICIPANT_STATUSES = ["PENDING", "APPROVED", "REJECTED", "COMPLETED", "DROPPED"];
+
+/** Approve / reject / complete / drop a member's training enrollment. */
+export async function updateTrainingParticipantStatus(formData: FormData): Promise<ActionResult> {
+  guard();
+  const id = String(formData.get("id"));
+  const status = String(formData.get("status"));
+  if (!TRAINING_PARTICIPANT_STATUSES.includes(status)) {
+    return { success: false, message: "Invalid status." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("training_participants")
+    .update({ status })
+    .eq("id", id);
+  if (error) return { success: false, message: "Could not update the enrollment." };
+  await logAudit("training_participant_status", "training_participant", id, { status });
+  revalidatePath("/admin/training");
+  revalidatePath("/training");
+  revalidatePath("/volunteer");
+  updateTag("training");
+  return { success: true, message: `Enrollment ${status.toLowerCase()}.` };
+}
+
+/**
+ * One-click certificate for a training participant (used from the training
+ * participants dialog). Title defaults to the training name.
+ */
+export async function issueTrainingCertificate(formData: FormData): Promise<ActionResult> {
+  guard();
+  const participantId = String(formData.get("participantId"));
+  if (!participantId) return { success: false, message: "Participant is required." };
+
+  const supabase = await createClient();
+  const { data: participant } = await supabase
+    .from("training_participants")
+    .select("volunteer_id, training_id, training(title)")
+    .eq("id", participantId)
+    .maybeSingle();
+  if (!participant) return { success: false, message: "Participant not found." };
+
+  const trainingTitle =
+    (participant.training as unknown as { title?: string } | undefined)?.title ?? "Training";
+  const title = `${trainingTitle} — Training Certificate`;
+  const token = `CRT-${Date.now().toString(36).toUpperCase()}${Math.random()
+    .toString(36)
+    .slice(2, 6)
+    .toUpperCase()}`;
+
+  const { error } = await supabase.from("certificates").insert({
+    volunteer_id: participant.volunteer_id,
+    training_id: participant.training_id,
+    title,
+    issued_at: new Date().toISOString().slice(0, 10),
+    verify_token: token,
+  });
+  if (error) return { success: false, message: "Could not issue the certificate." };
+  await logAudit("certificate_issued", "certificate", participant.volunteer_id, { title });
+  revalidatePath("/admin/training");
+  revalidatePath("/admin/certificates");
+  updateTag("certificates");
+  return {
+    success: true,
+    message: `Certificate issued. Verify URL: /verify/certificate/${token}`,
+  };
+}
 
 export async function saveTraining(formData: FormData): Promise<ActionResult> {
   guard();

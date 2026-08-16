@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { InlineStatus } from "@/components/admin/inline-status";
+import { PositionDepartment } from "@/components/admin/position-department";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import {
   ResponsiveTable,
@@ -13,7 +14,7 @@ import {
 import { Reveal } from "@/components/shared/reveal";
 import { adminGetTeamMembers } from "@/lib/queries";
 import { updateTeamMemberStatus } from "@/lib/admin-actions";
-import { formatDateTime } from "@/lib/constants";
+import { formatDateTime, TEAM_POSITIONS, RCY_DEPARTMENTS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const STATUS_TABS = [
@@ -48,9 +49,9 @@ export default async function AdminTeamMembersPage({
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-dark text-sm font-bold text-white">
             {v.name.charAt(0)}
           </span>
-          <div>
-            <p className="font-medium text-foreground">{v.name}</p>
-            <p className="text-xs text-muted-foreground">{v.phone ?? "—"}</p>
+          <div className="min-w-0">
+            <p className="break-words font-medium text-foreground">{v.name}</p>
+            <p className="break-words text-xs text-muted-foreground">{v.phone ?? "—"}</p>
           </div>
         </div>
       ),
@@ -77,6 +78,33 @@ export default async function AdminTeamMembersPage({
         <span className="text-xs text-muted-foreground">
           {[v.department, v.semester].filter(Boolean).join(" · ") || "—"}
         </span>
+      ),
+    },
+    {
+      header: "Position / RCY Dept.",
+      render: (v) => (
+        <PositionDepartment
+          memberId={v.id}
+          position={v.position}
+          rcyDepartment={v.rcy_department}
+          positionOptions={TEAM_POSITIONS as unknown as string[]}
+          departmentOptions={RCY_DEPARTMENTS as unknown as string[]}
+          positionTriggerClassName="w-44"
+          departmentTriggerClassName="w-56"
+        />
+      ),
+      // Keep both dropdowns usable on the mobile card view too — full width,
+      // stacked vertically by PositionDepartment itself on small screens.
+      mobileRender: (v) => (
+        <PositionDepartment
+          memberId={v.id}
+          position={v.position}
+          rcyDepartment={v.rcy_department}
+          positionOptions={TEAM_POSITIONS as unknown as string[]}
+          departmentOptions={RCY_DEPARTMENTS as unknown as string[]}
+          positionTriggerClassName="w-full"
+          departmentTriggerClassName="w-full"
+        />
       ),
     },
     {
@@ -185,6 +213,7 @@ export default async function AdminTeamMembersPage({
         rows={volunteers}
         keyFor={(v) => v.id}
         minWidth="min-w-[760px]"
+        mobileCardColumns={1}
         actions={(v) => (
           <Button asChild variant="ghost" size="sm">
             <Link href={`/admin/team/${v.id}`}>

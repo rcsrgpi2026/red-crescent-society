@@ -16,6 +16,7 @@ import {
 import { SiteLogo } from "@/components/layout/site-logo";
 import { getSettings } from "@/lib/queries";
 import { getServerMessages } from "@/lib/i18n/server";
+import { getProfile, isAdminRole } from "@/lib/auth";
 
 const QUICK_LINKS = [
   { key: "team", href: "/team" },
@@ -41,6 +42,10 @@ const SOCIAL_ICONS: Record<string, React.ElementType> = {
 
 export async function SiteFooter() {
   const [t, settings] = await Promise.all([getServerMessages(), getSettings()]);
+  const profile = await getProfile();
+  const isAdmin = isAdminRole(profile?.role);
+  // Team is admin-only — keep its quick link off the footer for everyone else.
+  const quickLinks = QUICK_LINKS.filter((link) => link.key !== "team" || isAdmin);
   const society = settings.society ?? {};
   const contact = settings.contact ?? {};
   const social = settings.social ?? {};
@@ -153,7 +158,7 @@ export async function SiteFooter() {
             {t.footer.quickLinks}
           </h3>
           <ul className="mt-3 grid grid-cols-2 gap-x-2 gap-y-1.5">
-            {QUICK_LINKS.map((link) => (
+            {quickLinks.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}

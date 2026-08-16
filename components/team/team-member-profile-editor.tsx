@@ -13,6 +13,7 @@ import {
   Phone,
   Mail,
   Shield,
+  Layers,
   Edit3,
   CheckCircle2,
   AlertCircle,
@@ -23,15 +24,26 @@ import {
 } from "lucide-react";
 import { PortalAvatarUploader } from "@/components/portal/portal-avatar-uploader";
 import { updateTeamMemberProfile, updateTeamMemberPhoto } from "@/lib/portal-actions";
-import { TEAM_MEMBER_STATUS_LABELS, formatDate } from "@/lib/constants";
+import { TEAM_MEMBER_STATUS_LABELS, formatDate, SESSIONS } from "@/lib/constants";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
-import { Label, Input, Textarea, Button } from "@/components/ui";
+import {
+  Label,
+  Input,
+  Textarea,
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui";
 import type { TeamMember } from "@/types/database";
 
 export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember }) {
   const [activeTab, setActiveTab] = useState<"view" | "edit">("view");
   const [formData, setFormData] = useState({
     name: teamMember.name || "",
+    session: teamMember.session || "",
     phone: teamMember.phone || "",
     area: teamMember.area || "",
     emergencyContactName: teamMember.emergency_contact_name || "",
@@ -80,8 +92,11 @@ export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember
 
   const overviewRows = [
     { icon: User, label: "Full Name", value: formData.name || teamMember.name },
-    { icon: Building2, label: "Department", value: teamMember.department || "—" },
+    { icon: Shield, label: "Position", value: teamMember.position || "—", note: "Declared by admin" },
+    { icon: Building2, label: "College Department", value: teamMember.department || "—" },
+    { icon: Layers, label: "RCY Department", value: teamMember.rcy_department || "—", note: "Declared by admin" },
     { icon: GraduationCap, label: "Semester", value: teamMember.semester || "—" },
+    { icon: CalendarDays, label: "Session", value: formData.session || teamMember.session || "—" },
     { icon: Droplets, label: "Blood Group", value: teamMember.blood_group || "—", note: "Protected (Admin only)" },
     { icon: MapPin, label: "Area / Address", value: formData.area || teamMember.area || "—" },
     { icon: Phone, label: "Mobile Number", value: formData.phone || teamMember.phone || "—" },
@@ -299,6 +314,31 @@ export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember
               )}
             </div>
 
+            <div>
+              <Label htmlFor="vl-session">Session</Label>
+              <Select
+                name="session"
+                value={formData.session || undefined}
+                onValueChange={(val) => handleChange("session", val)}
+              >
+                <SelectTrigger id="vl-session" className="mt-1.5">
+                  <SelectValue placeholder="Select session" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SESSIONS.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.session && (
+                <p className="mt-1 text-xs font-medium text-crescent">{errors.session[0]}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <Label htmlFor="vl-phone">Mobile Number</Label>
               <Input

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
@@ -10,6 +11,98 @@ import {
   contactSchema,
   donorContactSchema,
 } from "@/lib/validation";
+
+/**
+ * Team members request to join a training. The request starts PENDING and
+ * the admin approves it from the admin training panel.
+ */
+export async function joinTraining(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  if (!isSupabaseConfigured) {
+    return { success: false, message: "The database is not configured yet." };
+  }
+
+  const trainingId = String(formData.get("trainingId") ?? "");
+  if (!trainingId) return { success: false, message: "Training is required." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, message: "Sign in as a team member to join training." };
+  }
+
+  const { data: member } = await supabase
+    .from("team_members")
+    .select("id, status")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!member) {
+    return { success: false, message: "Team member profile not found." };
+  }
+  if (member.status !== "APPROVED") {
+    return {
+      success: false,
+      message: "Your membership must be approved before you can join training.",
+    };
+  }
+
+  const { data: training } = await supabase
+    .from("training")
+    .select("status")
+    .eq("id", trainingId)
+    .maybeSingle();
+  if (!training) {
+    return { success: false, message: "Training not found." };
+  }
+  if (training.status !== "UPCOMING" && training.status !== "ONGOING") {
+    return { success: false, message: "This training is not open for joining." };
+  }
+
+  const { data: existing } = await supabase
+    .from("training_participants")
+    .select("id, status")
+    .eq("training_id", trainingId)
+    .eq("volunteer_id", member.id)
+    .maybeSingle();
+
+  if (existing) {
+    if (existing.status === "PENDING") {
+      return { success: false, message: "You already requested to join this training." };
+    }
+    if (existing.status === "APPROVED" || existing.status === "COMPLETED") {
+      return { success: false, message: "You are already enrolled in this training." };
+    }
+    // REJECTED or DROPPED → request again.
+    const { error } = await supabase
+      .from("training_participants")
+      .update({ status: "PENDING" })
+      .eq("id", existing.id);
+    if (error) {
+      console.error("joinTraining resubmit error:", error);
+      return { success: false, message: "Something went wrong. Please try again." };
+    }
+    revalidatePath("/training");
+    revalidatePath("/volunteer");
+    return { success: true, message: "Request resubmitted — awaiting approval." };
+  }
+
+  const { error } = await supabase.from("training_participants").insert({
+    training_id: trainingId,
+    volunteer_id: member.id,
+    status: "PENDING",
+  });
+  if (error) {
+    console.error("joinTraining insert error:", error);
+    return { success: false, message: "Something went wrong. Please try again." };
+  }
+  revalidatePath("/training");
+  revalidatePath("/volunteer");
+  return { success: true, message: "Joining request sent — awaiting approval." };
+}
 
 export async function adminLogin(email: string, password: string): Promise<ActionResult> {
   if (!isSupabaseConfigured) {

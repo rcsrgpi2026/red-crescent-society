@@ -5,8 +5,8 @@ import { PageHero } from "@/components/shared/page-hero";
 import { EmptyState } from "@/components/shared/empty-state";
 import { TeamMemberCard } from "@/components/cards/team-member-card";
 import { TeamMemberFilters } from "@/components/team/team-filters";
-import { getPublicTeamMembers } from "@/lib/queries";
-import { DEPARTMENTS, SEMESTERS } from "@/lib/constants";
+import { adminGetTeamMembers } from "@/lib/queries";
+import { DEPARTMENTS, SEMESTERS, TEAM_POSITIONS } from "@/lib/constants";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 import { format } from "@/lib/i18n";
 
@@ -28,11 +28,25 @@ export default async function VolunteersPage({
     getServerLocale(),
     searchParams,
   ]);
-  const volunteers = await getPublicTeamMembers({
+  // Admin-only page (middleware) — use the full member record so the ID-style
+  // cards can show roll, registration number, session and department.
+  const volunteers = await adminGetTeamMembers({
+    status: "APPROVED",
+    publicProfile: true,
     search: params.search,
     department: params.department,
     semester: params.semester,
   });
+
+  // Order the ID cards by leadership rank (Team Leader first … General Member),
+  // keeping any legacy/unknown positions at the end. Stable sort preserves the
+  // created-at order within the same position.
+  const positionOrder = new Map<string, number>(TEAM_POSITIONS.map((p, i) => [p, i]));
+  volunteers.sort(
+    (a, b) =>
+      (positionOrder.get(a.position) ?? TEAM_POSITIONS.length) -
+      (positionOrder.get(b.position) ?? TEAM_POSITIONS.length)
+  );
 
   return (
     <>

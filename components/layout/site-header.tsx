@@ -113,6 +113,9 @@ export function SiteHeader({
     currentUser?.role === "EVENT_MANAGER" ||
     currentUser?.role === "CONTENT_MANAGER";
 
+  // Team is admin-only — hide the nav link from everyone else.
+  const navLinks = NAV_LINKS.filter((item) => item.key !== "team" || isStaff);
+
   const dashboardHref = isStaff
     ? "/admin"
     : currentUser?.role === "STUDENT"
@@ -176,7 +179,7 @@ export function SiteHeader({
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-0.5 xl:flex" aria-label="Main navigation">
-            {NAV_LINKS.map((item) => (
+            {navLinks.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -280,7 +283,7 @@ export function SiteHeader({
                     onActive={isActive("/")}
                     onClick={() => setMenuOpen(false)}
                   />
-                  {NAV_LINKS.map((item) => (
+                  {navLinks.map((item) => (
                     <MobileLink
                       key={item.href}
                       href={item.href}

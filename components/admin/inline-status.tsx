@@ -13,6 +13,8 @@ interface InlineStatusProps {
   name?: string;
   /** Optional width classes for the trigger — defaults to a compact fixed width. */
   triggerClassName?: string;
+  /** Screen-reader label for the select. */
+  ariaLabel?: string;
 }
 
 export function InlineStatus({
@@ -22,6 +24,7 @@ export function InlineStatus({
   options,
   name = "status",
   triggerClassName,
+  ariaLabel = "Update status",
 }: InlineStatusProps) {
   async function onChange(next: string) {
     const fd = new FormData();
@@ -39,7 +42,7 @@ export function InlineStatus({
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger
         className={cn("h-8 text-xs", triggerClassName ?? "w-36")}
-        aria-label="Update status"
+        aria-label={ariaLabel}
       >
         <SelectValue />
       </SelectTrigger>

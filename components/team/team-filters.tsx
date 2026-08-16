@@ -46,11 +46,13 @@ export function TeamMemberFilters({ departments, semesters, current }: TeamMembe
           />
         </form>
         <Select
-          value={current.department ?? ""}
-          onValueChange={(v) => apply({ ...current, department: v || undefined })}
+          value={current.department || "__all"}
+          onValueChange={(v) =>
+            apply({ ...current, department: v === "__all" ? undefined : v })
+          }
         >
           <SelectTrigger className="md:w-56" aria-label="Filter by department">
-            <SelectValue placeholder="All departments" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all">All departments</SelectItem>
@@ -62,11 +64,13 @@ export function TeamMemberFilters({ departments, semesters, current }: TeamMembe
           </SelectContent>
         </Select>
         <Select
-          value={current.semester ?? ""}
-          onValueChange={(v) => apply({ ...current, semester: v || undefined })}
+          value={current.semester || "__all"}
+          onValueChange={(v) =>
+            apply({ ...current, semester: v === "__all" ? undefined : v })
+          }
         >
           <SelectTrigger className="md:w-40" aria-label="Filter by semester">
-            <SelectValue placeholder="All semesters" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all">All semesters</SelectItem>

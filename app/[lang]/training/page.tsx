@@ -4,9 +4,11 @@ import { GraduationCap, CalendarDays, MapPin, UserRound, Award } from "lucide-re
 import { PageHero } from "@/components/shared/page-hero";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
-import { getPublicTrainings } from "@/lib/queries";
+import { getPublicTrainings, getMyTrainingEnrollments } from "@/lib/queries";
+import { getCurrentTeamMember } from "@/lib/auth";
 import { formatDate } from "@/lib/constants";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
+import { TrainingJoinButton } from "@/components/team/training-join-button";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerMessages();
@@ -17,11 +19,22 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function TrainingPage() {
-  const [t, locale, trainings] = await Promise.all([
+  const [t, locale, trainings, teamMember] = await Promise.all([
     getServerMessages(),
     getServerLocale(),
     getPublicTrainings(),
+    getCurrentTeamMember(),
   ]);
+  const canJoin = teamMember?.status === "APPROVED";
+
+  // Map training id → the member's own enrollment status (PENDING / APPROVED /
+  // COMPLETED / REJECTED / DROPPED) so each card shows the right state instead
+  // of always offering the join button.
+  const myStatus = new Map<string, string>();
+  if (canJoin && teamMember) {
+    const enrollments = await getMyTrainingEnrollments(teamMember.id);
+    for (const en of enrollments) myStatus.set(en.training_id, en.status);
+  }
 
   return (
     <>
@@ -74,6 +87,21 @@ export default async function TrainingPage() {
                       {training.description}
                     </p>
                   )}
+                  {canJoin &&
+                    (training.status === "UPCOMING" || training.status === "ONGOING") && (
+                      <TrainingJoinButton
+                        trainingId={training.id}
+                        label={t.training.joinTraining}
+                        requestAgainLabel={t.training.requestAgain}
+                        status={myStatus.get(training.id) ?? null}
+                        statusLabels={{
+                          PENDING: t.training.statusPending,
+                          APPROVED: t.training.statusEnrolled,
+                          COMPLETED: t.training.statusCompleted,
+                          DROPPED: t.training.statusDropped,
+                        }}
+                      />
+                    )}
                 </div>
               ))}
             </div>
@@ -90,15 +118,17 @@ export default async function TrainingPage() {
               <span className="font-semibold">{t.training.certificatesLabel}</span> {t.training.certificatesNote}
             </p>
           </div>
-          <div className="mt-6 text-center">
-            <Link
-              href="/volunteer/login"
-              className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
-            >
-              <GraduationCap className="h-4 w-4" aria-hidden />
-              {t.training.joinToAccess}
-            </Link>
-          </div>
+          {!canJoin && (
+            <div className="mt-6 text-center">
+              <Link
+                href="/volunteer/login"
+                className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
+              >
+                <GraduationCap className="h-4 w-4" aria-hidden />
+                {t.training.joinToAccess}
+              </Link>
+            </div>
+          )}
         </div>
       </section>
     </>

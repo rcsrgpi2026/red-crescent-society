@@ -11,6 +11,8 @@ import {
   getPublicActivities,
   getTeamMemberParticipation,
   getMyDonorContactRequests,
+  getMyTrainingEnrollments,
+  getMyCertificates,
 } from "@/lib/queries";
 import { TEAM_MEMBER_STATUS_LABELS } from "@/lib/constants";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
@@ -19,6 +21,8 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { ParticipationPanel } from "@/components/team/participation-panel";
 import { TeamMemberProfileEditor } from "@/components/team/team-member-profile-editor";
 import { DonorContactNotifications } from "@/components/portal/donor-contact-notifications";
+import { MyTrainings } from "@/components/team/my-trainings";
+import { MyCertificates } from "@/components/team/my-certificates";
 
 export const metadata: Metadata = {
   title: "Team Member Portal & Profile",
@@ -32,19 +36,26 @@ export default async function TeamMemberPortalPage() {
   let participationEvents: { id: string; title: string; date: string | null }[] = [];
   let participationActivities: { id: string; title: string; date: string | null }[] = [];
   let requests: Awaited<ReturnType<typeof getTeamMemberParticipation>> = [];
+  let trainings: Awaited<ReturnType<typeof getMyTrainingEnrollments>> = [];
+  let certificates: Awaited<ReturnType<typeof getMyCertificates>> = [];
   const notifications = await getMyDonorContactRequests();
 
   if (teamMember.status === "APPROVED") {
-    const [events, activities, ownRequests] = await Promise.all([
-      getUpcomingEvents(12),
-      getPublicActivities(),
-      getTeamMemberParticipation(teamMember.id),
-    ]);
+    const [events, activities, ownRequests, ownTrainings, ownCertificates] =
+      await Promise.all([
+        getUpcomingEvents(12),
+        getPublicActivities(),
+        getTeamMemberParticipation(teamMember.id),
+        getMyTrainingEnrollments(teamMember.id),
+        getMyCertificates(teamMember.id),
+      ]);
     participationEvents = events.map((e) => ({ id: e.id, title: e.title, date: e.date }));
     participationActivities = activities
       .slice(0, 12)
       .map((a) => ({ id: a.id, title: a.title, date: a.date }));
     requests = ownRequests;
+    trainings = ownTrainings;
+    certificates = ownCertificates;
   }
 
   return (
@@ -100,6 +111,14 @@ export default async function TeamMemberPortalPage() {
               activities={participationActivities}
               requests={requests}
             />
+          )}
+
+          {/* Training Enrollments (Approved Only) */}
+          {teamMember.status === "APPROVED" && <MyTrainings enrollments={trainings} />}
+
+          {/* Issued Certificates (Approved Only) */}
+          {teamMember.status === "APPROVED" && (
+            <MyCertificates certificates={certificates} />
           )}
         </div>
       </main>

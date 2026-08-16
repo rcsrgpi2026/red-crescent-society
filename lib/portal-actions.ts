@@ -22,6 +22,13 @@ const studentProfileSchema = z.object({
 
 const volunteerProfileSchema = z.object({
   name: z.string().trim().min(2, "Full name must be at least 2 characters"),
+  session: z
+    .string()
+    .trim()
+    .min(1, "Select your session")
+    .max(20)
+    .optional()
+    .or(z.literal("")),
   phone: z
     .string()
     .trim()
@@ -145,6 +152,7 @@ export async function updateTeamMemberProfile(
 ): Promise<ActionResult> {
   const parsed = volunteerProfileSchema.safeParse({
     name: formData.get("name"),
+    session: formData.get("session") || undefined,
     phone: formData.get("phone"),
     area: formData.get("area"),
     emergencyContactName: formData.get("emergencyContactName"),
@@ -177,6 +185,7 @@ export async function updateTeamMemberProfile(
     .from("team_members")
     .update({
       name: v.name,
+      session: v.session || null,
       phone: v.phone,
       area: v.area,
       emergency_contact_name: v.emergencyContactName,

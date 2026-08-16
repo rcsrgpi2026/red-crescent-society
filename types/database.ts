@@ -24,6 +24,12 @@ export type EventStatus =
   | "DRAFT";
 export type Availability = "AVAILABLE" | "UNAVAILABLE";
 export type TrainingStatus = "UPCOMING" | "ONGOING" | "COMPLETED";
+export type TrainingParticipantStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "COMPLETED"
+  | "DROPPED";
 
 export interface Profile {
   id: string;
@@ -59,7 +65,12 @@ export interface TeamMember {
   student_id: string | null;
   roll: string | null;
   registration_no: string | null;
+  /** Academic session, e.g. 2024-25 — shown on the ID-style membership card. */
+  session: string | null;
+  /** College department (academic), e.g. Computer Science & Technology. */
   department: string | null;
+  /** RCY department (society wing) — declared by the admin, e.g. Health & Services. */
+  rcy_department: string | null;
   semester: string | null;
   phone: string | null;
   email: string | null;
@@ -341,6 +352,28 @@ export interface Training {
   updated_at: string;
 }
 
+export interface TrainingParticipant {
+  id: string;
+  training_id: string;
+  volunteer_id: string;
+  status: TrainingParticipantStatus;
+  created_at: string;
+}
+
+/** Admin view of a training participant — joined team member info. */
+export interface AdminTrainingParticipant extends TrainingParticipant {
+  team_members?: { name: string | null; member_id: string | null; position: string | null } | null;
+}
+
+/** Member's own training enrollment — joined training info. */
+export interface MyTrainingEnrollment {
+  id: string;
+  training_id: string;
+  status: TrainingParticipantStatus;
+  created_at: string;
+  training: { title: string; date: string | null; category: string | null; status: string };
+}
+
 export interface Certificate {
   id: string;
   volunteer_id: string;
@@ -348,6 +381,7 @@ export interface Certificate {
   issued_at: string | null;
   file_url: string | null;
   verify_token: string;
+  training_id: string | null;
   created_at: string;
 }
 

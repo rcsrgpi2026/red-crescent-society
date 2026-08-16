@@ -22,7 +22,9 @@ import type {
   Notice,
   NoticeAttachment,
   ParticipationRequest,
+  AdminTrainingParticipant,
   DonorContactNotification,
+  MyTrainingEnrollment,
   PublicBloodDonor,
   PublicBloodRequest,
   PublicTeamMember,
@@ -625,6 +627,9 @@ export const getCertificateVerification = unstable_cache(
 export async function adminGetTeamMembers(params?: {
   status?: string;
   search?: string;
+  department?: string;
+  semester?: string;
+  publicProfile?: boolean;
   limit?: number;
 }): Promise<TeamMember[]> {
   const supabase = await db();
@@ -632,6 +637,9 @@ export async function adminGetTeamMembers(params?: {
   let query = supabase.from("team_members").select("*");
   if (params?.status) query = query.eq("status", params.status);
   if (params?.search) query = query.ilike("name", `%${params.search}%`);
+  if (params?.department) query = query.eq("department", params.department);
+  if (params?.semester) query = query.eq("semester", params.semester);
+  if (params?.publicProfile !== undefined) query = query.eq("public_profile", params.publicProfile);
   const { data } = await query.order("created_at", { ascending: false }).limit(params?.limit ?? 200);
   return data ?? [];
 }
@@ -804,6 +812,45 @@ export async function adminGetUnreadMessageCount(): Promise<number> {
   return count ?? 0;
 }
 
+export async function adminGetTrainingParticipants(
+  trainingId: string
+): Promise<AdminTrainingParticipant[]> {
+  const supabase = await db();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("training_participants")
+    .select("*, team_members(name, member_id, position)")
+    .eq("training_id", trainingId)
+    .order("created_at", { ascending: true });
+  return (data ?? []) as AdminTrainingParticipant[];
+}
+
+export async function getMyCertificates(
+  teamMemberId: string
+): Promise<Certificate[]> {
+  const supabase = await db();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("certificates")
+    .select("*")
+    .eq("volunteer_id", teamMemberId)
+    .order("issued_at", { ascending: false });
+  return (data ?? []) as Certificate[];
+}
+
+export async function getMyTrainingEnrollments(
+  teamMemberId: string
+): Promise<MyTrainingEnrollment[]> {
+  const supabase = await db();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("training_participants")
+    .select("id, training_id, status, created_at, training(title, date, category, status)")
+    .eq("volunteer_id", teamMemberId)
+    .order("created_at", { ascending: false });
+  return (data ?? []) as unknown as MyTrainingEnrollment[];
+}
+
 export async function adminGetAttendanceForEvent(eventId: string): Promise<Attendance[]> {
   const supabase = await db();
   if (!supabase) return [];
@@ -833,6 +880,24 @@ export async function adminGetCertificates(): Promise<Certificate[]> {
     .select("*")
     .order("created_at", { ascending: false });
   return data ?? [];
+}
+
+/**
+ * Count of certificates issued per training (only certificates linked to a
+ * training — i.e. issued from the training participants dialog).
+ */
+export async function adminGetTrainingCertificateCounts(): Promise<Record<string, number>> {
+  const supabase = await db();
+  if (!supabase) return {};
+  const { data } = await supabase
+    .from("certificates")
+    .select("training_id")
+    .not("training_id", "is", null);
+  const counts: Record<string, number> = {};
+  for (const row of data ?? []) {
+    if (row.training_id) counts[row.training_id] = (counts[row.training_id] ?? 0) + 1;
+  }
+  return counts;
 }
 
 export interface AdminParticipationRequest {

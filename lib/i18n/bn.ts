@@ -322,6 +322,8 @@ export const bn: Messages = {
     trainingTitle: "সাহায্যের জন্য প্রস্তুত করে এমন প্রশিক্ষণ",
     trainingDescription:
       "প্রাথমিক চিকিৎসা থেকে দুর্যোগ ব্যবস্থাপনা — প্রশিক্ষণই আমাদের টিম সদস্যদের সেবার দক্ষতা গড়ে তোলে।",
+    trainingEmptyTitle: "কোনো প্রশিক্ষণ কর্মসূচি নির্ধারিত নেই",
+    trainingEmptyText: "প্রশিক্ষণ সেশন এখানে ও নোটিশ বোর্ডে ঘোষণা করা হবে।",
     trainingItems: [
       {
         title: "প্রাথমিক চিকিৎসা",
@@ -523,6 +525,7 @@ export const bn: Messages = {
     emptyText: "সোসাইটির ঘোষণা এখানে দেখা যাবে।",
     allNotices: "সব নোটিশ",
     pinnedNotice: "পিন করা নোটিশ",
+    readNotice: "নোটিশ পড়ুন",
     noContent: "এই নোটিশে আর কোনো বিষয়বস্তু নেই।",
     attachments: "সংযুক্তি",
     allNoticesBack: "সব নোটিশ",
@@ -539,6 +542,12 @@ export const bn: Messages = {
       "যেসব টিম সদস্য প্রশিক্ষণ সম্পন্ন করেন তারা অনন্য যাচাইকরণ লিংকসহ সার্টিফিকেট পান, যা শেয়ার ও প্রকাশ্যে যাচাই করা যায়।",
     certificatesLabel: "সার্টিফিকেট:",
     joinToAccess: "প্রশিক্ষণ পেতে যোগ দিন",
+    joinTraining: "এই প্রশিক্ষণে যোগ দিন",
+    requestAgain: "আবার অনুরোধ করুন",
+    statusPending: "অনুমোদন অপেক্ষমাণ",
+    statusEnrolled: "নথিভুক্ত",
+    statusCompleted: "সম্পন্ন",
+    statusDropped: "বাদ পড়েছে",
   },
 
   volunteers: {

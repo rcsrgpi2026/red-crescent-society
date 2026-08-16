@@ -148,9 +148,14 @@ export default async function BloodSupportPage({
               <ul className="divide-y divide-line">
                 {requests.slice(0, 8).map((request) => (
                   <li key={request.id}>
+                    {/* Responsive card: on mobile the info column is a
+                        flexible 1fr (min-width 0 so text wraps instead of
+                        overflowing) and the status badges move to their own
+                        full-width row below; on desktop it returns to the
+                        single horizontal row with badges right-aligned. */}
                     <Link
                       href={`/blood-support/request/${request.id}`}
-                      className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-4 transition-colors hover:bg-mist/60"
+                      className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2 px-4 py-4 transition-colors hover:bg-mist/60 sm:flex sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2 sm:px-5"
                     >
                       <span
                         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${
@@ -161,28 +166,28 @@ export default async function BloodSupportPage({
                       >
                         {request.blood_group}
                       </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold text-foreground">{request.patient_name}</p>
-                        <p className="flex flex-wrap items-center gap-x-4 text-xs text-muted-foreground">
+                      <div className="min-w-0 sm:flex-1">
+                        <p className="font-semibold text-foreground sm:truncate">{request.patient_name}</p>
+                        <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                           {request.hospital && (
-                            <span className="flex items-center gap-1">
-                              <HeartPulse className="h-3 w-3" aria-hidden />
-                              {request.hospital}
+                            <span className="flex min-w-0 items-center gap-1">
+                              <HeartPulse className="h-3 w-3 shrink-0" aria-hidden />
+                              <span className="min-w-0">{request.hospital}</span>
                             </span>
                           )}
                           {request.location && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" aria-hidden />
-                              {request.location}
+                            <span className="flex min-w-0 items-center gap-1">
+                              <MapPin className="h-3 w-3 shrink-0" aria-hidden />
+                              <span className="min-w-0">{request.location}</span>
                             </span>
                           )}
                           <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" aria-hidden />
+                            <Clock className="h-3 w-3 shrink-0" aria-hidden />
                             {formatDate(request.required_date ?? request.created_at, locale === "bn" ? "bn-BD" : "en-GB")}
                           </span>
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-1 sm:ml-auto">
                         {request.emergency_level === "EMERGENCY" && (
                           <StatusBadge label={t.status.emergencyLevel.EMERGENCY} tone="crescent" />
                         )}

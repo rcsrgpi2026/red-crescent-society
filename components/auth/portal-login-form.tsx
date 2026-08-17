@@ -30,40 +30,44 @@ export function PortalLoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5" noValidate>
+    <form onSubmit={onSubmit} className="space-y-3 sm:space-y-4" noValidate>
       {state.message && !state.success && (
         <div
           role="alert"
-          className="rounded-xl border border-crescent/30 bg-crescent-soft p-3.5 text-sm text-crescent"
+          className="rounded-xl border border-crescent/30 bg-crescent-soft p-2.5 text-xs text-crescent sm:p-3.5 sm:text-sm"
         >
           {state.message}
         </div>
       )}
       <div>
-        <Label htmlFor="portal-email">Email</Label>
+        <Label htmlFor="portal-email" className="text-xs sm:text-sm">
+          Email
+        </Label>
         <Input
           id="portal-email"
           name="email"
           type="email"
           autoComplete="email"
           placeholder="you@example.com"
-          className="mt-1.5"
+          className="mt-1 h-9 text-sm sm:mt-1.5 sm:h-10"
           required
         />
       </div>
       <div>
-        <Label htmlFor="portal-password">Password</Label>
+        <Label htmlFor="portal-password" className="text-xs sm:text-sm">
+          Password
+        </Label>
         <Input
           id="portal-password"
           name="password"
           type="password"
           autoComplete="current-password"
           placeholder="••••••••"
-          className="mt-1.5"
+          className="mt-1 h-9 text-sm sm:mt-1.5 sm:h-10"
           required
         />
       </div>
-      <Button type="submit" disabled={busy} className="w-full">
+      <Button type="submit" disabled={busy} className="h-9 w-full text-sm sm:h-10">
         {busy ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
         ) : (

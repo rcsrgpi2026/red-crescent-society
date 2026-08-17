@@ -47,11 +47,9 @@ function heroPhotos(images: (string | null | undefined)[]): string[] {
 export default async function HomePage() {
   // Team content (section + links) is visible only to admin roles — volunteers
   // and students should not see the team on the home page.
-  const profile = await getProfile();
-  const isAdmin = isAdminRole(profile?.role);
-
-  const [t, locale, settings, stats, events, notices, activities, trainings, albums, requests, founders, members] =
+  const [profile, t, locale, settings, stats, events, notices, activities, trainings, albums, requests, founders, members] =
     await Promise.all([
+      getProfile(),
       getServerMessages(),
       getServerLocale(),
       getSettings(),
@@ -65,6 +63,7 @@ export default async function HomePage() {
       getFounders(),
       getCommunityMembers(),
     ]);
+  const isAdmin = isAdminRole(profile?.role);
   const team = isAdmin ? await getPublicTeamMembers({ limit: 18 }) : [];
 
   const homepage = settings.homepage ?? {};

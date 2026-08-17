@@ -84,19 +84,20 @@ export function PortalShell({
         </p>
       </div>
 
-      {/* Form side — fixed to the viewport; the card scrolls internally
-          when the (register) form is taller than the screen. */}
-      <div className="flex overflow-y-auto bg-white px-6">
-        <div className="m-auto w-full max-w-md py-10">
-          <Link
-            href="/"
-            className="mb-8 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-brand-dark"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            Back to website
-          </Link>
-          <div className="lg:hidden">
-            <SiteLogo variant="society" className="w-12" />
+      {/* Form side — centered in the viewport on mobile/desktop without overflow for login */}
+      <div className="flex h-full overflow-y-auto bg-white px-4 sm:px-6">
+        <div className="m-auto w-full max-w-md py-4 sm:py-8 lg:py-10">
+          <div className="mb-3 flex items-center justify-between sm:mb-6 lg:mb-8">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-brand-dark sm:text-sm"
+            >
+              <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
+              Back to website
+            </Link>
+            <div className="lg:hidden">
+              <SiteLogo variant="society" className="w-8 sm:w-10" />
+            </div>
           </div>
           {children}
         </div>

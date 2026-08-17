@@ -87,9 +87,8 @@ const EMPTY_STATS: HomeStats = {
   studentsReached: 0,
 };
 
-// Home stats are fetched live (uncached) so the blood counters update
-// the moment a request is confirmed or a donor registers.
-export async function getHomeStats(): Promise<HomeStats> {
+export const getHomeStats = unstable_cache(
+  async (): Promise<HomeStats> => {
     const supabase = getPublicClient();
     if (!supabase) return EMPTY_STATS;
     const [teamMembers, donors, events, trainings, requests, activities] = await Promise.all([
@@ -126,7 +125,10 @@ export async function getHomeStats(): Promise<HomeStats> {
       bloodDonations: bloodUnits,
       studentsReached: reached,
     };
-  }
+  },
+  ["home-stats"],
+  { tags: ["stats", "donors", "blood-requests"], revalidate: 60 }
+);
 
 export const getFounders = unstable_cache(
   async (): Promise<Founder[]> => {

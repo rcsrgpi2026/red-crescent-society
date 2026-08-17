@@ -51,12 +51,16 @@ export function Hero({
 
   const images = (backgroundImages ?? []).filter(Boolean);
   const [index, setIndex] = useState(0);
+  const [hasTransitioned, setHasTransitioned] = useState(false);
   const activeIndex = images.length > 0 ? index % images.length : 0;
 
   // Crossfade through the photos. Paused for prefers-reduced-motion.
   useEffect(() => {
     if (reduced || images.length < 2) return;
-    const id = setInterval(() => setIndex((i) => (i + 1) % images.length), SLIDE_INTERVAL_MS);
+    const id = setInterval(() => {
+      setHasTransitioned(true);
+      setIndex((i) => (i + 1) % images.length);
+    }, SLIDE_INTERVAL_MS);
     return () => clearInterval(id);
   }, [reduced, images.length]);
 
@@ -80,10 +84,12 @@ export function Hero({
               // Only the first backdrop is LCP-critical — fetching all hero
               // photos at high priority on first paint wastes mobile bandwidth.
               priority={i === 0}
+              quality={75}
               sizes="100vw"
               className={cn(
-                "object-cover transition-opacity duration-[1400ms] ease-in-out",
-                i === activeIndex ? "opacity-100" : "opacity-0"
+                "object-cover",
+                hasTransitioned && "transition-opacity duration-1000 ease-in-out",
+                i === activeIndex ? "opacity-100" : "opacity-0 pointer-events-none"
               )}
             />
           ))}
@@ -103,7 +109,10 @@ export function Hero({
                 <button
                   key={src}
                   type="button"
-                  onClick={() => setIndex(i)}
+                  onClick={() => {
+                    setHasTransitioned(true);
+                    setIndex(i);
+                  }}
                   aria-label={t.home.heroSlideIndicator
                     .replace("{n}", String(i + 1))
                     .replace("{total}", String(images.length))}

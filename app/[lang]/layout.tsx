@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -105,6 +106,7 @@ export default async function PublicRootLayout({
           </LocaleProvider>
           <Toaster position="top-center" richColors closeButton />
         </TooltipProvider>
+        <Analytics />
       </body>
     </html>
   );

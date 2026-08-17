@@ -65,29 +65,32 @@ export default async function ContactPage() {
       />
       <section className="bg-white">
         <div className="container-site grid gap-10 py-14 lg:grid-cols-[1fr_1.2fr] lg:py-20">
-          <div>
+          <div className="min-w-0">
             <div className="grid gap-6">
               {items.map((item) => (
                 <div
                   key={item.title}
-                  className="flex items-start gap-4 rounded-2xl border border-line bg-mist/50 p-7 sm:items-center sm:gap-5"
+                  className="flex min-w-0 items-start gap-4 rounded-2xl border border-line bg-mist/50 p-7 sm:items-center sm:gap-5"
                 >
                   <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-brand">
                     <item.icon className="h-7 w-7" aria-hidden />
                   </span>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <h3 className="text-lg font-semibold text-foreground">{item.title}</h3>
                     {item.lines.map((line, i) =>
                       item.href ? (
                         <a
                           key={i}
                           href={item.href}
-                          className="mt-1.5 block text-base text-brand-dark hover:underline"
+                          className="mt-1.5 block text-base text-brand-dark wrap-anywhere hover:underline"
                         >
                           {line}
                         </a>
                       ) : (
-                        <p key={i} className="mt-1.5 text-base text-muted-foreground">
+                        <p
+                          key={i}
+                          className="mt-1.5 text-base text-muted-foreground wrap-anywhere"
+                        >
                           {line}
                         </p>
                       )
@@ -101,7 +104,7 @@ export default async function ContactPage() {
               <p className="mt-2 text-base leading-relaxed text-muted-foreground">{t.contact.dropByText}</p>
             </div>
           </div>
-          <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8">
+          <div className="min-w-0 rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-xl font-bold text-foreground">{t.contact.sendUsMessage}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{t.contact.sendUsMessageText}</p>
             <div className="mt-6">

@@ -192,7 +192,7 @@
 
 @layer utilities {
   .container-site {
-    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+    @apply mx-auto w-full max-w-7xl px-5 sm:px-6 lg:px-8;
   }
   .font-bengali {
     font-family: var(--font-noto-bengali), var(--font-poppins), sans-serif;

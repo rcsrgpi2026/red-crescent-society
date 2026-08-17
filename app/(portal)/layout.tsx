@@ -1,6 +1,7 @@
 import "../globals.css";
 import "./print.css";
 
+import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LocaleProvider } from "@/components/providers/locale-provider";
@@ -30,6 +31,7 @@ export default function PortalRootLayout({
           </LocaleProvider>
           <Toaster position="top-center" richColors closeButton />
         </TooltipProvider>
+        <Analytics />
       </body>
     </html>
   );

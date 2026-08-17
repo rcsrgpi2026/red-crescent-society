@@ -23,31 +23,32 @@ export default async function AdminPanelLayout({
   const unreadMessages = await adminGetUnreadMessageCount();
 
   return (
-    <div className="min-h-screen bg-mist/60">
-      {/* Desktop sidebar — fixed left navigation panel */}
+    <div className="min-h-screen overflow-x-clip bg-mist/60">
+      {/* Desktop sidebar — fixed left navigation panel. Hidden below lg so it
+          has zero effect on the mobile layout (no width, no offset). */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[264px] border-r border-white/10 lg:block">
         <AdminSidebar unreadMessages={unreadMessages} />
       </aside>
 
-      {/* Main column — offset by the sidebar width on desktop */}
-      <div className="min-h-screen lg:pl-[264px]">
-        {/* Topbar */}
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-3 border-b border-line bg-white/90 px-4 shadow-sm shadow-black/[0.03] backdrop-blur sm:px-6">
+      {/* Main column — offset by the sidebar width only on desktop */}
+      <div className="min-h-screen w-full max-w-full lg:pl-[264px]">
+        {/* Topbar — full viewport width, solid so content never shows through it */}
+        <header className="relative sticky top-0 z-40 flex h-16 w-full items-center justify-between gap-3 border-b border-line bg-white px-5 pt-[env(safe-area-inset-top)] shadow-sm shadow-black/[0.03] sm:px-6">
           {/* Brand gradient hairline */}
           <span
             className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-brand via-crescent to-poly"
             aria-hidden
           />
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <AdminMobileNav unreadMessages={unreadMessages} />
             <div className="hidden sm:block">
               <p className="text-sm font-bold text-foreground">Management Dashboard</p>
               <p className="text-xs text-muted-foreground">
-                Rajshahi Polytechnic Institute Red Crescent Society
+                Rajshahi Govt. Polytechnic Institute Red Crescent Youth
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
             <Badge
               variant="secondary"
               className="hidden items-center gap-1.5 border-brand/20 bg-brand-soft text-brand-ink sm:inline-flex"
@@ -57,13 +58,14 @@ export default async function AdminPanelLayout({
             </Badge>
             <Link
               href="/admin/settings"
-              className="text-xs font-semibold text-brand hover:underline"
+              className="whitespace-nowrap text-xs font-semibold text-brand hover:underline"
             >
               Settings
             </Link>
           </div>
         </header>
-        <main className="p-4 sm:p-6 lg:p-8">{children}</main>
+        {/* Safe-area bottom spacing so floating gesture bars never cover cards */}
+        <main className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

@@ -25,7 +25,6 @@ export async function GET() {
     { header: "Session", width: 1.7, getValue: (v) => v.session ?? "—" },
     { header: "Department", width: 3.2, getValue: (v) => v.department ?? "—" },
     { header: "RCY Dept.", width: 3.4, getValue: (v) => v.rcy_department ?? "—" },
-    { header: "Semester", width: 1.5, getValue: (v) => v.semester ?? "—" },
     { header: "Phone", width: 2.4, getValue: (v) => v.phone ?? "—" },
     { header: "Email", width: 2.8, getValue: (v) => v.email ?? "—" },
     { header: "Blood", width: 1.4, getValue: (v) => v.blood_group ?? "—" },

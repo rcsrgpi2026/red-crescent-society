@@ -7,27 +7,25 @@ import { Input, Button, Select, SelectContent, SelectItem, SelectTrigger, Select
 
 interface TeamMemberFiltersProps {
   departments: readonly string[];
-  semesters: readonly string[];
-  current: { search?: string; department?: string; semester?: string };
+  current: { search?: string; department?: string };
 }
 
-export function TeamMemberFilters({ departments, semesters, current }: TeamMemberFiltersProps) {
+export function TeamMemberFilters({ departments, current }: TeamMemberFiltersProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const apply = (next: { search?: string; department?: string; semester?: string }) => {
+  const apply = (next: { search?: string; department?: string }) => {
     const params = new URLSearchParams();
     if (next.search) params.set("search", next.search);
     if (next.department) params.set("department", next.department);
-    if (next.semester) params.set("semester", next.semester);
     startTransition(() => router.push(`/team?${params.toString()}`));
   };
 
-  const hasFilters = Boolean(current.search || current.department || current.semester);
+  const hasFilters = Boolean(current.search || current.department);
 
   return (
     <div className="rounded-2xl border border-line bg-mist/60 p-4">
-      <div className="grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
+      <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -51,7 +49,7 @@ export function TeamMemberFilters({ departments, semesters, current }: TeamMembe
             apply({ ...current, department: v === "__all" ? undefined : v })
           }
         >
-          <SelectTrigger className="md:w-56" aria-label="Filter by department">
+          <SelectTrigger className="md:max-w-56" aria-label="Filter by department">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -59,24 +57,6 @@ export function TeamMemberFilters({ departments, semesters, current }: TeamMembe
             {departments.map((d) => (
               <SelectItem key={d} value={d}>
                 {d}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={current.semester || "__all"}
-          onValueChange={(v) =>
-            apply({ ...current, semester: v === "__all" ? undefined : v })
-          }
-        >
-          <SelectTrigger className="md:w-40" aria-label="Filter by semester">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all">All semesters</SelectItem>
-            {semesters.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
               </SelectItem>
             ))}
           </SelectContent>

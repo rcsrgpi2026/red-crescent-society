@@ -73,10 +73,10 @@ export default async function AdminTeamMembersPage({
       ),
     },
     {
-      header: "Department / Semester",
+      header: "Department",
       render: (v) => (
         <span className="text-xs text-muted-foreground">
-          {[v.department, v.semester].filter(Boolean).join(" · ") || "—"}
+          {v.department || "—"}
         </span>
       ),
     },

@@ -102,7 +102,7 @@ export default async function AdminDashboardPage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">{v.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {[v.department, v.semester].filter(Boolean).join(" · ") || "—"} · {formatDateTime(v.created_at)}
+                        {v.department || "—"} · {formatDateTime(v.created_at)}
                       </p>
                     </div>
                     <StatusBadge label={v.status} tone={statusTone(v.status)} />

@@ -24,7 +24,7 @@ export function PortalShell({
   const highlights = isStudent
     ? [
         "Instant access — no approval needed",
-        "Your session, semester, roll and department",
+        "Your session, roll and department",
         "Your details stay private to the society",
       ]
     : [
@@ -48,9 +48,9 @@ export function PortalShell({
         <Link href="/" className="relative flex items-center gap-3 text-white">
           <SiteLogo variant="society" className="w-10" />
           <span className="leading-tight">
-            <span className="block font-bold">Red Crescent Society</span>
+            <span className="block font-bold">Red Crescent Youth</span>
             <span className="block text-xs text-white/60">
-              Rajshahi Polytechnic Institute
+              Rajshahi Govt. Polytechnic Institute
             </span>
           </span>
         </Link>

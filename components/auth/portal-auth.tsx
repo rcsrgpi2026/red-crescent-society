@@ -19,7 +19,7 @@ export function PortalAuth({ kind }: { kind: "student" | "volunteer" }) {
   return (
     <>
       <h2 className="mt-4 text-2xl font-bold text-foreground">
-        {isStudent ? "Student sign in" : "Volunteer sign in"}
+        {isStudent ? "Student sign in" : "RCY Member Login"}
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
         {isStudent

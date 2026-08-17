@@ -2,6 +2,8 @@ import { Download, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { AdminPageHeader } from "@/components/admin/page-header";
+import { ConfirmDelete } from "@/components/admin/confirm-delete";
+import { deleteStudent } from "@/lib/admin-actions";
 import {
   ResponsiveTable,
   type Column,
@@ -27,12 +29,6 @@ export default async function AdminStudentsPage() {
       render: (s) => <span className="text-xs text-muted-foreground">{s.session}</span>,
     },
     {
-      header: "Semester",
-      render: (s) => (
-        <span className="text-xs text-muted-foreground">{s.semester}</span>
-      ),
-    },
-    {
       header: "Department",
       render: (s) => <span className="text-sm">{s.department}</span>,
     },
@@ -54,6 +50,17 @@ export default async function AdminStudentsPage() {
         <span className="whitespace-nowrap text-xs text-muted-foreground">
           {formatDateTime(s.created_at)}
         </span>
+      ),
+    },
+    {
+      header: "Actions",
+      render: (s) => (
+        <ConfirmDelete
+          action={deleteStudent}
+          id={s.id}
+          label="Delete"
+          description={`Delete ${s.name}'s student account? This also removes their login account — it cannot be undone.`}
+        />
       ),
     },
   ];

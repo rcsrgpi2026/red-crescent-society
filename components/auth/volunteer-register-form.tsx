@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FormShell, FieldError, SubmitButton } from "@/components/forms/form";
 import { volunteerSignUp } from "@/lib/auth-actions";
-import { BLOOD_GROUPS, DEPARTMENTS, SEMESTERS, SESSIONS } from "@/lib/constants";
+import { BLOOD_GROUPS, DEPARTMENTS, SESSIONS } from "@/lib/constants";
 import {
   Label,
   Input,
@@ -22,7 +22,6 @@ export function VolunteerRegisterForm() {
     registrationNo: "",
     session: "",
     department: "",
-    semester: "",
     phone: "",
     email: "",
     password: "",
@@ -128,26 +127,6 @@ export function VolunteerRegisterForm() {
                 </SelectContent>
               </Select>
               <FieldError errors={errors} name="department" />
-            </div>
-            <div>
-              <Label htmlFor="vl-semester">Semester</Label>
-              <Select
-                name="semester"
-                value={formData.semester}
-                onValueChange={(val) => handleChange("semester", val)}
-              >
-                <SelectTrigger id="vl-semester" className="mt-1.5">
-                  <SelectValue placeholder="Select semester" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SEMESTERS.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FieldError errors={errors} name="semester" />
             </div>
           </div>
 

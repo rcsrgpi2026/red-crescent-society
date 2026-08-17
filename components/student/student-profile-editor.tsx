@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   User,
-  GraduationCap,
   CalendarDays,
   Hash,
   Building2,
@@ -19,7 +18,7 @@ import {
 } from "lucide-react";
 import { PortalAvatarUploader } from "@/components/portal/portal-avatar-uploader";
 import { updateStudentProfile, updateStudentPhoto } from "@/lib/portal-actions";
-import { DEPARTMENTS, SEMESTERS, BLOOD_GROUPS } from "@/lib/constants";
+import { DEPARTMENTS, BLOOD_GROUPS } from "@/lib/constants";
 import {
   Label,
   Input,
@@ -37,7 +36,6 @@ export function StudentProfileEditor({ student }: { student: Student }) {
   const [formData, setFormData] = useState({
     name: student.name || "",
     session: student.session || "",
-    semester: student.semester || "",
     roll: student.roll || "",
     department: student.department || "",
     phone: student.phone || "",
@@ -84,7 +82,6 @@ export function StudentProfileEditor({ student }: { student: Student }) {
   const overviewRows = [
     { icon: User, label: "Full Name", value: formData.name || student.name },
     { icon: CalendarDays, label: "Session", value: formData.session || student.session },
-    { icon: GraduationCap, label: "Semester", value: formData.semester || student.semester },
     { icon: Hash, label: "Roll Number", value: formData.roll || student.roll },
     { icon: Building2, label: "Department", value: formData.department || student.department },
     { icon: Phone, label: "Mobile Number", value: formData.phone || student.phone },
@@ -254,28 +251,6 @@ export function StudentProfileEditor({ student }: { student: Student }) {
               )}
             </div>
 
-            <div>
-              <Label htmlFor="st-semester">Semester</Label>
-              <Select
-                name="semester"
-                value={formData.semester}
-                onValueChange={(val) => handleChange("semester", val)}
-              >
-                <SelectTrigger id="st-semester" className="mt-1.5">
-                  <SelectValue placeholder="Select semester" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SEMESTERS.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.semester && (
-                <p className="mt-1 text-xs font-medium text-crescent">{errors.semester[0]}</p>
-              )}
-            </div>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">

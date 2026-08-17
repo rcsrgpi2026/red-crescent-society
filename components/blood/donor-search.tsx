@@ -45,7 +45,7 @@ export function DonorSearch({ current }: DonorSearchProps) {
           value={current.bloodGroup ?? ""}
           onValueChange={(v) => apply({ ...current, bloodGroup: v || undefined })}
         >
-          <SelectTrigger className="sm:w-44" aria-label="Filter by blood group">
+          <SelectTrigger className="sm:max-w-44" aria-label="Filter by blood group">
             <SelectValue placeholder="All blood groups" />
           </SelectTrigger>
           <SelectContent>

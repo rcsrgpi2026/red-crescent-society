@@ -13,7 +13,15 @@ import {
   getMyDonorContactRequests,
   getMyTrainingEnrollments,
   getMyCertificates,
+  getSettings,
 } from "@/lib/queries";
+import {
+  designFromSettings,
+  memberFromTeamMember,
+  buildCardConfig,
+} from "@/lib/id-card/config";
+import { MemberCardPanel } from "@/components/id-card/member-card-panel";
+import { updateTeamMemberPhoto } from "@/lib/portal-actions";
 import { TEAM_MEMBER_STATUS_LABELS } from "@/lib/constants";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { SiteLogo } from "@/components/layout/site-logo";
@@ -38,7 +46,15 @@ export default async function TeamMemberPortalPage() {
   let requests: Awaited<ReturnType<typeof getTeamMemberParticipation>> = [];
   let trainings: Awaited<ReturnType<typeof getMyTrainingEnrollments>> = [];
   let certificates: Awaited<ReturnType<typeof getMyCertificates>> = [];
-  const notifications = await getMyDonorContactRequests();
+  const [notifications, settings] = await Promise.all([
+    getMyDonorContactRequests(),
+    getSettings(),
+  ]);
+  const cardConfig = buildCardConfig(
+    designFromSettings(settings),
+    memberFromTeamMember(teamMember),
+    teamMember.photo_url
+  );
 
   if (teamMember.status === "APPROVED") {
     const [events, activities, ownRequests, ownTrainings, ownCertificates] =
@@ -70,7 +86,7 @@ export default async function TeamMemberPortalPage() {
                 Team Member Portal
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                RPI Red Crescent Society
+                RPI Red Crescent Youth
               </p>
             </div>
           </div>
@@ -99,6 +115,16 @@ export default async function TeamMemberPortalPage() {
           <DonorContactNotifications requests={notifications} />
           {teamMember.status === "PENDING" && <PendingNotice />}
           {teamMember.status === "REJECTED" && <RejectedNotice />}
+
+          {/* Membership ID Card — design is set by admins, details come from this profile */}
+          <MemberCardPanel
+            config={cardConfig}
+            title="Membership ID Card"
+            description="Your official membership card — front and back. Download both sides together to keep a copy on your phone."
+            onPhotoSaved={updateTeamMemberPhoto}
+            photoFolder="volunteers"
+            showBothSides
+          />
 
           {/* Dedicated Profile & Photo Editor */}
           <TeamMemberProfileEditor teamMember={teamMember} />

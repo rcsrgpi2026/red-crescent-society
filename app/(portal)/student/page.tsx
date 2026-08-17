@@ -2,7 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requireStudent } from "@/lib/auth";
-import { getMyDonorContactRequests } from "@/lib/queries";
+import { getMyDonorContactRequests, getSettings } from "@/lib/queries";
+import {
+  designFromSettings,
+  memberFromStudent,
+  buildCardConfig,
+} from "@/lib/id-card/config";
+import { MemberCardPanel } from "@/components/id-card/member-card-panel";
+import { updateStudentPhoto } from "@/lib/portal-actions";
 import { SiteLogo } from "@/components/layout/site-logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { StudentProfileEditor } from "@/components/student/student-profile-editor";
@@ -16,7 +23,15 @@ export const metadata: Metadata = {
 
 export default async function StudentPortalPage() {
   const { student } = await requireStudent();
-  const notifications = await getMyDonorContactRequests();
+  const [notifications, settings] = await Promise.all([
+    getMyDonorContactRequests(),
+    getSettings(),
+  ]);
+  const cardConfig = buildCardConfig(
+    designFromSettings(settings),
+    memberFromStudent(student),
+    student.photo_url
+  );
 
   return (
     <div className="min-h-screen bg-mist">
@@ -30,7 +45,7 @@ export default async function StudentPortalPage() {
                 Student Account Portal
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                RPI Red Crescent Society
+                RPI Red Crescent Youth
               </p>
             </div>
           </div>
@@ -57,6 +72,14 @@ export default async function StudentPortalPage() {
 
         <div className="mt-6 space-y-6">
           <DonorContactNotifications requests={notifications} />
+          <MemberCardPanel
+            config={cardConfig}
+            title="Student Membership Card"
+            description="Your digital student card with the Red Crescent Society — front and back. Download both sides together to keep a copy on your phone."
+            onPhotoSaved={updateStudentPhoto}
+            photoFolder="students"
+            showBothSides
+          />
           <StudentProfileEditor student={student} />
         </div>
       </main>

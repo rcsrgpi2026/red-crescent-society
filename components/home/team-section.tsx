@@ -43,10 +43,8 @@ export function TeamSection({ t, team }: { t: Messages; team: PublicTeamMember[]
                     <p className="text-xs font-medium text-brand">
                       {member.position || "Team Member"}
                     </p>
-                    {(member.department || member.semester) && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {[member.department, member.semester].filter(Boolean).join(" · ")}
-                      </p>
+                    {member.department && (
+                      <p className="mt-1 text-xs text-muted-foreground">{member.department}</p>
                     )}
                   </div>
                 </div>

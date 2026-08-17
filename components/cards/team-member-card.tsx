@@ -7,7 +7,6 @@ const ID_ROWS: { label: string; getValue: (m: TeamMember) => string | null | und
   { label: "Roll", getValue: (m) => m.roll },
   { label: "Registration No.", getValue: (m) => m.registration_no },
   { label: "Session", getValue: (m) => m.session },
-  { label: "Semester", getValue: (m) => m.semester },
   { label: "Department", getValue: (m) => m.department },
   { label: "RCY Dept.", getValue: (m) => m.rcy_department },
 ];

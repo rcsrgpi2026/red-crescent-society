@@ -15,6 +15,9 @@ const supabaseHost = supabaseUrl.replace(/^https?:\/\//, "");
  *   works — so we keep the documented config-level approach.
  * - style-src 'unsafe-inline': components render inline style attributes
  *   (e.g. motion animations), which nonces cannot cover.
+ * - style-src https://fonts.googleapis.com + font-src https://fonts.gstatic.com:
+ *   the membership card's selectable fonts (see components/id-card/card-fonts.tsx)
+ *   are loaded from Google Fonts at runtime.
  * - img-src https:: admin-configured image URLs can point at any host
  *   (next.config images.remotePatterns is "**"), so https: preserves that.
  * - 'unsafe-eval' and the local websocket are development-only (React devtools).
@@ -22,9 +25,9 @@ const supabaseHost = supabaseUrl.replace(/^https?:\/\//, "");
 const cspDirectives = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
+  "font-src 'self' data: https://fonts.gstatic.com",
   `connect-src 'self'${supabaseHost ? ` https://${supabaseHost} wss://${supabaseHost}` : ""}${
     isDev ? " ws://localhost:*" : ""
   }`,

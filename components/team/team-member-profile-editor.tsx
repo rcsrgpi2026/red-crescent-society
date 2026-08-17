@@ -6,7 +6,6 @@ import {
   BadgeCheck,
   CalendarDays,
   Building2,
-  GraduationCap,
   Award,
   Droplets,
   MapPin,
@@ -14,6 +13,7 @@ import {
   Mail,
   Shield,
   Layers,
+  Hash,
   Edit3,
   CheckCircle2,
   AlertCircle,
@@ -24,7 +24,12 @@ import {
 } from "lucide-react";
 import { PortalAvatarUploader } from "@/components/portal/portal-avatar-uploader";
 import { updateTeamMemberProfile, updateTeamMemberPhoto } from "@/lib/portal-actions";
-import { TEAM_MEMBER_STATUS_LABELS, formatDate, SESSIONS } from "@/lib/constants";
+import {
+  TEAM_MEMBER_STATUS_LABELS,
+  formatDate,
+  SESSIONS,
+  DEPARTMENTS,
+} from "@/lib/constants";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import {
   Label,
@@ -43,7 +48,12 @@ export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember
   const [activeTab, setActiveTab] = useState<"view" | "edit">("view");
   const [formData, setFormData] = useState({
     name: teamMember.name || "",
+    roll: teamMember.roll || "",
+    registrationNo: teamMember.registration_no || "",
     session: teamMember.session || "",
+    department: teamMember.department || "",
+    designation: teamMember.position || "",
+    email: teamMember.email || "",
     phone: teamMember.phone || "",
     area: teamMember.area || "",
     emergencyContactName: teamMember.emergency_contact_name || "",
@@ -92,15 +102,16 @@ export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember
 
   const overviewRows = [
     { icon: User, label: "Full Name", value: formData.name || teamMember.name },
-    { icon: Shield, label: "Position", value: teamMember.position || "—", note: "Declared by admin" },
-    { icon: Building2, label: "College Department", value: teamMember.department || "—" },
+    { icon: Hash, label: "Roll", value: formData.roll || teamMember.roll || "—" },
+    { icon: Hash, label: "Registration No.", value: formData.registrationNo || teamMember.registration_no || "—" },
+    { icon: Shield, label: "Designation", value: formData.designation || teamMember.position || "—", note: "Shown on your ID card" },
+    { icon: Building2, label: "College Department", value: formData.department || teamMember.department || "—" },
     { icon: Layers, label: "RCY Department", value: teamMember.rcy_department || "—", note: "Declared by admin" },
-    { icon: GraduationCap, label: "Semester", value: teamMember.semester || "—" },
     { icon: CalendarDays, label: "Session", value: formData.session || teamMember.session || "—" },
     { icon: Droplets, label: "Blood Group", value: teamMember.blood_group || "—", note: "Protected (Admin only)" },
     { icon: MapPin, label: "Area / Address", value: formData.area || teamMember.area || "—" },
     { icon: Phone, label: "Mobile Number", value: formData.phone || teamMember.phone || "—" },
-    { icon: Mail, label: "Email", value: teamMember.email || "—" },
+    { icon: Mail, label: "Email", value: formData.email || teamMember.email || "—" },
     {
       icon: Phone,
       label: "Emergency Contact",
@@ -340,6 +351,102 @@ export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
+              <Label htmlFor="vl-roll">Roll Number</Label>
+              <Input
+                id="vl-roll"
+                name="roll"
+                value={formData.roll}
+                onChange={(e) => handleChange("roll", e.target.value)}
+                placeholder="e.g. 73014"
+                className="mt-1.5"
+                required
+              />
+              {errors.roll && (
+                <p className="mt-1 text-xs font-medium text-crescent">{errors.roll[0]}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="vl-registrationNo">Registration Number</Label>
+              <Input
+                id="vl-registrationNo"
+                name="registrationNo"
+                value={formData.registrationNo}
+                onChange={(e) => handleChange("registrationNo", e.target.value)}
+                placeholder="e.g. 1502392940"
+                className="mt-1.5"
+              />
+              {errors.registrationNo && (
+                <p className="mt-1 text-xs font-medium text-crescent">{errors.registrationNo[0]}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="vl-department">Department</Label>
+              <Select
+                name="department"
+                value={formData.department || undefined}
+                onValueChange={(val) => handleChange("department", val)}
+              >
+                <SelectTrigger id="vl-department" className="mt-1.5">
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEPARTMENTS.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {d}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.department && (
+                <p className="mt-1 text-xs font-medium text-crescent">{errors.department[0]}</p>
+              )}
+            </div>
+
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="vl-designation">Designation</Label>
+              <Input
+                id="vl-designation"
+                name="designation"
+                value={formData.designation}
+                onChange={(e) => handleChange("designation", e.target.value)}
+                placeholder="e.g. General Member, Executive Member"
+                className="mt-1.5"
+                required
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Shown on your membership ID card.
+              </p>
+              {errors.designation && (
+                <p className="mt-1 text-xs font-medium text-crescent">{errors.designation[0]}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="vl-email">Email Address</Label>
+              <Input
+                id="vl-email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleChange("email", e.target.value)}
+                placeholder="you@example.com"
+                className="mt-1.5"
+              />
+              {errors.email && (
+                <p className="mt-1 text-xs font-medium text-crescent">{errors.email[0]}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
               <Label htmlFor="vl-phone">Mobile Number</Label>
               <Input
                 id="vl-phone"
@@ -475,7 +582,7 @@ export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 flex items-start gap-2.5">
             <Shield className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
             <p>
-              Your Membership ID, Team Rank/Position, Department/Semester records, and Points are officially verified and managed by society administrators.
+              Your Membership ID, RCY Department, Membership Status and Points are officially verified and managed by society administrators. Name, roll, registration number, department, designation, and contact details are yours to update — they appear on your membership ID card.
             </p>
           </div>
 

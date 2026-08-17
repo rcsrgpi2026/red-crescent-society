@@ -21,7 +21,6 @@ export async function GET() {
     { header: "Name", width: 3.5, getValue: (v) => v.name },
     { header: "Roll", width: 2, getValue: (v) => v.roll },
     { header: "Session", width: 2, getValue: (v) => v.session },
-    { header: "Semester", width: 1.6, getValue: (v) => v.semester },
     { header: "Department", width: 4, getValue: (v) => v.department },
     { header: "Phone", width: 2.6, getValue: (v) => v.phone },
     { header: "Email", width: 3.5, getValue: (v) => v.email },

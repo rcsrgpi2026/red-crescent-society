@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FormShell, FieldError, SubmitButton } from "@/components/forms/form";
 import { studentSignUp } from "@/lib/auth-actions";
-import { DEPARTMENTS, SEMESTERS } from "@/lib/constants";
+import { DEPARTMENTS } from "@/lib/constants";
 import {
   Label,
   Input,
@@ -20,7 +20,6 @@ export function StudentRegisterForm() {
     email: "",
     password: "",
     session: "",
-    semester: "",
     roll: "",
     phone: "",
     department: "",
@@ -98,26 +97,6 @@ export function StudentRegisterForm() {
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="st-semester">Semester</Label>
-              <Select
-                name="semester"
-                value={formData.semester}
-                onValueChange={(val) => handleChange("semester", val)}
-              >
-                <SelectTrigger id="st-semester" className="mt-1.5">
-                  <SelectValue placeholder="Select semester" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SEMESTERS.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FieldError errors={errors} name="semester" />
-            </div>
             <div>
               <Label htmlFor="st-roll">Roll number</Label>
               <Input

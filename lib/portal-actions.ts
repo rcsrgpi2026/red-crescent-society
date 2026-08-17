@@ -3,13 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import type { ActionResult } from "@/lib/actions";
 
 const studentProfileSchema = z.object({
   name: z.string().trim().min(2, "Full name must be at least 2 characters"),
   session: z.string().trim().min(4, "Session is required (e.g. 2024-25)"),
-  semester: z.string().trim().min(1, "Semester is required"),
   roll: z.string().trim().min(1, "Roll number is required"),
   department: z.string().trim().min(1, "Department is required"),
   phone: z
@@ -22,11 +20,28 @@ const studentProfileSchema = z.object({
 
 const volunteerProfileSchema = z.object({
   name: z.string().trim().min(2, "Full name must be at least 2 characters"),
+  roll: z.string().trim().min(1, "Roll number is required").max(20),
+  registrationNo: z.string().trim().max(30).optional().or(z.literal("")),
   session: z
     .string()
     .trim()
     .min(1, "Select your session")
     .max(20)
+    .optional()
+    .or(z.literal("")),
+  department: z.string().trim().min(1, "Department is required"),
+  designation: z
+    .string()
+    .trim()
+    .min(2, "Designation is required")
+    .max(60)
+    .optional()
+    .or(z.literal("")),
+  email: z
+    .string()
+    .trim()
+    .email("Provide a valid email address")
+    .max(120)
     .optional()
     .or(z.literal("")),
   phone: z
@@ -65,7 +80,6 @@ export async function updateStudentProfile(
   const parsed = studentProfileSchema.safeParse({
     name: formData.get("name"),
     session: formData.get("session"),
-    semester: formData.get("semester"),
     roll: formData.get("roll"),
     department: formData.get("department"),
     phone: formData.get("phone"),
@@ -94,7 +108,6 @@ export async function updateStudentProfile(
     .update({
       name: v.name,
       session: v.session,
-      semester: v.semester,
       roll: v.roll,
       department: v.department,
       phone: v.phone,
@@ -152,7 +165,12 @@ export async function updateTeamMemberProfile(
 ): Promise<ActionResult> {
   const parsed = volunteerProfileSchema.safeParse({
     name: formData.get("name"),
+    roll: formData.get("roll"),
+    registrationNo: formData.get("registrationNo") || undefined,
     session: formData.get("session") || undefined,
+    department: formData.get("department"),
+    designation: formData.get("designation") || undefined,
+    email: formData.get("email") || undefined,
     phone: formData.get("phone"),
     area: formData.get("area"),
     emergencyContactName: formData.get("emergencyContactName"),
@@ -185,7 +203,12 @@ export async function updateTeamMemberProfile(
     .from("team_members")
     .update({
       name: v.name,
+      roll: v.roll || null,
+      registration_no: v.registrationNo || null,
       session: v.session || null,
+      department: v.department || null,
+      position: v.designation || "General Member",
+      email: v.email || null,
       phone: v.phone,
       area: v.area,
       emergency_contact_name: v.emergencyContactName,

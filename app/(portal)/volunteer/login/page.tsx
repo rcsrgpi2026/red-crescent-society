@@ -3,7 +3,7 @@ import { PortalShell } from "@/components/auth/portal-shell";
 import { PortalAuth } from "@/components/auth/portal-auth";
 
 export const metadata: Metadata = {
-  title: "Volunteer Login",
+  title: "RCY Member Login",
   robots: { index: false, follow: false },
 };
 

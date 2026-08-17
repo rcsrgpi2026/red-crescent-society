@@ -1,7 +1,7 @@
 import type { UserRole } from "@/types/database";
 
-export const SITE_NAME = "Rajshahi Polytechnic Institute Red Crescent Society";
-export const SITE_SHORT_NAME = "RPI Red Crescent Society";
+export const SITE_NAME = "Rajshahi Govt. Polytechnic Institute Red Crescent Youth";
+export const SITE_SHORT_NAME = "RPI Red Crescent Youth";
 
 export const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
 
@@ -18,8 +18,6 @@ export const DEPARTMENTS = [
   "Refrigeration & Air Conditioning",
   "Other",
 ] as const;
-
-export const SEMESTERS = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"] as const;
 
 export const SESSIONS = ["22-23", "23-24", "24-25", "25-26", "26-27"] as const;
 

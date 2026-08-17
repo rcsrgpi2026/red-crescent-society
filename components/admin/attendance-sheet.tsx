@@ -50,7 +50,7 @@ export function AttendanceSheet({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">{v.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {v.member_id ?? "—"} · {[v.department, v.semester].filter(Boolean).join(" · ") || "—"}
+                    {v.member_id ?? "—"} · {v.department || "—"}
                   </p>
                 </div>
                 {current ? (

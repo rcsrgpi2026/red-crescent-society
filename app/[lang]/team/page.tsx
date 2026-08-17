@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { TeamMemberCard } from "@/components/cards/team-member-card";
 import { TeamMemberFilters } from "@/components/team/team-filters";
 import { adminGetTeamMembers } from "@/lib/queries";
-import { DEPARTMENTS, SEMESTERS, TEAM_POSITIONS } from "@/lib/constants";
+import { DEPARTMENTS, TEAM_POSITIONS } from "@/lib/constants";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 import { format } from "@/lib/i18n";
 
@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function VolunteersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; department?: string; semester?: string }>;
+  searchParams: Promise<{ search?: string; department?: string }>;
 }) {
   const [t, locale, params] = await Promise.all([
     getServerMessages(),
@@ -35,7 +35,6 @@ export default async function VolunteersPage({
     publicProfile: true,
     search: params.search,
     department: params.department,
-    semester: params.semester,
   });
 
   // Order the ID cards by leadership rank (Team Leader first … General Member),
@@ -67,7 +66,6 @@ export default async function VolunteersPage({
         <div className="container-site py-12 lg:py-16">
           <TeamMemberFilters
             departments={DEPARTMENTS}
-            semesters={SEMESTERS}
             current={{ ...params }}
           />
           {volunteers.length > 0 ? (

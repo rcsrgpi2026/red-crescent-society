@@ -5,7 +5,7 @@
 
 export const messages = {
   meta: {
-    siteName: "Rajshahi Polytechnic Institute Red Crescent Society",
+    siteName: "Rajshahi Govt. Polytechnic Institute Red Crescent Youth",
     siteDescription:
       "The Red Crescent Society unit of Rajshahi Polytechnic Institute — serving the community through blood support, first aid, disaster response, training and community service.",
     home: {
@@ -108,11 +108,11 @@ export const messages = {
     joinUs: "Join Us",
     login: "Login",
     studentPortal: "Student Login",
-    volunteerPortal: "Volunteer Login",
+    volunteerPortal: "RCY Member Login",
     emergencySupport: "Emergency Support",
     emergencyStrip: "Emergency Support: Blood & First Aid",
-    redCrescentSociety: "Red Crescent Society",
-    rajshahiPolytechnic: "Rajshahi Polytechnic Institute",
+    redCrescentSociety: "Red Crescent Youth",
+    rajshahiPolytechnic: "Rajshahi Govt. Polytechnic Institute",
     openMenu: "Open menu",
   },
 
@@ -405,7 +405,7 @@ export const messages = {
     introEyebrow: "Introduction",
     introTitle: "Students serving with humanity",
     introText1:
-      "The society brings together students of Rajshahi Polytechnic Institute who share one conviction — that young people can make their community safer, healthier and more caring. Through blood donation camps, first aid training, disaster preparedness and awareness campaigns, our team members put that conviction into action every semester.",
+      "The society brings together students of Rajshahi Polytechnic Institute who share one conviction — that young people can make their community safer, healthier and more caring. Through blood donation camps, first aid training, disaster preparedness and awareness campaigns, our team members put that conviction into action year after year.",
     introText2:
       "Working under the banner of the Bangladesh Red Crescent Society and with the support of the institute administration, the society is a place to learn real skills, take real responsibility, and serve real people.",
     missionTitle: "Our Mission",
@@ -555,12 +555,11 @@ export const messages = {
     heroEyebrow: "Our Team",
     heroTitle: "Meet the Team",
     heroDescription:
-      "Approved team members with public profiles. Search by name, department or semester — or join them.",
+      "Approved team members with public profiles. Search by name or department — or join them.",
     becomeVolunteer: "Join the Team",
     searchPlaceholder: "Search by name…",
     searchAria: "Search team members by name",
     allDepartments: "All departments",
-    allSemesters: "All semesters",
     showing: "Showing {n} team member{s}",
     emptyTitle: "No team members found",
     emptyText: "Try different filters, or check back soon — approved team members appear here.",
@@ -806,8 +805,6 @@ export const messages = {
       studentIdPlaceholder: "e.g. CST-23001",
       department: "Department",
       selectDepartment: "Select department",
-      semester: "Semester",
-      selectSemester: "Select semester",
       mobile: "Mobile number",
       phonePlaceholder: "017XXXXXXXX",
       emailOptional: "Email (optional)",

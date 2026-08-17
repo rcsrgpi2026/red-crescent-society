@@ -2,7 +2,7 @@
 
 import { FormShell, FieldError, SubmitButton } from "@/components/forms/form";
 import { joinTeamMember } from "@/lib/actions";
-import { BLOOD_GROUPS, DEPARTMENTS, SEMESTERS } from "@/lib/constants";
+import { BLOOD_GROUPS, DEPARTMENTS } from "@/lib/constants";
 import {
   Label,
   Input,
@@ -48,22 +48,6 @@ export function JoinForm() {
                 </SelectContent>
               </Select>
               <FieldError errors={errors} name="department" />
-            </div>
-            <div>
-              <Label htmlFor="semester">Semester</Label>
-              <Select name="semester">
-                <SelectTrigger id="semester" className="mt-1.5">
-                  <SelectValue placeholder="Select semester" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SEMESTERS.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FieldError errors={errors} name="semester" />
             </div>
           </div>
 

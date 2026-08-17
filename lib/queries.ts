@@ -255,7 +255,6 @@ export const getPublicTeamMembers = unstable_cache(
   async (params?: {
     search?: string;
     department?: string;
-    semester?: string;
     limit?: number;
   }): Promise<PublicTeamMember[]> => {
     const supabase = getPublicClient();
@@ -267,9 +266,6 @@ export const getPublicTeamMembers = unstable_cache(
     }
     if (params?.department) {
       query = query.eq("department", params.department);
-    }
-    if (params?.semester) {
-      query = query.eq("semester", params.semester);
     }
 
     const { data } = await query
@@ -628,7 +624,6 @@ export async function adminGetTeamMembers(params?: {
   status?: string;
   search?: string;
   department?: string;
-  semester?: string;
   publicProfile?: boolean;
   limit?: number;
 }): Promise<TeamMember[]> {
@@ -638,7 +633,6 @@ export async function adminGetTeamMembers(params?: {
   if (params?.status) query = query.eq("status", params.status);
   if (params?.search) query = query.ilike("name", `%${params.search}%`);
   if (params?.department) query = query.eq("department", params.department);
-  if (params?.semester) query = query.eq("semester", params.semester);
   if (params?.publicProfile !== undefined) query = query.eq("public_profile", params.publicProfile);
   const { data } = await query.order("created_at", { ascending: false }).limit(params?.limit ?? 200);
   return data ?? [];

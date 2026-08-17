@@ -2,9 +2,11 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { logAudit } from "@/lib/auth";
 import { slugify, TEAM_POSITIONS, RCY_DEPARTMENTS, NON_DEPARTMENT_POSITIONS } from "@/lib/constants";
+import { ID_CARD_SETTINGS_KEY } from "@/lib/id-card/constants";
 import type { ActionResult } from "@/lib/actions";
 
 function guard() {
@@ -67,12 +69,84 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
 export async function deleteTeamMember(id: string): Promise<ActionResult> {
   guard();
   const supabase = await createClient();
+
+  // Grab the linked Supabase auth account id before the profile row is gone.
+  const { data: member } = await supabase
+    .from("team_members")
+    .select("user_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  // Delete the Supabase authentication account FIRST so we never end up with a
+  // deleted profile row whose login account still exists. If the auth deletion
+  // fails, abort and keep the member intact — the admin can retry later.
+  if (member?.user_id) {
+    let admin: ReturnType<typeof createAdminClient>;
+    try {
+      admin = createAdminClient();
+    } catch {
+      return {
+        success: false,
+        message: "Could not delete the login account — SUPABASE_SERVICE_ROLE_KEY is not configured. The team member was NOT deleted.",
+      };
+    }
+    const { error: authError } = await admin.auth.admin.deleteUser(member.user_id);
+    if (authError) {
+      return {
+        success: false,
+        message: `Could not delete the login account (${authError.message}). The team member was NOT deleted.`,
+      };
+    }
+  }
+
   const { error } = await supabase.from("team_members").delete().eq("id", id);
   if (error)    return { success: false, message: "Could not delete the team member." };
   await logAudit("volunteer_deleted", "volunteer", id);
   revalidatePath("/admin/team");
   updateTag("volunteers");
-  return { success: true, message: "Team member deleted." };
+  return { success: true, message: "Team member and their login account deleted." };
+}
+
+/**
+ * Deletes a student's profile record AND their Supabase authentication
+ * account (via the service-role client) so they can no longer sign in to the
+ * student portal. The auth account is deleted first — if that fails the
+ * student is left intact and the admin gets a clear error instead.
+ */
+export async function deleteStudent(id: string): Promise<ActionResult> {
+  guard();
+  const supabase = await createClient();
+
+  const { data: student } = await supabase
+    .from("students")
+    .select("user_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (student?.user_id) {
+    let admin: ReturnType<typeof createAdminClient>;
+    try {
+      admin = createAdminClient();
+    } catch {
+      return {
+        success: false,
+        message: "Could not delete the login account — SUPABASE_SERVICE_ROLE_KEY is not configured. The student was NOT deleted.",
+      };
+    }
+    const { error: authError } = await admin.auth.admin.deleteUser(student.user_id);
+    if (authError) {
+      return {
+        success: false,
+        message: `Could not delete the login account (${authError.message}). The student was NOT deleted.`,
+      };
+    }
+  }
+
+  const { error } = await supabase.from("students").delete().eq("id", id);
+  if (error)    return { success: false, message: "Could not delete the student." };
+  await logAudit("student_deleted", "student", id);
+  revalidatePath("/admin/students");
+  return { success: true, message: "Student and their login account deleted." };
 }
 
 /**
@@ -1052,4 +1126,38 @@ export async function saveSettings(
   revalidatePath("/admin/settings");
   updateTag("settings");
   return { success: true, message: "Settings saved." };
+}
+
+/**
+ * Saves the global ID card design (logos, watermark, header, typography,
+ * footer, back side). Stored as a JSON string under the `id_card` settings
+ * key; member data is never part of it — cards are assembled per member.
+ */
+export async function saveIdCardDesign(configJson: string): Promise<ActionResult> {
+  guard();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(configJson);
+  } catch {
+    return { success: false, message: "The card design could not be read." };
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { success: false, message: "The card design must be a JSON object." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("website_settings")
+    .upsert(
+      { key: ID_CARD_SETTINGS_KEY, value: { config: JSON.stringify(parsed) } },
+      { onConflict: "key" }
+    );
+  if (error) return { success: false, message: "Could not save the card design." };
+  await logAudit("id_card_design_updated", "website_settings", ID_CARD_SETTINGS_KEY);
+  revalidatePath("/admin/id-card");
+  updateTag("settings");
+  return {
+    success: true,
+    message: "ID card design saved — it now applies to every member card.",
+  };
 }

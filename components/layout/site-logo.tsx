@@ -25,7 +25,7 @@ export function SiteLogo({ variant = "society", className, priority }: SiteLogoP
   return (
     <Image
       src={src}
-      alt={isSociety ? "Rajshahi Polytechnic Institute Red Crescent Society logo" : "Rajshahi Polytechnic Institute logo"}
+      alt={isSociety ? "Red Crescent Youth — Rajshahi Govt. Polytechnic Institute logo" : "Rajshahi Govt. Polytechnic Institute logo"}
       width={64}
       height={64}
       priority={priority}

@@ -7,7 +7,7 @@ import type { Messages } from "./messages";
 
 export const bn: Messages = {
   meta: {
-    siteName: "রাজশাহী পলিটেকনিক ইনস্টিটিউট রেড ক্রিসেন্ট সোসাইটি",
+    siteName: "রাজশাহী সরকারি পলিটেকনিক ইনস্টিটিউট রেড ক্রিসেন্ট ইয়ুথ",
     siteDescription:
       "রাজশাহী পলিটেকনিক ইনস্টিটিউটের রেড ক্রিসেন্ট সোসাইটি ইউনিট — রক্ত সহায়তা, প্রাথমিক চিকিৎসা, দুর্যোগ মোকাবিলা, প্রশিক্ষণ ও সমাজসেবার মাধ্যমে সমাজের সেবায় নিয়োজিত।",
     home: {
@@ -111,11 +111,11 @@ export const bn: Messages = {
     joinUs: "যোগ দিন",
     login: "লগইন",
     studentPortal: "শিক্ষার্থী লগইন",
-    volunteerPortal: "স্বেচ্ছাসেবক লগইন",
+    volunteerPortal: "আরসিওয়াই সদস্য লগইন",
     emergencySupport: "জরুরি সহায়তা",
     emergencyStrip: "জরুরি সহায়তা: রক্ত ও প্রাথমিক চিকিৎসা",
-    redCrescentSociety: "রেড ক্রিসেন্ট সোসাইটি",
-    rajshahiPolytechnic: "রাজশাহী পলিটেকনিক ইনস্টিটিউট",
+    redCrescentSociety: "রেড ক্রিসেন্ট ইয়ুথ",
+    rajshahiPolytechnic: "রাজশাহী সরকারি পলিটেকনিক ইনস্টিটিউট",
     openMenu: "মেনু খুলুন",
   },
 
@@ -559,7 +559,6 @@ export const bn: Messages = {
     searchPlaceholder: "নাম দিয়ে খুঁজুন…",
     searchAria: "নাম দিয়ে টিম সদস্য খুঁজুন",
     allDepartments: "সব বিভাগ",
-    allSemesters: "সব সেমিস্টার",
     showing: "{n} জন টিম সদস্য দেখানো হচ্ছে",
     emptyTitle: "কোনো টিম সদস্য পাওয়া যায়নি",
     emptyText: "অন্য ফিল্টার চেষ্টা করুন, বা শীঘ্রই আবার দেখুন — অনুমোদিত টিম সদস্যরা এখানে দেখা যাবে।",
@@ -804,8 +803,6 @@ export const bn: Messages = {
       studentIdPlaceholder: "যেমন: CST-23001",
       department: "বিভাগ",
       selectDepartment: "বিভাগ নির্বাচন করুন",
-      semester: "সেমিস্টার",
-      selectSemester: "সেমিস্টার নির্বাচন করুন",
       mobile: "মোবাইল নম্বর",
       phonePlaceholder: "017XXXXXXXX",
       emailOptional: "ইমেইল (ঐচ্ছিক)",

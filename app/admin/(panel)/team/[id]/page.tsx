@@ -48,7 +48,6 @@ export default async function AdminTeamMemberDetailPage({
     { label: "Session", value: volunteer.session },
     { label: "College department", value: volunteer.department },
     { label: "RCY department", value: volunteer.rcy_department },
-    { label: "Semester", value: volunteer.semester },
     { label: "Phone", value: volunteer.phone },
     { label: "Email", value: volunteer.email },
     { label: "Blood group", value: volunteer.blood_group },

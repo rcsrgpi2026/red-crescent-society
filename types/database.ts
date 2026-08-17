@@ -45,7 +45,6 @@ export interface Student {
   user_id: string | null;
   name: string;
   session: string;
-  semester: string;
   roll: string;
   department: string;
   phone: string;
@@ -71,7 +70,6 @@ export interface TeamMember {
   department: string | null;
   /** RCY department (society wing) — declared by the admin, e.g. Health & Services. */
   rcy_department: string | null;
-  semester: string | null;
   phone: string | null;
   email: string | null;
   blood_group: string | null;
@@ -97,7 +95,6 @@ export interface PublicTeamMember {
   member_id: string | null;
   name: string;
   department: string | null;
-  semester: string | null;
   area: string | null;
   photo_url: string | null;
   position: string;

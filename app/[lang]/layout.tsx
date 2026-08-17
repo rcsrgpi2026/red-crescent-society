@@ -52,6 +52,7 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+
 export default async function PublicRootLayout({
   children,
 }: Readonly<{
@@ -66,6 +67,9 @@ export default async function PublicRootLayout({
   // Server-provided logos: render the uploaded logos in the first paint so the
   // placeholder SVGs never flash before the custom ones load.
   const logos = settings.logos ?? {};
+  // Origins the site talks to at runtime: Google Fonts (the card fonts loaded
+  // on the member card pages) and Supabase storage (activity/album photos).
+  const supabaseHost = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/^https?:\/\//, "");
 
   return (
     <html
@@ -73,6 +77,13 @@ export default async function PublicRootLayout({
       className={`${fontVariables} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {supabaseHost && (
+          <link rel="preconnect" href={`https://${supabaseHost}`} crossOrigin="anonymous" />
+        )}
+      </head>
       <body className="flex min-h-full flex-col">
         <TooltipProvider delayDuration={200}>
           <LocaleProvider locale={locale} t={t}>

@@ -95,17 +95,24 @@ export default async function AdminDashboardPage() {
             {volunteers.length > 0 ? (
               <ul className="divide-y divide-line">
                 {volunteers.slice(0, 6).map((v) => (
-                  <li key={v.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-mist/70">
+                  <li key={v.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-3 transition-colors hover:bg-mist/70">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-dark text-sm font-bold text-white">
                       {v.name.charAt(0)}
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">{v.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                    {/* min-w-0 + flex-1 lets the text wrap and shrink; basis-40
+                        reserves readable width so the status badge wraps onto its
+                        own line instead of overflowing on very narrow screens. */}
+                    <div className="min-w-0 flex-1 basis-40">
+                      <p className="text-sm font-medium text-foreground">{v.name}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
                         {v.department || "—"} · {formatDateTime(v.created_at)}
                       </p>
                     </div>
-                    <StatusBadge label={v.status} tone={statusTone(v.status)} />
+                    <StatusBadge
+                      label={v.status}
+                      tone={statusTone(v.status)}
+                      className="ml-auto shrink-0"
+                    />
                   </li>
                 ))}
               </ul>
@@ -128,19 +135,20 @@ export default async function AdminDashboardPage() {
             {requests.length > 0 ? (
               <ul className="divide-y divide-line">
                 {requests.slice(0, 6).map((r) => (
-                  <li key={r.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-mist/70">
+                  <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-3 transition-colors hover:bg-mist/70">
                     <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${r.emergency_level === "EMERGENCY" ? "bg-gradient-to-br from-crescent to-crescent-dark text-white" : "bg-crescent-soft text-crescent"}`}>
                       {r.blood_group}
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">{r.patient_name}</p>
-                      <p className="truncate text-xs text-muted-foreground">
+                    <div className="min-w-0 flex-1 basis-40">
+                      <p className="text-sm font-medium text-foreground">{r.patient_name}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
                         {r.hospital || r.location} · {formatDate(r.created_at)}
                       </p>
                     </div>
                     <StatusBadge
                       label={BLOOD_REQUEST_STATUS_LABELS[r.status] ?? r.status}
                       tone={statusTone(r.status)}
+                      className="ml-auto shrink-0"
                     />
                   </li>
                 ))}

@@ -1,0 +1,60 @@
+/*
+ * ID card printing (portal pages only).
+ *
+ * The card DOM is a fixed 1012×638px element (the CR80 design size); the
+ * on-screen preview scales it with CSS transforms to fit the viewport. When
+ * printing we hide the portal chrome and print the canonical card itself:
+ * the preview scale is neutralized, the card is pinned to the top-left of the
+ * page, backgrounds keep their colors, and each side gets its own page.
+ *
+ * NOTE: the print page is sized to the default landscape card (1012×638px).
+ * A portrait design (638×1012) still prints at that page size.
+ */
+
+@media print {
+  @page {
+    /* Page equals the canonical card size — the card prints 1:1, never
+       reflowed or resized by the surrounding page. */
+    size: 1012px 638px;
+    margin: 0;
+  }
+
+  /* Hide everything except the cards (ancestors stay in flow, so a hidden
+     header cannot shrink the printable area). */
+  body * {
+    visibility: hidden;
+  }
+
+  [data-card-root],
+  [data-card-root] * {
+    visibility: visible;
+  }
+
+  /* Neutralize the responsive preview scaling on the wrapper levels so the
+     fixed-size card prints at its natural dimensions. Only the two wrapper
+     levels are targeted — the card's own internal transforms (photo pan,
+     watermark rotation, logo offsets) must be preserved. */
+  .print-card-wrapper > div,
+  .print-card-wrapper > div > div {
+    transform: none !important;
+  }
+
+  [data-card-root] {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* The back side (or any additional card) starts on its own page. */
+  .print-card-wrapper ~ .print-card-wrapper {
+    break-before: page;
+    page-break-before: always;
+  }
+}

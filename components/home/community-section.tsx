@@ -1,5 +1,6 @@
-import Image from "next/image";
 import { Users, UserRound } from "lucide-react";
+import { ProfilePhoto } from "@/components/shared/profile-photo";
+import { resolvePhotoUrl } from "@/lib/photo-url";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Reveal } from "@/components/shared/reveal";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -81,19 +82,17 @@ function MemberCard({ member }: { member: CommunityMember }) {
   return (
     <div className="flex h-[14rem] w-38 flex-col items-center rounded-2xl border border-line bg-white p-4 text-center shadow-sm transition-all hover:-translate-y-1 hover:border-brand/40 hover:shadow-md sm:h-[15rem] sm:w-44 xl:h-[16rem]">
       <div className="relative h-22 w-22 shrink-0 overflow-hidden rounded-full bg-mist ring-2 ring-brand/40 sm:h-24 sm:w-24 xl:h-28 xl:w-28">
-        {member.photo_url ? (
-          <Image
-            src={member.photo_url}
-            alt={member.name}
-            fill
-            sizes="112px"
-            className="object-cover"
-          />
-        ) : (
-          <span className="flex h-full w-full items-center justify-center text-muted-foreground/60">
-            <UserRound className="h-12 w-12" strokeWidth={1.5} aria-hidden />
-          </span>
-        )}
+        <ProfilePhoto
+          src={resolvePhotoUrl(member.photo_url)}
+          alt={member.name}
+          sizes="112px"
+          imageClassName="object-cover"
+          fallback={
+            <span className="flex h-full w-full items-center justify-center text-muted-foreground/60">
+              <UserRound className="h-12 w-12" strokeWidth={1.5} aria-hidden />
+            </span>
+          }
+        />
       </div>
       {member.name && (
         <FitText

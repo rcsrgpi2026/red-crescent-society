@@ -18,6 +18,10 @@ const supabaseHost = supabaseUrl.replace(/^https?:\/\//, "");
  * - style-src https://fonts.googleapis.com + font-src https://fonts.gstatic.com:
  *   the membership card's selectable fonts (see components/id-card/card-fonts.tsx)
  *   are loaded from Google Fonts at runtime.
+ * - connect-src also allows the Google Fonts hosts: the PNG/PDF export pipeline
+ *   (lib/id-card/export.ts) fetches the font files with fetch() to inline them
+ *   into the capture — without this, the CSP blocks those fetches and the
+ *   exported card silently falls back to Arial.
  * - img-src https:: admin-configured image URLs can point at any host
  *   (next.config images.remotePatterns is "**"), so https: preserves that.
  * - 'unsafe-eval' and the local websocket are development-only (React devtools).
@@ -28,7 +32,7 @@ const cspDirectives = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data: https://fonts.gstatic.com",
-  `connect-src 'self'${supabaseHost ? ` https://${supabaseHost} wss://${supabaseHost}` : ""}${
+  `connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com${supabaseHost ? ` https://${supabaseHost} wss://${supabaseHost}` : ""}${
     isDev ? " ws://localhost:*" : ""
   }`,
   "object-src 'none'",

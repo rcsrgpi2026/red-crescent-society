@@ -66,34 +66,39 @@ export default async function ContactPage() {
       <section className="bg-white">
         <div className="container-site grid gap-10 py-14 lg:grid-cols-[1fr_1.2fr] lg:py-20">
           <div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-6">
               {items.map((item) => (
-                <div key={item.title} className="rounded-2xl border border-line bg-mist/50 p-5">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-soft text-brand">
-                    <item.icon className="h-5 w-5" aria-hidden />
+                <div
+                  key={item.title}
+                  className="flex items-start gap-4 rounded-2xl border border-line bg-mist/50 p-7 sm:items-center sm:gap-5"
+                >
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-brand">
+                    <item.icon className="h-7 w-7" aria-hidden />
                   </span>
-                  <h3 className="mt-3 text-sm font-semibold text-foreground">{item.title}</h3>
-                  {item.lines.map((line, i) =>
-                    item.href ? (
-                      <a
-                        key={i}
-                        href={item.href}
-                        className="mt-1 block text-sm text-brand-dark hover:underline"
-                      >
-                        {line}
-                      </a>
-                    ) : (
-                      <p key={i} className="mt-1 text-sm text-muted-foreground">
-                        {line}
-                      </p>
-                    )
-                  )}
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-semibold text-foreground">{item.title}</h3>
+                    {item.lines.map((line, i) =>
+                      item.href ? (
+                        <a
+                          key={i}
+                          href={item.href}
+                          className="mt-1.5 block text-base text-brand-dark hover:underline"
+                        >
+                          {line}
+                        </a>
+                      ) : (
+                        <p key={i} className="mt-1.5 text-base text-muted-foreground">
+                          {line}
+                        </p>
+                      )
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-            <div className="mt-6 rounded-2xl border border-line bg-mist/50 p-5">
-              <h3 className="text-sm font-semibold text-foreground">{t.contact.dropByTitle}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{t.contact.dropByText}</p>
+            <div className="mt-6 rounded-2xl border border-line bg-mist/50 p-7">
+              <h3 className="text-lg font-semibold text-foreground">{t.contact.dropByTitle}</h3>
+              <p className="mt-2 text-base leading-relaxed text-muted-foreground">{t.contact.dropByText}</p>
             </div>
           </div>
           <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8">

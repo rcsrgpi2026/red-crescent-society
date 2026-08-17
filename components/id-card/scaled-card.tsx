@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CardConfig, CardSide } from "@/types/id-card";
 import { IDCardView } from "@/components/id-card/id-card-view";
+import { cn } from "@/lib/utils";
 
 interface ScaledCardProps {
   config: CardConfig;
@@ -53,7 +54,7 @@ export function ScaledCard({
   return (
     <div
       ref={wrapperRef}
-      className={className}
+      className={cn("print-card-wrapper", className)}
       style={{
         width: "100%",
         maxWidth: cardWidth,

@@ -77,7 +77,9 @@ export function Hero({
               src={src}
               alt={images.length > 1 ? t.home.heroPhotoAltN.replace("{n}", String(i + 1)) : t.home.heroPhotoAlt}
               fill
-              priority
+              // Only the first backdrop is LCP-critical — fetching all hero
+              // photos at high priority on first paint wastes mobile bandwidth.
+              priority={i === 0}
               sizes="100vw"
               className={cn(
                 "object-cover transition-opacity duration-[1400ms] ease-in-out",

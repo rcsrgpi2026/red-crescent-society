@@ -106,6 +106,8 @@ export function IDCardView({
             fontSize: `${Math.round(typography.labelFontSize * ps)}px`,
             fontWeight: typography.labelFontWeight,
             color: typography.labelColor,
+            // Labels are single-line by design — never wrap, or the row shifts.
+            whiteSpace: "nowrap",
           }}
         >
           {label}
@@ -747,6 +749,7 @@ export function IDCardView({
                           fontSize: `${typography.labelFontSize + 3}px`,
                           fontWeight: typography.labelFontWeight,
                           color: typography.labelColor,
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {labels.name}
@@ -778,6 +781,7 @@ export function IDCardView({
                                 fontSize: `${typography.labelFontSize}px`,
                                 fontWeight: typography.labelFontWeight,
                                 color: typography.labelColor,
+                                whiteSpace: "nowrap",
                               }}
                             >
                               {labels.roll}
@@ -805,6 +809,7 @@ export function IDCardView({
                                 fontSize: `${typography.labelFontSize}px`,
                                 fontWeight: typography.labelFontWeight,
                                 color: typography.labelColor,
+                                whiteSpace: "nowrap",
                               }}
                             >
                               {labels.session}
@@ -838,6 +843,7 @@ export function IDCardView({
                                 fontSize: `${typography.labelFontSize}px`,
                                 fontWeight: typography.labelFontWeight,
                                 color: typography.labelColor,
+                                whiteSpace: "nowrap",
                               }}
                             >
                               {labels.register}
@@ -860,12 +866,13 @@ export function IDCardView({
                           <div className="flex min-w-0 flex-1 items-baseline">
                             <span
                               className="flex-shrink-0 pr-3"
-                              style={{
-                                fontFamily: typography.labelFontFamily,
-                                fontSize: `${typography.labelFontSize - 1}px`,
-                                fontWeight: typography.labelFontWeight,
-                                color: typography.labelColor,
-                              }}
+                        style={{
+                          fontFamily: typography.labelFontFamily,
+                          fontSize: `${typography.labelFontSize - 1}px`,
+                          fontWeight: typography.labelFontWeight,
+                          color: typography.labelColor,
+                          whiteSpace: "nowrap",
+                        }}
                             >
                               {labels.department}
                             </span>
@@ -895,6 +902,7 @@ export function IDCardView({
                           fontSize: `${typography.labelFontSize - 0.5}px`,
                           fontWeight: typography.labelFontWeight,
                           color: typography.labelColor,
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {labels.designation}

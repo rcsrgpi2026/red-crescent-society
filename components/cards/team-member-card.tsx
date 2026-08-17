@@ -1,6 +1,7 @@
-import Image from "next/image";
 import { BadgeCheck } from "lucide-react";
 import { SiteLogo } from "@/components/layout/site-logo";
+import { ProfilePhoto } from "@/components/shared/profile-photo";
+import { resolvePhotoUrl } from "@/lib/photo-url";
 import type { TeamMember } from "@/types/database";
 
 const ID_ROWS: { label: string; getValue: (m: TeamMember) => string | null | undefined }[] = [
@@ -28,19 +29,17 @@ export function TeamMemberCard({ teamMember }: { teamMember: TeamMember }) {
 
       {/* Photo — square ID box */}
       <div className="relative mx-auto mt-5 aspect-square w-32 overflow-hidden rounded-lg border border-line bg-brand-soft shadow-inner sm:w-36">
-        {teamMember.photo_url ? (
-          <Image
-            src={teamMember.photo_url}
-            alt={`${teamMember.name} — ${teamMember.position}`}
-            fill
-            sizes="144px"
-            className="object-cover"
-          />
-        ) : (
-          <span className="flex h-full w-full items-center justify-center text-5xl font-bold text-brand/30">
-            {teamMember.name.charAt(0).toUpperCase()}
-          </span>
-        )}
+        <ProfilePhoto
+          src={resolvePhotoUrl(teamMember.photo_url)}
+          alt={`${teamMember.name} — ${teamMember.position}`}
+          sizes="144px"
+          imageClassName="object-cover"
+          fallback={
+            <span className="flex h-full w-full items-center justify-center text-5xl font-bold text-brand/30">
+              {teamMember.name.charAt(0).toUpperCase()}
+            </span>
+          }
+        />
       </div>
 
       {/* Identity + record */}

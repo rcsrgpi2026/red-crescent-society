@@ -1,7 +1,8 @@
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { SectionHeader } from "@/components/shared/section-header";
+import { ProfilePhoto } from "@/components/shared/profile-photo";
+import { resolvePhotoUrl } from "@/lib/photo-url";
 import { Reveal } from "@/components/shared/reveal";
 import { EmptyState } from "@/components/shared/empty-state";
 import type { Messages } from "@/lib/i18n";
@@ -24,19 +25,17 @@ export function TeamSection({ t, team }: { t: Messages; team: PublicTeamMember[]
               <Reveal key={member.id} delay={(i % 3) * 0.06}>
                 <div className="flex h-full items-start gap-4 rounded-2xl border border-line bg-white p-5 transition-all hover:border-brand/40 hover:shadow-sm">
                   <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-brand-soft">
-                    {member.photo_url ? (
-                      <Image
-                        src={member.photo_url}
-                        alt={member.name}
-                        fill
-                        sizes="64px"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center text-2xl font-bold text-brand/40">
-                        {member.name.charAt(0)}
-                      </span>
-                    )}
+                    <ProfilePhoto
+                      src={resolvePhotoUrl(member.photo_url)}
+                      alt={member.name}
+                      sizes="64px"
+                      imageClassName="object-cover"
+                      fallback={
+                        <span className="flex h-full w-full items-center justify-center text-2xl font-bold text-brand/40">
+                          {member.name.charAt(0)}
+                        </span>
+                      }
+                    />
                   </div>
                   <div>
                     <h3 className="font-semibold text-foreground">{member.name}</h3>

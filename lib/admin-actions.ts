@@ -1,18 +1,39 @@
 "use server";
 
+import { randomBytes } from "crypto";
 import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { logAudit } from "@/lib/auth";
+import { logAudit, requireAdmin } from "@/lib/auth";
 import { slugify, TEAM_POSITIONS, RCY_DEPARTMENTS, NON_DEPARTMENT_POSITIONS } from "@/lib/constants";
 import { ID_CARD_SETTINGS_KEY } from "@/lib/id-card/constants";
 import type { ActionResult } from "@/lib/actions";
 
-function guard() {
+function guardConfig() {
   if (!isSupabaseConfigured) {
     throw new Error("Supabase is not configured. Add your credentials (see README).");
   }
+}
+
+/**
+ * Enforces admin-level access for every admin server action. RLS alone is not
+ * enough — server actions are plain HTTP endpoints, so the role check must
+ * happen in the action itself (a non-admin could otherwise reach actions whose
+ * RLS policies do not protect a column, e.g. self-updating `position`).
+ */
+async function guard() {
+  guardConfig();
+  const profile = await requireAdmin();
+  if (!profile) {
+    throw new Error("You are not authorized to perform this action.");
+  }
+  return profile;
+}
+
+/** Cryptographically strong, unguessable certificate verification token. */
+function generateVerifyToken(): string {
+  return `CRT-${randomBytes(12).toString("hex").toUpperCase()}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -29,7 +50,7 @@ export async function submitTeamMemberStatus(formData: FormData): Promise<void> 
 }
 
 export async function updateTeamMemberStatus(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = String(formData.get("id"));
   const status = String(formData.get("status"));
   if (!["APPROVED", "REJECTED"].includes(status)) {
@@ -67,7 +88,7 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
 }
 
 export async function deleteTeamMember(id: string): Promise<ActionResult> {
-  guard();
+  await guard();
   const supabase = await createClient();
 
   // Grab the linked Supabase auth account id before the profile row is gone.
@@ -114,7 +135,7 @@ export async function deleteTeamMember(id: string): Promise<ActionResult> {
  * student is left intact and the admin gets a clear error instead.
  */
 export async function deleteStudent(id: string): Promise<ActionResult> {
-  guard();
+  await guard();
   const supabase = await createClient();
 
   const { data: student } = await supabase
@@ -155,7 +176,7 @@ export async function deleteStudent(id: string): Promise<ActionResult> {
  * the ID-style membership card.
  */
 export async function updateTeamMemberPosition(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = String(formData.get("id"));
   const position = String(formData.get("position"));
   if (!id) return { success: false, message: "Team member is required." };
@@ -185,7 +206,7 @@ export async function updateTeamMemberPosition(formData: FormData): Promise<Acti
  * profile and on the ID-style membership card.
  */
 export async function updateTeamMemberRcyDepartment(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = String(formData.get("id"));
   const rcyDepartment = String(formData.get("rcyDepartment"));
   if (!id) return { success: false, message: "Team member is required." };
@@ -216,7 +237,7 @@ export async function updateTeamMemberRcyDepartment(formData: FormData): Promise
 }
 
 export async function addPoints(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const teamMemberId = String(formData.get("teamMemberId"));
   const points = Number(formData.get("points"));
   const reason = String(formData.get("reason") ?? "");
@@ -249,7 +270,7 @@ export async function addPoints(formData: FormData): Promise<ActionResult> {
 }
 
 export async function updateTeamMemberPhoto(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = String(formData.get("id"));
   const photoUrl = String(formData.get("photoUrl") ?? "").trim();
   if (!id) return { success: false, message: "Team member is required." };
@@ -272,7 +293,7 @@ export async function updateTeamMemberPhoto(formData: FormData): Promise<ActionR
 // ---------------------------------------------------------------------------
 
 export async function saveFounder(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = formData.get("id") ? String(formData.get("id")) : null;
   const payload = {
     name: String(formData.get("name") ?? "").trim(),
@@ -310,7 +331,7 @@ export async function saveFounder(formData: FormData): Promise<ActionResult> {
 }
 
 export async function deleteFounder(id: string): Promise<ActionResult> {
-  guard();
+  await guard();
   const supabase = await createClient();
   const { error } = await supabase.from("founders").delete().eq("id", id);
   if (error) return { success: false, message: "Could not delete the founder." };
@@ -326,7 +347,7 @@ export async function deleteFounder(id: string): Promise<ActionResult> {
 // ---------------------------------------------------------------------------
 
 export async function saveCommunityMember(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = formData.get("id") ? String(formData.get("id")) : null;
   const name = String(formData.get("name") ?? "").trim();
   const position = String(formData.get("position") ?? "").trim();
@@ -369,7 +390,7 @@ export async function saveCommunityMember(formData: FormData): Promise<ActionRes
 }
 
 export async function deleteCommunityMember(id: string): Promise<ActionResult> {
-  guard();
+  await guard();
   const supabase = await createClient();
   const { error } = await supabase.from("community_members").delete().eq("id", id);
   if (error) return { success: false, message: "Could not delete the member." };
@@ -385,7 +406,7 @@ export async function deleteCommunityMember(id: string): Promise<ActionResult> {
 // ---------------------------------------------------------------------------
 
 export async function updateDonor(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = String(formData.get("id"));
   const availability = String(formData.get("availability"));
   const isActive = formData.get("isActive") === "on" || formData.get("isActive") === "true";
@@ -404,7 +425,7 @@ export async function updateDonor(formData: FormData): Promise<ActionResult> {
 }
 
 export async function deleteDonor(id: string): Promise<ActionResult> {
-  guard();
+  await guard();
   const supabase = await createClient();
   const { error } = await supabase.from("blood_donors").delete().eq("id", id);
   if (error) return { success: false, message: "Could not delete the donor." };
@@ -415,7 +436,7 @@ export async function deleteDonor(id: string): Promise<ActionResult> {
 }
 
 export async function updateContactRequestStatus(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = String(formData.get("id"));
   const status = String(formData.get("status"));
   const supabase = await createClient();
@@ -432,7 +453,7 @@ export async function updateContactRequestStatus(formData: FormData): Promise<Ac
 // ---------------------------------------------------------------------------
 
 export async function updateBloodRequestStatus(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = String(formData.get("id"));
   const status = String(formData.get("status"));
   const supabase = await createClient();
@@ -464,7 +485,7 @@ export async function submitUnconfirmBloodDonation(formData: FormData): Promise<
  * "Blood Units Donated" statistic using `units_donated`.
  */
 export async function confirmBloodDonation(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = String(formData.get("id"));
   if (!id) return { success: false, message: "Blood request is required." };
 
@@ -509,7 +530,7 @@ export async function confirmBloodDonation(formData: FormData): Promise<ActionRe
 
 /** Removes the confirmation (keeps the recorded units for reference). */
 export async function unconfirmBloodDonation(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = String(formData.get("id"));
   if (!id) return { success: false, message: "Blood request is required." };
 
@@ -533,7 +554,7 @@ export async function unconfirmBloodDonation(formData: FormData): Promise<Action
 // ---------------------------------------------------------------------------
 
 export async function saveEvent(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = formData.get("id") ? String(formData.get("id")) : null;
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { success: false, message: "Title is required." };
@@ -571,7 +592,7 @@ export async function saveEvent(formData: FormData): Promise<ActionResult> {
 }
 
 export async function deleteEvent(id: string): Promise<ActionResult> {
-  guard();
+  await guard();
   const supabase = await createClient();
   const { error } = await supabase.from("events").delete().eq("id", id);
   if (error) return { success: false, message: "Could not delete the event." };
@@ -588,7 +609,7 @@ export async function deleteEvent(id: string): Promise<ActionResult> {
  * from the registrations dialog.
  */
 export async function updateEventRegistrationStatus(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = String(formData.get("id"));
   const status = String(formData.get("status"));
   if (!["REGISTERED", "ATTENDED", "CANCELLED"].includes(status)) {
@@ -623,7 +644,7 @@ export async function updateEventRegistrationStatus(formData: FormData): Promise
 // ---------------------------------------------------------------------------
 
 export async function saveActivity(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = formData.get("id") ? String(formData.get("id")) : null;
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { success: false, message: "Title is required." };
@@ -661,7 +682,7 @@ export async function saveActivity(formData: FormData): Promise<ActionResult> {
 }
 
 export async function deleteActivity(id: string): Promise<ActionResult> {
-  guard();
+  await guard();
   const supabase = await createClient();
   const { error } = await supabase.from("activities").delete().eq("id", id);
   if (error) return { success: false, message: "Could not delete the activity." };
@@ -677,7 +698,7 @@ export async function deleteActivity(id: string): Promise<ActionResult> {
 // ---------------------------------------------------------------------------
 
 export async function saveNotice(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = formData.get("id") ? String(formData.get("id")) : null;
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { success: false, message: "Title is required." };
@@ -734,7 +755,7 @@ export async function saveNotice(formData: FormData): Promise<ActionResult> {
 }
 
 export async function deleteNotice(id: string): Promise<ActionResult> {
-  guard();
+  await guard();
   const supabase = await createClient();
   const { error } = await supabase.from("notices").delete().eq("id", id);
   if (error) return { success: false, message: "Could not delete the notice." };
@@ -753,7 +774,7 @@ const TRAINING_PARTICIPANT_STATUSES = ["PENDING", "APPROVED", "REJECTED", "COMPL
 
 /** Approve / reject / complete / drop a member's training enrollment. */
 export async function updateTrainingParticipantStatus(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = String(formData.get("id"));
   const status = String(formData.get("status"));
   if (!TRAINING_PARTICIPANT_STATUSES.includes(status)) {
@@ -779,7 +800,7 @@ export async function updateTrainingParticipantStatus(formData: FormData): Promi
  * participants dialog). Title defaults to the training name.
  */
 export async function issueTrainingCertificate(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const participantId = String(formData.get("participantId"));
   if (!participantId) return { success: false, message: "Participant is required." };
 
@@ -794,10 +815,7 @@ export async function issueTrainingCertificate(formData: FormData): Promise<Acti
   const trainingTitle =
     (participant.training as unknown as { title?: string } | undefined)?.title ?? "Training";
   const title = `${trainingTitle} — Training Certificate`;
-  const token = `CRT-${Date.now().toString(36).toUpperCase()}${Math.random()
-    .toString(36)
-    .slice(2, 6)
-    .toUpperCase()}`;
+  const token = generateVerifyToken();
 
   const { error } = await supabase.from("certificates").insert({
     volunteer_id: participant.volunteer_id,
@@ -818,7 +836,7 @@ export async function issueTrainingCertificate(formData: FormData): Promise<Acti
 }
 
 export async function saveTraining(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = formData.get("id") ? String(formData.get("id")) : null;
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { success: false, message: "Title is required." };
@@ -851,7 +869,7 @@ export async function saveTraining(formData: FormData): Promise<ActionResult> {
 }
 
 export async function deleteTraining(id: string): Promise<ActionResult> {
-  guard();
+  await guard();
   const supabase = await createClient();
   const { error } = await supabase.from("training").delete().eq("id", id);
   if (error) return { success: false, message: "Could not delete the training." };
@@ -867,7 +885,7 @@ export async function deleteTraining(id: string): Promise<ActionResult> {
 // ---------------------------------------------------------------------------
 
 export async function saveAlbum(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = formData.get("id") ? String(formData.get("id")) : null;
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { success: false, message: "Title is required." };
@@ -915,7 +933,7 @@ export async function saveAlbum(formData: FormData): Promise<ActionResult> {
 }
 
 export async function deleteAlbum(id: string): Promise<ActionResult> {
-  guard();
+  await guard();
   const supabase = await createClient();
   const { error } = await supabase.from("gallery_albums").delete().eq("id", id);
   if (error) return { success: false, message: "Could not delete the album." };
@@ -931,15 +949,12 @@ export async function deleteAlbum(id: string): Promise<ActionResult> {
 // ---------------------------------------------------------------------------
 
 export async function issueCertificate(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const teamMemberId = String(formData.get("teamMemberId"));
   const title = String(formData.get("title") ?? "").trim();
   if (!teamMemberId || !title) return { success: false, message: "Team member and title are required." };
 
-  const token = `CRT-${Date.now().toString(36).toUpperCase()}${Math.random()
-    .toString(36)
-    .slice(2, 6)
-    .toUpperCase()}`;
+  const token = generateVerifyToken();
 
   const supabase = await createClient();
   const { error } = await supabase.from("certificates").insert({
@@ -960,7 +975,7 @@ export async function issueCertificate(formData: FormData): Promise<ActionResult
 }
 
 export async function deleteCertificate(id: string): Promise<ActionResult> {
-  guard();
+  await guard();
   const supabase = await createClient();
   const { error } = await supabase.from("certificates").delete().eq("id", id);
   if (error) return { success: false, message: "Could not delete the certificate." };
@@ -975,7 +990,7 @@ export async function deleteCertificate(id: string): Promise<ActionResult> {
 // ---------------------------------------------------------------------------
 
 export async function toggleAttendance(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const eventId = String(formData.get("eventId"));
   const teamMemberId = String(formData.get("teamMemberId"));
   const mark = String(formData.get("mark")); // PRESENT or ABSENT
@@ -1000,7 +1015,7 @@ export async function toggleAttendance(formData: FormData): Promise<ActionResult
 // ---------------------------------------------------------------------------
 
 export async function updateMessageStatus(formData: FormData): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = String(formData.get("id"));
   const status = String(formData.get("status"));
   const supabase = await createClient();
@@ -1013,6 +1028,8 @@ export async function updateMessageStatus(formData: FormData): Promise<ActionRes
 /** Polled by the sidebar's unread indicator (client component). */
 export async function getUnreadMessageCount(): Promise<number> {
   if (!isSupabaseConfigured) return 0;
+  const profile = await requireAdmin();
+  if (!profile) return 0;
   const supabase = await createClient();
   const { count } = await supabase
     .from("contact_messages")
@@ -1026,7 +1043,7 @@ export async function getUnreadMessageCount(): Promise<number> {
 // ---------------------------------------------------------------------------
 
 export async function submitParticipationRequest(formData: FormData): Promise<ActionResult> {
-  guard();
+  guardConfig();
   const teamMemberId = String(formData.get("teamMemberId"));
   const eventId = String(formData.get("eventId") ?? "");
   const activityId = String(formData.get("activityId") ?? "");
@@ -1073,7 +1090,7 @@ export async function submitParticipationRequest(formData: FormData): Promise<Ac
 export async function updateParticipationRequestStatus(
   formData: FormData
 ): Promise<ActionResult> {
-  guard();
+  await guard();
   const id = String(formData.get("id"));
   const status = String(formData.get("status"));
   if (!["APPROVED", "REJECTED"].includes(status)) {
@@ -1101,7 +1118,7 @@ export async function saveSettings(
   key: string,
   value: Record<string, string>
 ): Promise<ActionResult> {
-  guard();
+  await guard();
   const supabase = await createClient();
 
   // Merge into the stored value instead of replacing it: the homepage group is
@@ -1134,7 +1151,7 @@ export async function saveSettings(
  * key; member data is never part of it — cards are assembled per member.
  */
 export async function saveIdCardDesign(configJson: string): Promise<ActionResult> {
-  guard();
+  await guard();
   let parsed: unknown;
   try {
     parsed = JSON.parse(configJson);

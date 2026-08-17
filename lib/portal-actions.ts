@@ -5,6 +5,18 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/actions";
 
+/**
+ * Leadership positions are declared by the society leadership (admin panel)
+ * only — volunteers can edit their own designation, but never claim one of
+ * these titles on the public team directory or their membership card.
+ */
+const RESERVED_POSITIONS = new Set([
+  "Team Leader",
+  "Deputy Team Leader",
+  "Group Leader",
+  "Assistant Group Leader",
+]);
+
 const studentProfileSchema = z.object({
   name: z.string().trim().min(2, "Full name must be at least 2 characters"),
   session: z.string().trim().min(4, "Session is required (e.g. 2024-25)"),
@@ -195,6 +207,13 @@ export async function updateTeamMemberProfile(
   }
 
   const v = parsed.data;
+  const designation = v.designation?.trim() || "General Member";
+  if (RESERVED_POSITIONS.has(designation)) {
+    return {
+      success: false,
+      message: "Leadership positions are assigned by the society leadership.",
+    };
+  }
   const skillsArray = v.skills
     ? v.skills.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
@@ -207,7 +226,7 @@ export async function updateTeamMemberProfile(
       registration_no: v.registrationNo || null,
       session: v.session || null,
       department: v.department || null,
-      position: v.designation || "General Member",
+      position: designation,
       email: v.email || null,
       phone: v.phone,
       area: v.area,

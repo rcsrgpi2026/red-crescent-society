@@ -41,8 +41,11 @@ const SOCIAL_ICONS: Record<string, React.ElementType> = {
 };
 
 export async function SiteFooter() {
-  const [t, settings] = await Promise.all([getServerMessages(), getSettings()]);
-  const profile = await getProfile();
+  const [t, settings, profile] = await Promise.all([
+    getServerMessages(),
+    getSettings(),
+    getProfile(),
+  ]);
   const isAdmin = isAdminRole(profile?.role);
   // Team is admin-only — keep its quick link off the footer for everyone else.
   const quickLinks = QUICK_LINKS.filter((link) => link.key !== "team" || isAdmin);

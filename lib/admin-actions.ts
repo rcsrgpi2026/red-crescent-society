@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { logAudit, requireAdmin } from "@/lib/auth";
 import { slugify, TEAM_POSITIONS, RCY_DEPARTMENTS, NON_DEPARTMENT_POSITIONS } from "@/lib/constants";
 import { ID_CARD_SETTINGS_KEY } from "@/lib/id-card/constants";
+import { createAndDispatchNotification } from "@/lib/notifications/notification-service";
 import type { ActionResult } from "@/lib/actions";
 
 function guardConfig() {
@@ -80,6 +81,35 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
   if (error) {
     return { success: false, message: "Could not update the team member." };
   }
+
+  // Trigger system notification if approved
+  if (status === "APPROVED") {
+    try {
+      const { data: member } = await supabase
+        .from("team_members")
+        .select("name, user_id")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (member?.user_id) {
+        await createAndDispatchNotification(
+          {
+            title: "🎉 Membership Application Approved!",
+            body: `Congratulations ${member.name}! Your Red Crescent Youth team membership has been approved (${patch.member_id}). You can now access your member ID card and join trainings.`,
+            type: "system",
+            priority: "high",
+            actionUrl: "/volunteer",
+          },
+          {
+            specificUserIds: [member.user_id],
+          }
+        );
+      }
+    } catch (notifErr) {
+      console.warn("Could not dispatch volunteer approval notification:", notifErr);
+    }
+  }
+
   await logAudit(`volunteer_${status.toLowerCase()}`, "volunteer", id);
   revalidatePath("/admin/team");
   revalidatePath("/team");
@@ -457,8 +487,37 @@ export async function updateBloodRequestStatus(formData: FormData): Promise<Acti
   const id = String(formData.get("id"));
   const status = String(formData.get("status"));
   const supabase = await createClient();
+
+  const { data: request } = await supabase
+    .from("blood_requests")
+    .select("patient_name, blood_group, units, hospital, location")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await supabase.from("blood_requests").update({ status }).eq("id", id);
   if (error) return { success: false, message: "Could not update the request." };
+
+  if (request && (status === "DONOR_FOUND" || status === "CONTACTING_DONOR" || status === "COMPLETED")) {
+    try {
+      const statusLabel =
+        status === "DONOR_FOUND"
+          ? "Donor Found"
+          : status === "CONTACTING_DONOR"
+          ? "Contacting Donor"
+          : "Donation Completed";
+
+      await createAndDispatchNotification({
+        title: `🩸 Blood Request Update: ${statusLabel}`,
+        body: `${statusLabel} for ${request.blood_group} request (${request.patient_name})${request.hospital ? ` at ${request.hospital}` : ""}.`,
+        type: "blood_request",
+        priority: "normal",
+        actionUrl: `/blood-support`,
+      });
+    } catch (notifErr) {
+      console.warn("Could not dispatch blood request update notification:", notifErr);
+    }
+  }
+
   await logAudit("blood_request_status", "blood_request", id, { status });
   revalidatePath("/admin/blood-requests");
   revalidatePath("/blood-support");
@@ -747,6 +806,22 @@ export async function saveNotice(formData: FormData): Promise<ActionResult> {
     }
   }
 
+  // Trigger smart notice notification if newly created and published
+  if (!id && payload.published) {
+    try {
+      const snippet = payload.content ? payload.content.slice(0, 140) + "..." : "A new official notice has been published on the portal.";
+      await createAndDispatchNotification({
+        title: `📢 ${payload.title}`,
+        body: snippet,
+        type: "notice",
+        priority: payload.pinned ? "high" : "normal",
+        actionUrl: `/notices/${payload.slug}`,
+      });
+    } catch (notifErr) {
+      console.warn("Could not dispatch notice notification:", notifErr);
+    }
+  }
+
   revalidatePath("/admin/notices");
   revalidatePath("/notices");
   revalidatePath("/notices/[slug]");
@@ -922,6 +997,21 @@ export async function saveAlbum(formData: FormData): Promise<ActionResult> {
       await supabase.from("gallery_images").insert(
         imageUrls.map((url, i) => ({ album_id: albumId, url, sort: i }))
       );
+    }
+  }
+
+  if (!id) {
+    try {
+      await createAndDispatchNotification({
+        title: `📸 New Gallery Album: ${payload.title}`,
+        body: payload.description ? payload.description.slice(0, 120) + "..." : `Check out the latest photos from ${payload.title} in the gallery.`,
+        type: "event",
+        priority: "normal",
+        actionUrl: `/gallery/${payload.slug}`,
+        imageUrl: payload.cover_image || undefined,
+      });
+    } catch (notifErr) {
+      console.warn("Could not dispatch gallery notification:", notifErr);
     }
   }
 

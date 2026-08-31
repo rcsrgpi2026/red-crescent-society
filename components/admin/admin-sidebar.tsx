@@ -21,6 +21,7 @@ import {
   MessageSquare,
   Settings,
   ScrollText,
+  Bell,
   LogOut,
   ExternalLink,
   Loader2,
@@ -36,6 +37,7 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 
 const NAV = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { label: "Notifications", href: "/admin/notifications", icon: Bell },
   { label: "Team Members", href: "/admin/team", icon: Users },
   { label: "Students", href: "/admin/students", icon: GraduationCap },
   { label: "Directors", href: "/admin/founders", icon: Handshake },

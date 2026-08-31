@@ -31,12 +31,13 @@ export function AdminMobileNav({ unreadMessages = 0 }: { unreadMessages?: number
   return (
     <>
       <button
+        type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg border border-line bg-white p-2 text-muted-foreground lg:hidden"
+        className="inline-flex items-center justify-center p-1.5 text-foreground transition-colors hover:text-brand-dark lg:hidden"
         aria-label="Open admin menu"
         aria-expanded={open}
       >
-        <Menu className="h-5 w-5" aria-hidden />
+        <Menu className="h-6 w-6" strokeWidth={2.75} aria-hidden />
       </button>
       {open && (
         <MobileAdminNav onClose={() => setOpen(false)} unreadMessages={unreadMessages} />

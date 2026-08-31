@@ -33,6 +33,7 @@ export async function proxy(request: NextRequest) {
   // Prefix matching must be exact per segment: "/team" (the public
   // directory) must NOT match the "/volunteer" portal prefix.
   const isExcluded =
+    pathname.startsWith("/api/") ||
     pathname === "/admin" ||
     pathname.startsWith("/admin/") ||
     pathname === "/student" ||
@@ -41,7 +42,10 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/volunteer/") ||
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml" ||
-    pathname === "/favicon.ico";
+    pathname === "/favicon.ico" ||
+    pathname === "/manifest.webmanifest" ||
+    pathname === "/manifest.json" ||
+    pathname === "/sw.js";
 
   if (!isExcluded && !hasLocalePrefix(pathname)) {
     const locale = getPreferredLocale(request);
@@ -76,6 +80,6 @@ export const config = {
      * Run on everything except static assets, images and the Next.js
      * internal routes.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest\\.webmanifest|manifest\\.json|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest|json|js)$).*)",
   ],
 };

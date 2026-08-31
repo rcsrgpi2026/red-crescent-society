@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { LocaleProvider } from "@/components/providers/locale-provider";
 import { LogoProvider } from "@/components/providers/logo-provider";
+import { PwaRegister } from "@/components/providers/pwa-register";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 import { getSettings } from "@/lib/queries";
 import { fontVariables } from "@/lib/fonts";
@@ -40,6 +41,16 @@ export async function generateMetadata(): Promise<Metadata> {
       title: siteName,
       description: t.meta.siteDescription,
     },
+    manifest: "/manifest.webmanifest",
+    icons: {
+      icon: "/favicon.ico",
+      apple: "/apple-touch-icon.png",
+    },
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: siteName,
+    },
     robots: {
       index: true,
       follow: true,
@@ -59,9 +70,11 @@ export default async function PublicRootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getServerLocale();
-  const t = await getServerMessages();
-  const settings = await getSettings();
+  const [locale, t, settings] = await Promise.all([
+    getServerLocale(),
+    getServerMessages(),
+    getSettings(),
+  ]);
   const society = settings.society ?? {};
   const asString = (v: unknown) =>
     typeof v === "string" && v.trim() ? v.trim() : undefined;
@@ -106,6 +119,7 @@ export default async function PublicRootLayout({
           </LocaleProvider>
           <Toaster position="top-center" richColors closeButton />
         </TooltipProvider>
+        <PwaRegister />
         <Analytics />
       </body>
     </html>

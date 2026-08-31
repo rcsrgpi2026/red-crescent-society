@@ -20,6 +20,15 @@ export function FormShell({ action, children, className }: FormShellProps) {
 
   return (
     <form action={formAction} className={cn("space-y-5", className)} noValidate>
+      {/* Invisible anti-spam bot trap */}
+      <input
+        type="text"
+        name="website_url"
+        tabIndex={-1}
+        autoComplete="off"
+        style={{ display: "none" }}
+        aria-hidden="true"
+      />
       {state.success && (
         <div
           role="status"

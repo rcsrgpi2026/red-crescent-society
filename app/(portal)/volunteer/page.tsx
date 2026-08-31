@@ -31,6 +31,8 @@ import { TeamMemberProfileEditor } from "@/components/team/team-member-profile-e
 import { DonorContactNotifications } from "@/components/portal/donor-contact-notifications";
 import { MyTrainings } from "@/components/team/my-trainings";
 import { MyCertificates } from "@/components/team/my-certificates";
+import { NotificationPreferencesForm } from "@/components/notifications/preference-form";
+import { getMyNotificationPreferences } from "@/lib/notifications/actions";
 
 export const metadata: Metadata = {
   title: "Team Member Portal & Profile",
@@ -46,9 +48,10 @@ export default async function TeamMemberPortalPage() {
   let requests: Awaited<ReturnType<typeof getTeamMemberParticipation>> = [];
   let trainings: Awaited<ReturnType<typeof getMyTrainingEnrollments>> = [];
   let certificates: Awaited<ReturnType<typeof getMyCertificates>> = [];
-  const [notifications, settings] = await Promise.all([
+  const [notifications, settings, notifPrefs] = await Promise.all([
     getMyDonorContactRequests(),
     getSettings(),
+    getMyNotificationPreferences(),
   ]);
   const cardConfig = buildCardConfig(
     designFromSettings(settings),
@@ -146,6 +149,17 @@ export default async function TeamMemberPortalPage() {
           {teamMember.status === "APPROVED" && (
             <MyCertificates certificates={certificates} />
           )}
+
+          {/* Smart Notification Preferences */}
+          <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-4">
+            <div>
+              <h3 className="text-base font-bold text-foreground">Notification & Alert Preferences</h3>
+              <p className="text-xs text-muted-foreground">
+                Customize which alerts you receive and manage quiet hours for your account.
+              </p>
+            </div>
+            <NotificationPreferencesForm initialPreferences={notifPrefs} />
+          </div>
         </div>
       </main>
     </div>

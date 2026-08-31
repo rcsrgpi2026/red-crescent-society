@@ -84,6 +84,7 @@ export function Hero({
               // Only the first backdrop is LCP-critical — fetching all hero
               // photos at high priority on first paint wastes mobile bandwidth.
               priority={i === 0}
+              loading={i === 0 ? "eager" : "lazy"}
               quality={75}
               sizes="100vw"
               className={cn(

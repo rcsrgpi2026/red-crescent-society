@@ -11,6 +11,7 @@ import {
   contactSchema,
   donorContactSchema,
 } from "@/lib/validation";
+import { createAndDispatchNotification } from "@/lib/notifications/notification-service";
 
 /**
  * Team members request to join a training. The request starts PENDING and
@@ -99,6 +100,31 @@ export async function joinTraining(
     console.error("joinTraining insert error:", error);
     return { success: false, message: "Something went wrong. Please try again." };
   }
+
+  // Admin-exclusive notification
+  try {
+    const { data: memberProfile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    await createAndDispatchNotification(
+      {
+        title: `🎓 Training Enrollment Request: ${memberProfile?.full_name || "Volunteer"}`,
+        body: `${memberProfile?.full_name || "A volunteer"} requested to join training. Review in Admin Panel.`,
+        type: "system",
+        priority: "normal",
+        actionUrl: `/admin/training`,
+      },
+      {
+        roles: ["SUPER_ADMIN", "ADMIN", "VOLUNTEER_MANAGER"],
+      }
+    );
+  } catch (err) {
+    console.warn("Could not dispatch training enrollment admin notification:", err);
+  }
+
   revalidatePath("/training");
   revalidatePath("/volunteer");
   return { success: true, message: "Joining request sent — awaiting approval." };
@@ -137,10 +163,23 @@ function zodErrors(error: import("zod").ZodError): Record<string, string[]> {
   return result;
 }
 
+function isBotSubmission(formData: FormData): boolean {
+  const hp = formData.get("website_url");
+  return typeof hp === "string" && hp.trim().length > 0;
+}
+
 export async function joinTeamMember(
   _prev: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
+  if (isBotSubmission(formData)) {
+    return {
+      success: true,
+      message:
+        "Application received! The society leadership will review it and approve your membership shortly.",
+    };
+  }
+
   const parsed = teamMemberSchema.safeParse({
     name: formData.get("name"),
     studentId: formData.get("studentId"),
@@ -199,6 +238,24 @@ export async function joinTeamMember(
     };
   }
 
+  // Admin-exclusive notification
+  try {
+    await createAndDispatchNotification(
+      {
+        title: `👤 New Volunteer Application: ${v.name}`,
+        body: `${v.name} applied for membership in ${v.department || "Red Crescent Youth"} (Phone: ${v.phone}). Review in Admin Panel.`,
+        type: "system",
+        priority: "high",
+        actionUrl: `/admin/team`,
+      },
+      {
+        roles: ["SUPER_ADMIN", "ADMIN", "VOLUNTEER_MANAGER"],
+      }
+    );
+  } catch (err) {
+    console.warn("Could not dispatch volunteer application admin notification:", err);
+  }
+
   return {
     success: true,
     message:
@@ -210,6 +267,14 @@ export async function submitBloodRequest(
   _prev: ActionResult,
   formData: FormData
 ): Promise<ActionResult<{ id: string }>> {
+  if (isBotSubmission(formData)) {
+    return {
+      success: true,
+      message: "Request submitted successfully! Tracking your request in the status interface.",
+      data: { id: "spam-filtered" },
+    };
+  }
+
   const parsed = bloodRequestSchema.safeParse({
     patientName: formData.get("patientName"),
     bloodGroup: formData.get("bloodGroup"),
@@ -266,6 +331,22 @@ export async function submitBloodRequest(
     };
   }
 
+  // Trigger instant notification: "Urgent Blood Needed: [BloodGroup] in [Location]"
+  try {
+    const priority = v.emergencyLevel === "EMERGENCY" ? "critical" : "high";
+    const locInfo = v.hospital ? `${v.hospital}, ${v.location}` : v.location;
+    await createAndDispatchNotification({
+      title: `🩸 Urgent Blood Needed: ${v.bloodGroup} (${v.location})`,
+      body: `${v.units} bag(s) of ${v.bloodGroup} needed at ${locInfo} for ${v.patientName}. Tap to view details and help save a life.`,
+      type: "blood_request",
+      priority,
+      actionUrl: `/blood-support`,
+      metadata: { requestId: String(id), bloodGroup: v.bloodGroup, location: v.location },
+    });
+  } catch (notifErr) {
+    console.warn("Could not dispatch blood request notification:", notifErr);
+  }
+
   return {
     success: true,
     message:
@@ -278,6 +359,14 @@ export async function registerDonor(
   _prev: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
+  if (isBotSubmission(formData)) {
+    return {
+      success: true,
+      message:
+        "You are now registered as a blood donor. Thank you for being a lifesaver! Your passcode keeps your listing safe.",
+    };
+  }
+
   const parsed = bloodDonorSchema.safeParse({
     name: formData.get("name"),
     bloodGroup: formData.get("bloodGroup"),
@@ -743,6 +832,30 @@ export async function registerForEvent(
     };
   }
 
+  // Admin-exclusive notification
+  try {
+    const { data: eventData } = await supabase
+      .from("events")
+      .select("title")
+      .eq("id", eventId)
+      .maybeSingle();
+
+    await createAndDispatchNotification(
+      {
+        title: `📅 Event Registration: ${v.name}`,
+        body: `${v.name} (${v.phone}) registered for ${eventData?.title || "an event"}.`,
+        type: "event",
+        priority: "normal",
+        actionUrl: `/admin/events`,
+      },
+      {
+        roles: ["SUPER_ADMIN", "ADMIN", "EVENT_MANAGER"],
+      }
+    );
+  } catch (err) {
+    console.warn("Could not dispatch event registration admin notification:", err);
+  }
+
   return {
     success: true,
     message: "You are registered! See you at the event.",
@@ -753,6 +866,10 @@ export async function submitContact(
   _prev: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
+  if (isBotSubmission(formData)) {
+    return { success: true, message: "Thank you for reaching out. We will get back to you shortly." };
+  }
+
   const parsed = contactSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -790,9 +907,116 @@ export async function submitContact(
     return { success: false, message: "Something went wrong. Please try again." };
   }
 
+  // Admin-exclusive notification
+  try {
+    await createAndDispatchNotification(
+      {
+        title: `✉️ New Contact Message: ${v.name}`,
+        body: `Subject: ${v.subject}. "${v.message.slice(0, 80)}..."`,
+        type: "system",
+        priority: "normal",
+        actionUrl: `/admin/messages`,
+      },
+      {
+        roles: ["SUPER_ADMIN", "ADMIN", "VOLUNTEER_MANAGER", "CONTENT_MANAGER"],
+      }
+    );
+  } catch (err) {
+    console.warn("Could not dispatch contact message admin notification:", err);
+  }
+
   return {
     success: true,
     message: "Message sent! The society leadership will get back to you.",
+  };
+}
+
+/**
+ * Submits a direct blood donor response/offer for a specific blood request.
+ * Saves directly into the admin messages inbox with patient & donor details.
+ */
+export async function submitBloodDonorOffer(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  if (!isSupabaseConfigured) {
+    return { success: false, message: "Database not configured." };
+  }
+
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  const patientName = String(formData.get("patientName") ?? "").trim();
+  const requiredBloodGroup = String(formData.get("requiredBloodGroup") ?? "").trim();
+  const hospital = String(formData.get("hospital") ?? "").trim();
+
+  const donorName = String(formData.get("donorName") ?? "").trim();
+  const donorPhone = String(formData.get("donorPhone") ?? "").trim();
+  const donorBloodGroup = String(formData.get("donorBloodGroup") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim();
+
+  if (!donorName || !donorPhone || !donorBloodGroup) {
+    return {
+      success: false,
+      message: "Please provide your name, phone number, and blood group.",
+    };
+  }
+
+  const subject = `🩸 Blood Donor Offer: ${donorBloodGroup} for ${patientName} (${requiredBloodGroup})`;
+  const fullMessage = `
+--- BLOOD DONATION RESPONSE ---
+DONOR DETAILS:
+• Name: ${donorName}
+• Phone: ${donorPhone}
+• Blood Group: ${donorBloodGroup}
+• Availability / Note: ${note || "Ready to donate immediately"}
+
+PATIENT / REQUEST DETAILS:
+• Patient: ${patientName}
+• Required Group: ${requiredBloodGroup}
+• Hospital / Location: ${hospital || "Rajshahi"}
+• Request Tracking ID: ${requestId}
+-------------------------------
+  `.trim();
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("contact_messages").insert({
+    name: donorName,
+    phone: donorPhone,
+    email: null,
+    subject,
+    message: fullMessage,
+    status: "NEW",
+  });
+
+  if (error) {
+    console.error("submitBloodDonorOffer error:", error);
+    return {
+      success: false,
+      message: "Could not send your message. Please try calling or WhatsApp directly.",
+    };
+  }
+
+  // Also dispatch a system notification to Admins
+  try {
+    await createAndDispatchNotification(
+      {
+        title: `🩸 Donor Response: ${donorBloodGroup} for ${patientName}`,
+        body: `${donorName} (${donorPhone}) wants to donate blood for ${patientName}. View in Admin Messages.`,
+        type: "system",
+        priority: "high",
+        actionUrl: `/admin/messages`,
+      },
+      {
+        roles: ["SUPER_ADMIN", "ADMIN", "VOLUNTEER_MANAGER"],
+      }
+    );
+  } catch (err) {
+    console.warn("Could not dispatch admin donor offer notification:", err);
+  }
+
+  return {
+    success: true,
+    message:
+      "Thank you! Your donation response has been sent to our Red Crescent coordinators. We will contact you shortly.",
   };
 }
 
@@ -800,6 +1024,15 @@ export async function requestDonorContact(
   _prev: ActionResult,
   formData: FormData
 ): Promise<ActionResult<{ id: string }>> {
+  if (isBotSubmission(formData)) {
+    return {
+      success: true,
+      message:
+        "Contact request sent! Keep this tracking link and your passcode — the donor's number will appear here once the society team approves it.",
+      data: { id: "spam-filtered" },
+    };
+  }
+
   const parsed = donorContactSchema.safeParse({
     donorId: formData.get("donorId"),
     requesterName: formData.get("requesterName"),
@@ -845,6 +1078,24 @@ export async function requestDonorContact(
   if (error || !id) {
     console.error("requestDonorContact error:", error);
     return { success: false, message: "Something went wrong. Please try again." };
+  }
+
+  // Admin-exclusive notification
+  try {
+    await createAndDispatchNotification(
+      {
+        title: `🩸 Donor Contact Request: ${v.bloodGroupNeeded}`,
+        body: `${v.requesterName} (${v.requesterContact}) requested donor contact for patient ${v.patientName}. Review in Admin Panel.`,
+        type: "system",
+        priority: "high",
+        actionUrl: `/admin/donors`,
+      },
+      {
+        roles: ["SUPER_ADMIN", "ADMIN", "VOLUNTEER_MANAGER"],
+      }
+    );
+  } catch (err) {
+    console.warn("Could not dispatch donor contact request admin notification:", err);
   }
 
   return {

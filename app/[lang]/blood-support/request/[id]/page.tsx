@@ -4,8 +4,10 @@ import Link from "next/link";
 import {
   Clock,
   Droplets,
+  HeartPulse,
   Building2,
   PhoneCall,
+  MessageCircle,
   ArrowLeft,
   CheckCircle2,
   AlertTriangle,
@@ -15,6 +17,7 @@ import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { getPublicBloodRequestById, getSettings } from "@/lib/queries";
 import { formatDate, BLOOD_REQUEST_STATUS_LABELS } from "@/lib/constants";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
+import { DonorResponseModal } from "@/components/blood/donor-response-modal";
 
 export async function generateMetadata({
   params,
@@ -47,7 +50,23 @@ export default async function BloodRequestStatusPage({
   if (!request) notFound();
 
   const emergency = settings.emergency ?? {};
-  const helpline = typeof emergency.bloodHelpline === "string" ? emergency.bloodHelpline : "";
+  const contact = settings.contact ?? {};
+  const helpline =
+    typeof emergency.bloodHelpline === "string" && emergency.bloodHelpline.trim()
+      ? emergency.bloodHelpline.trim()
+      : typeof contact.phone === "string" && contact.phone.trim()
+      ? contact.phone.trim()
+      : "01614424259";
+
+  const rawDigits = helpline.replace(/[^\d]/g, "");
+  const whatsappNumber = rawDigits.startsWith("88")
+    ? rawDigits
+    : rawDigits.startsWith("0")
+    ? `88${rawDigits}`
+    : `880${rawDigits}`;
+  const phoneFormatted = helpline.startsWith("01") && helpline.length === 11
+    ? `+880 ${helpline.slice(1, 5)}-${helpline.slice(5)}`
+    : helpline;
 
   const statusLabel =
     t.status.bloodRequest[request.status] ??
@@ -172,23 +191,48 @@ export default async function BloodRequestStatusPage({
 
             {/* Helpline & Guidance side */}
             <div className="space-y-5">
-              {helpline && (
-                <div className="rounded-3xl border border-crescent/30 bg-crescent-soft p-6">
-                  <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-crescent">
-                    <PhoneCall className="h-4 w-4" aria-hidden />
-                    Emergency Blood Helpline
-                  </p>
-                  <a
-                    href={`tel:${helpline}`}
-                    className="mt-2 block text-2xl font-bold text-crescent-dark hover:underline"
-                  >
-                    {helpline}
-                  </a>
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                    If this is a critical emergency, call our emergency hotline directly for immediate assistance.
-                  </p>
+              {/* Emergency Coordinator Contact Card */}
+              <div className="rounded-3xl border border-crescent/30 bg-gradient-to-br from-crescent-soft/90 to-crescent-soft/40 p-6 shadow-sm">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-crescent">
+                  <HeartPulse className="h-4 w-4 text-crescent" aria-hidden />
+                  Wanna Donate Blood & Save a Life?
                 </div>
-              )}
+                <p className="mt-2 text-sm text-foreground/90 leading-relaxed font-medium">
+                  If you are ready to donate blood for this patient or need immediate coordination assistance, reach out to our on-duty Red Crescent coordinator right now.
+                </p>
+                <div className="mt-4 flex flex-col gap-2.5">
+                  <DonorResponseModal
+                    requestId={request.id}
+                    patientName={request.patient_name}
+                    requiredBloodGroup={request.blood_group}
+                    hospital={request.hospital}
+                    location={request.location}
+                  />
+
+                  <a
+                    href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+                      `Hello Red Crescent Youth! I want to donate blood / help with Blood Request ID: ${request.id} for patient ${request.patient_name} (${request.blood_group}).`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-600/30 bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.99]"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp: I Want to Donate
+                  </a>
+
+                  <a
+                    href={`tel:+${rawDigits}`}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-crescent px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-crescent-dark active:scale-[0.99]"
+                  >
+                    <PhoneCall className="h-4 w-4" />
+                    Call Coordinator: {phoneFormatted}
+                  </a>
+                </div>
+                <p className="mt-3 text-[11px] text-muted-foreground text-center">
+                  24/7 volunteer emergency response network.
+                </p>
+              </div>
 
               <div className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
                 <p className="flex items-center gap-2 font-bold">

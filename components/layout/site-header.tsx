@@ -22,6 +22,7 @@ import {
 import { SiteLogo } from "@/components/layout/site-logo";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useLocale } from "@/components/providers/locale-provider";
 import { stripLocalePrefix } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
@@ -210,6 +211,7 @@ export function SiteHeader({
           </nav>
 
           <div className="flex items-center gap-2">
+            <NotificationBell userId={currentUser?.id} />
             <div className="hidden sm:block">
               <LanguageSwitcher />
             </div>
@@ -255,14 +257,13 @@ export function SiteHeader({
             {/* Mobile menu */}
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="xl:hidden"
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center p-1.5 text-foreground transition-colors hover:text-brand-dark xl:hidden"
                   aria-label={t.nav.openMenu}
                 >
-                  <Menu className="h-5 w-5" aria-hidden />
-                </Button>
+                  <Menu className="h-6 w-6" strokeWidth={2.75} aria-hidden />
+                </button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[20rem] overflow-hidden p-0">
                 <SheetHeader className="shrink-0 border-b px-5 py-4">

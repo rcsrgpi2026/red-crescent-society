@@ -14,6 +14,8 @@ import { SiteLogo } from "@/components/layout/site-logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { StudentProfileEditor } from "@/components/student/student-profile-editor";
 import { DonorContactNotifications } from "@/components/portal/donor-contact-notifications";
+import { NotificationPreferencesForm } from "@/components/notifications/preference-form";
+import { getMyNotificationPreferences } from "@/lib/notifications/actions";
 
 export const metadata: Metadata = {
   title: "My Student Profile & Portal",
@@ -23,9 +25,10 @@ export const metadata: Metadata = {
 
 export default async function StudentPortalPage() {
   const { student } = await requireStudent();
-  const [notifications, settings] = await Promise.all([
+  const [notifications, settings, notifPrefs] = await Promise.all([
     getMyDonorContactRequests(),
     getSettings(),
+    getMyNotificationPreferences(),
   ]);
   const cardConfig = buildCardConfig(
     designFromSettings(settings),
@@ -81,6 +84,17 @@ export default async function StudentPortalPage() {
             showBothSides
           />
           <StudentProfileEditor student={student} />
+
+          {/* Smart Notification Preferences */}
+          <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-4">
+            <div>
+              <h3 className="text-base font-bold text-foreground">Notification & Alert Preferences</h3>
+              <p className="text-xs text-muted-foreground">
+                Customize which alerts you receive and manage quiet hours for your account.
+              </p>
+            </div>
+            <NotificationPreferencesForm initialPreferences={notifPrefs} />
+          </div>
         </div>
       </main>
     </div>

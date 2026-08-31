@@ -14,6 +14,7 @@ import { ActivityStoryCard } from "@/components/cards/activity-story-card";
 import { TrainingCard } from "@/components/cards/training-card";
 import { NoticeCard } from "@/components/cards/notice-card";
 import { AlbumCard } from "@/components/cards/album-card";
+import { NotificationPermissionCard } from "@/components/notifications/permission-banner";
 import {
   getSettings,
   getHomeStats,
@@ -142,6 +143,11 @@ export default async function HomePage() {
             </Button>
           </div>
         </div>
+      </section>
+
+      {/* Polite notification opt-in prompt */}
+      <section className="container-site pt-6 pb-2">
+        <NotificationPermissionCard />
       </section>
 
       {/* Serve — impact in numbers */}

@@ -15,6 +15,7 @@ export * from "./label";
 export * from "./marquee";
 export * from "./number-ticker";
 export * from "./pagination";
+export * from "./popover";
 export * from "./progress";
 export * from "./radio-group";
 export * from "./scroll-area";

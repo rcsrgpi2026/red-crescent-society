@@ -217,32 +217,7 @@ export function memberFromTeamMember(tm: {
   };
 }
 
-/** Maps a student record to the card's member data (no registration/designation). */
-export function memberFromStudent(s: {
-  name: string;
-  roll: string;
-  session: string;
-  department: string;
-  phone?: string;
-  email?: string;
-  blood_group?: string | null;
-}): MemberData {
-  return {
-    name: s.name || "",
-    roll: s.roll ?? "",
-    register: "",
-    session: s.session ?? "",
-    department: departmentShortName(s.department),
-    designation: "",
-    validUntil: validUntilFromSession(s.session),
-    phone: s.phone ?? "",
-    email: s.email ?? "",
-    facebook: "",
-    bloodGroup: s.blood_group ?? "",
-    idNumber: "",
-    customFields: [],
-  };
-}
+
 
 /**
  * Resolves the back-side QR payload. Supports `{member_id}`, `{roll}` and

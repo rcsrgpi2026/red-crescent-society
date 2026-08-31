@@ -135,6 +135,7 @@ export async function studentSignUp(
     user_id: userId,
     name: v.name,
     session: v.session,
+    semester: "",
     roll: v.roll,
     department: v.department,
     phone: v.phone,

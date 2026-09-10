@@ -29,9 +29,18 @@ export default async function AdminStudentsPage() {
       render: (s) => <span className="text-xs text-muted-foreground">{s.session}</span>,
     },
     {
+      header: "Semester",
+      render: (s) => (
+        <span className="text-xs font-semibold text-brand-dark">
+          {s.semester ? `${s.semester} Sem` : "—"}
+        </span>
+      ),
+    },
+    {
       header: "Department",
       render: (s) => <span className="text-sm">{s.department}</span>,
     },
+
     {
       header: "Phone",
       render: (s) => <span className="text-xs text-muted-foreground">{s.phone}</span>,

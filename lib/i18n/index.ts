@@ -1,5 +1,4 @@
 import { messages, type Messages } from "./messages";
-import { bn } from "./bn";
 import {
   defaultLocale,
   isLocale,
@@ -13,11 +12,11 @@ export { isLocale, defaultLocale, locales } from "./config";
 
 const dictionaries: Record<Locale, Messages> = {
   en: messages,
-  bn,
+  bn: messages,
 };
 
-export function getMessages(locale: Locale): Messages {
-  return dictionaries[locale] ?? dictionaries[defaultLocale];
+export function getMessages(locale?: Locale): Messages {
+  return dictionaries[locale ?? defaultLocale] ?? dictionaries[defaultLocale];
 }
 
 export function getMessagesSafe(locale: string | undefined | null): Messages {

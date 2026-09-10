@@ -83,10 +83,12 @@ export async function studentSignUp(
     email: formData.get("email"),
     password: formData.get("password"),
     session: formData.get("session"),
+    semester: formData.get("semester") || "",
     roll: formData.get("roll"),
     department: formData.get("department"),
     phone: formData.get("phone"),
   });
+
 
   if (!parsed.success) {
     return { success: false, errors: zodErrors(parsed.error) };
@@ -135,12 +137,13 @@ export async function studentSignUp(
     user_id: userId,
     name: v.name,
     session: v.session,
-    semester: "",
+    semester: v.semester || "",
     roll: v.roll,
     department: v.department,
     phone: v.phone,
     email: v.email,
   });
+
   if (insertError) {
     console.error("studentSignUp insert error:", insertError);
     return {

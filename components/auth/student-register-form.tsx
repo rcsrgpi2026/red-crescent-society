@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FormShell, FieldError, SubmitButton } from "@/components/forms/form";
 import { studentSignUp } from "@/lib/auth-actions";
-import { DEPARTMENTS } from "@/lib/constants";
+import { DEPARTMENTS, SEMESTERS } from "@/lib/constants";
 import {
   Label,
   Input,
@@ -20,6 +20,7 @@ export function StudentRegisterForm() {
     email: "",
     password: "",
     session: "",
+    semester: "",
     roll: "",
     phone: "",
     department: "",
@@ -33,9 +34,13 @@ export function StudentRegisterForm() {
     <FormShell action={studentSignUp}>
       {(errors) => (
         <>
+          {/* Explicit hidden inputs for select dropdown values */}
+          <input type="hidden" name="department" value={formData.department} />
+          <input type="hidden" name="semester" value={formData.semester} />
+
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <Label htmlFor="st-name">Full name</Label>
+              <Label htmlFor="st-name">Full Name *</Label>
               <Input
                 id="st-name"
                 name="name"
@@ -49,7 +54,7 @@ export function StudentRegisterForm() {
               <FieldError errors={errors} name="name" />
             </div>
             <div>
-              <Label htmlFor="st-email">Email</Label>
+              <Label htmlFor="st-email">Email Address *</Label>
               <Input
                 id="st-email"
                 name="email"
@@ -67,7 +72,7 @@ export function StudentRegisterForm() {
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <Label htmlFor="st-password">Password</Label>
+              <Label htmlFor="st-password">Password *</Label>
               <Input
                 id="st-password"
                 name="password"
@@ -82,7 +87,7 @@ export function StudentRegisterForm() {
               <FieldError errors={errors} name="password" />
             </div>
             <div>
-              <Label htmlFor="st-session">Session</Label>
+              <Label htmlFor="st-session">Academic Session *</Label>
               <Input
                 id="st-session"
                 name="session"
@@ -98,39 +103,8 @@ export function StudentRegisterForm() {
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <Label htmlFor="st-roll">Roll number</Label>
-              <Input
-                id="st-roll"
-                name="roll"
-                value={formData.roll}
-                onChange={(e) => handleChange("roll", e.target.value)}
-                placeholder="e.g. 73014"
-                className="mt-1.5"
-                required
-              />
-              <FieldError errors={errors} name="roll" />
-            </div>
-          </div>
-
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="st-phone">Mobile number</Label>
-              <Input
-                id="st-phone"
-                name="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleChange("phone", e.target.value)}
-                placeholder="017XXXXXXXX"
-                className="mt-1.5"
-                required
-              />
-              <FieldError errors={errors} name="phone" />
-            </div>
-            <div>
-              <Label htmlFor="st-department">Department</Label>
+              <Label htmlFor="st-department">Department *</Label>
               <Select
-                name="department"
                 value={formData.department}
                 onValueChange={(val) => handleChange("department", val)}
               >
@@ -147,10 +121,60 @@ export function StudentRegisterForm() {
               </Select>
               <FieldError errors={errors} name="department" />
             </div>
+            <div>
+              <Label htmlFor="st-semester">Current Semester *</Label>
+              <Select
+                value={formData.semester}
+                onValueChange={(val) => handleChange("semester", val)}
+              >
+                <SelectTrigger id="st-semester" className="mt-1.5">
+                  <SelectValue placeholder="Select semester (1st - 8th)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SEMESTERS.map((sem) => (
+                    <SelectItem key={sem} value={sem}>
+                      {sem} Semester
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldError errors={errors} name="semester" />
+            </div>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="st-roll">Student Roll Number *</Label>
+              <Input
+                id="st-roll"
+                name="roll"
+                value={formData.roll}
+                onChange={(e) => handleChange("roll", e.target.value)}
+                placeholder="e.g. 73014"
+                className="mt-1.5"
+                required
+              />
+              <FieldError errors={errors} name="roll" />
+            </div>
+            <div>
+              <Label htmlFor="st-phone">Mobile Number *</Label>
+              <Input
+                id="st-phone"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => handleChange("phone", e.target.value)}
+                placeholder="017XXXXXXXX"
+                className="mt-1.5"
+                required
+              />
+              <FieldError errors={errors} name="phone" />
+            </div>
           </div>
 
           <SubmitButton className="w-full">Create Student Account</SubmitButton>
           <p className="text-xs text-muted-foreground">
+
             Every field is required. Student accounts are activated immediately —
             no approval needed.
           </p>

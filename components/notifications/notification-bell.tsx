@@ -171,13 +171,13 @@ export function NotificationBell({ userId }: { userId?: string | null }) {
         align="end"
         className="w-80 sm:w-96 p-0 shadow-xl border-poly/20 rounded-2xl overflow-hidden"
       >
-        <div className="flex items-center justify-between border-b px-4 py-3 bg-muted/40">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-sm text-foreground">
+        <div className="flex items-center justify-between gap-2 border-b px-4 py-3 bg-muted/40">
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className="font-semibold text-sm text-foreground truncate">
               {userId ? "Notifications" : "🩸 Urgent Blood Alerts"}
             </h3>
             {unreadCount > 0 && (
-              <span className="rounded-full bg-poly/15 px-2 py-0.5 text-xs font-semibold text-poly">
+              <span className="inline-flex items-center shrink-0 whitespace-nowrap rounded-full bg-poly/15 px-2.5 py-0.5 text-xs font-semibold text-poly">
                 {unreadCount} active
               </span>
             )}
@@ -188,7 +188,7 @@ export function NotificationBell({ userId }: { userId?: string | null }) {
               size="sm"
               onClick={handleMarkAllRead}
               disabled={isPending}
-              className="h-7 text-xs text-muted-foreground hover:text-foreground"
+              className="h-7 shrink-0 whitespace-nowrap text-xs text-muted-foreground hover:text-foreground"
             >
               <CheckCheck className="mr-1 h-3.5 w-3.5" />
               Mark all as read

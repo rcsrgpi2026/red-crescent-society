@@ -1,6 +1,8 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   Users,
+  User,
   UserPlus,
   HeartPulse,
   CalendarDays,
@@ -15,6 +17,7 @@ import {
   adminGetBloodRequests,
   adminGetEvents,
   adminGetMessages,
+  adminGetRecruitmentStats,
 } from "@/lib/queries";
 import { formatDate, formatDateTime, BLOOD_REQUEST_STATUS_LABELS } from "@/lib/constants";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
@@ -22,25 +25,42 @@ import { Reveal } from "@/components/shared/reveal";
 import { NumberTicker } from "@/components/ui/number-ticker";
 
 export default async function AdminDashboardPage() {
-  const [volunteers, requests, events, messages] = await Promise.all([
+  const [volunteers, requests, events, messages, recruitmentStats] = await Promise.all([
     adminGetTeamMembers({ limit: 500 }),
     adminGetBloodRequests(),
     adminGetEvents(),
     adminGetMessages(),
+    adminGetRecruitmentStats(),
   ]);
 
   const pendingVolunteers = volunteers.filter((v) => v.status === "PENDING");
+  const approvedVolunteers = volunteers.filter((v) => v.status === "APPROVED");
   const pendingRequests = requests.filter((r) => r.status === "PENDING");
   const upcomingEvents = events.filter((e) => ["UPCOMING", "ONGOING"].includes(e.status));
   const unreadMessages = messages.filter((m) => m.status === "NEW");
 
   const stats = [
-    { label: "Total team members", value: volunteers.length, icon: Users, href: "/admin/team", tone: "bg-gradient-to-br from-brand to-brand-dark" },
-    { label: "Pending registrations", value: pendingVolunteers.length, icon: UserPlus, href: "/admin/team?status=PENDING", tone: "bg-gradient-to-br from-amber-400 to-orange-500" },
+    {
+      label: "Total team members",
+      value: approvedVolunteers.length,
+      icon: Users,
+      href: "/admin/team?status=APPROVED",
+      tone: "bg-gradient-to-br from-brand to-brand-dark",
+    },
+    {
+      label: "Pending applications",
+      value: recruitmentStats.pending,
+      icon: UserPlus,
+      href: "/admin/recruitment/applications?status=PENDING",
+      tone: recruitmentStats.pending > 0
+        ? "bg-gradient-to-br from-amber-500 to-rose-500 animate-pulse"
+        : "bg-gradient-to-br from-amber-400 to-orange-500",
+    },
     { label: "Open blood requests", value: requests.filter((r) => !["COMPLETED", "CANCELLED"].includes(r.status)).length, icon: HeartPulse, href: "/admin/blood-requests", tone: "bg-gradient-to-br from-crescent to-crescent-dark" },
     { label: "Upcoming events", value: upcomingEvents.length, icon: CalendarDays, href: "/admin/events", tone: "bg-gradient-to-br from-poly to-[#0f4d80]" },
     { label: "Unread messages", value: unreadMessages.length, icon: MessageSquare, href: "/admin/messages", tone: "bg-gradient-to-br from-emerald-400 to-emerald-600" },
   ];
+
 
   return (
     <div className="space-y-8">
@@ -96,9 +116,21 @@ export default async function AdminDashboardPage() {
               <ul className="divide-y divide-line">
                 {volunteers.slice(0, 6).map((v) => (
                   <li key={v.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-3 transition-colors hover:bg-mist/70">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-dark text-sm font-bold text-white">
-                      {v.name.charAt(0)}
-                    </span>
+                    {v.photo_url?.trim() ? (
+                      <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-line bg-mist shadow-xs">
+                        <Image
+                          src={v.photo_url}
+                          alt={v.name}
+                          fill
+                          sizes="36px"
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-brand-soft/60 text-brand">
+                        <User className="h-4.5 w-4.5" aria-hidden />
+                      </div>
+                    )}
                     {/* min-w-0 + flex-1 lets the text wrap and shrink; basis-40
                         reserves readable width so the status badge wraps onto its
                         own line instead of overflowing on very narrow screens. */}

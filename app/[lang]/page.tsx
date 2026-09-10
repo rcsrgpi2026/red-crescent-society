@@ -15,6 +15,8 @@ import { TrainingCard } from "@/components/cards/training-card";
 import { NoticeCard } from "@/components/cards/notice-card";
 import { AlbumCard } from "@/components/cards/album-card";
 import { NotificationPermissionCard } from "@/components/notifications/permission-banner";
+import { RecruitmentBanner } from "@/components/home/recruitment-banner";
+import { RecruitmentPopup } from "@/components/home/recruitment-popup";
 import {
   getSettings,
   getHomeStats,
@@ -27,6 +29,7 @@ import {
   getPublicTeamMembers,
   getFounders,
   getCommunityMembers,
+  getActiveRecruitmentCampaign,
 } from "@/lib/queries";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 import { format } from "@/lib/i18n";
@@ -48,22 +51,38 @@ function heroPhotos(images: (string | null | undefined)[]): string[] {
 export default async function HomePage() {
   // Team content (section + links) is visible only to admin roles — volunteers
   // and students should not see the team on the home page.
-  const [profile, t, locale, settings, stats, events, notices, activities, trainings, albums, requests, founders, members] =
-    await Promise.all([
-      getProfile(),
-      getServerMessages(),
-      getServerLocale(),
-      getSettings(),
-      getHomeStats(),
-      getUpcomingEvents(3),
-      getPublishedNotices(4),
-      getRecentActivities(6),
-      getPublicTrainings(),
-      getAlbums(6),
-      getPublicBloodRequests(),
-      getFounders(),
-      getCommunityMembers(),
-    ]);
+  const [
+    profile,
+    t,
+    locale,
+    settings,
+    stats,
+    events,
+    notices,
+    activities,
+    trainings,
+    albums,
+    requests,
+    founders,
+    members,
+    activeCampaign,
+  ] = await Promise.all([
+    getProfile(),
+    getServerMessages(),
+    getServerLocale(),
+    getSettings(),
+    getHomeStats(),
+    getUpcomingEvents(3),
+    getPublishedNotices(4),
+    getRecentActivities(6),
+    getPublicTrainings(),
+    getAlbums(6),
+    getPublicBloodRequests(),
+    getFounders(),
+    getCommunityMembers(),
+    getActiveRecruitmentCampaign(),
+  ]);
+
   const isAdmin = isAdminRole(profile?.role);
   const team = isAdmin ? await getPublicTeamMembers({ limit: 18 }) : [];
 
@@ -94,6 +113,10 @@ export default async function HomePage() {
 
   return (
     <>
+      {/* Volunteer Recruitment Banner & Modal Popup */}
+      <RecruitmentBanner campaign={activeCampaign} />
+      <RecruitmentPopup campaign={activeCampaign} />
+
       {/* Serve. Respond. Make a Difference. */}
       <Hero
         heroTitle={
@@ -109,6 +132,7 @@ export default async function HomePage() {
         bloodHelpline={bloodHelpline}
         collegeName={collegeName}
       />
+
 
       {/* Respond — emergency strip */}
       <section className="border-b border-line bg-crescent">

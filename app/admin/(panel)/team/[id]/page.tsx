@@ -78,8 +78,8 @@ export default async function AdminTeamMemberDetailPage({
             {volunteer.photo_url ? (
               <Image src={volunteer.photo_url} alt={volunteer.name} fill sizes="56px" className="object-cover" />
             ) : (
-              <span className="flex h-full w-full items-center justify-center text-2xl font-bold text-brand">
-                {volunteer.name.charAt(0)}
+              <span className="flex h-full w-full items-center justify-center text-brand">
+                <UserRound className="h-7 w-7" aria-hidden />
               </span>
             )}
             <AdminFormDialog

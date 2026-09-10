@@ -28,11 +28,14 @@ import type {
   PublicBloodDonor,
   PublicBloodRequest,
   PublicTeamMember,
+  RecruitmentCampaign,
   Student,
   TeamMember,
   TeamMemberPoint,
   Training,
+  VolunteerApplication,
 } from "@/types/database";
+
 
 /**
  * Public queries are wrapped in `unstable_cache` (tagged + 60s revalidate):
@@ -986,3 +989,143 @@ export async function adminGetAuditLogs(limit = 50) {
     .limit(limit);
   return data ?? [];
 }
+
+// ------------------------------------------------------------
+// Volunteer Recruitment & Applications
+// ------------------------------------------------------------
+
+/**
+ * Returns the currently active recruitment campaign, or null if recruitment is OFF.
+ */
+export const getActiveRecruitmentCampaign = unstable_cache(
+  async (): Promise<RecruitmentCampaign | null> => {
+    const supabase = getPublicClient();
+    if (!supabase) return null;
+    const { data } = await supabase
+      .from("recruitment_campaigns")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data ?? null;
+  },
+  ["active-recruitment-campaign"],
+  { tags: ["recruitment", "home"], revalidate: 30 }
+);
+
+export async function adminGetRecruitmentCampaigns(): Promise<RecruitmentCampaign[]> {
+  const supabase = await db();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("recruitment_campaigns")
+    .select("*")
+    .order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export async function adminGetRecruitmentCampaign(id: string): Promise<RecruitmentCampaign | null> {
+  const supabase = await db();
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from("recruitment_campaigns")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  return data ?? null;
+}
+
+export async function adminGetVolunteerApplications(filters?: {
+  status?: string;
+  campaignId?: string;
+  search?: string;
+}): Promise<VolunteerApplication[]> {
+  const supabase = await db();
+  if (!supabase) return [];
+
+  let query = supabase
+    .from("volunteer_applications")
+    .select("*, recruitment_campaigns(id, title)")
+    .order("created_at", { ascending: false });
+
+  if (filters?.status) {
+    query = query.eq("status", filters.status);
+  }
+  if (filters?.campaignId) {
+    query = query.eq("campaign_id", filters.campaignId);
+  }
+  if (filters?.search) {
+    const term = `%${filters.search.trim()}%`;
+    query = query.or(
+      `name.ilike.${term},roll.ilike.${term},department.ilike.${term},phone.ilike.${term},email.ilike.${term}`
+    );
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("adminGetVolunteerApplications error:", error);
+    return [];
+  }
+  return (data ?? []) as VolunteerApplication[];
+}
+
+export async function adminGetVolunteerApplication(id: string): Promise<VolunteerApplication | null> {
+  const supabase = await db();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("volunteer_applications")
+    .select("*, recruitment_campaigns(id, title)")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("adminGetVolunteerApplication error:", error);
+    return null;
+  }
+  return (data as VolunteerApplication) ?? null;
+}
+
+/**
+ * Loads the current authenticated user's latest volunteer application.
+ */
+export async function getMyVolunteerApplication(userId: string): Promise<VolunteerApplication | null> {
+  const supabase = await db();
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from("volunteer_applications")
+    .select("*, recruitment_campaigns(id, title)")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as VolunteerApplication) ?? null;
+}
+
+export async function adminGetRecruitmentStats() {
+  const supabase = await db();
+  if (!supabase) {
+    return { total: 0, pending: 0, approved: 0, rejected: 0, activeCampaign: null };
+  }
+
+  const [appsRes, campaignRes] = await Promise.all([
+    supabase.from("volunteer_applications").select("status"),
+    supabase
+      .from("recruitment_campaigns")
+      .select("*")
+      .order("is_active", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const apps = appsRes.data ?? [];
+  return {
+    total: apps.length,
+    pending: apps.filter((a) => a.status === "PENDING").length,
+    approved: apps.filter((a) => a.status === "APPROVED").length,
+    rejected: apps.filter((a) => a.status === "REJECTED").length,
+    activeCampaign: campaignRes.data ?? null,
+  };
+}
+
+

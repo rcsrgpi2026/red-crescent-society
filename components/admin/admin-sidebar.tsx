@@ -26,6 +26,7 @@ import {
   ExternalLink,
   Loader2,
   X,
+  UserPlus,
 } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -38,8 +39,10 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 const NAV = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Notifications", href: "/admin/notifications", icon: Bell },
+  { label: "Recruitment", href: "/admin/recruitment", icon: UserPlus },
   { label: "Team Members", href: "/admin/team", icon: Users },
   { label: "Students", href: "/admin/students", icon: GraduationCap },
+
   { label: "Directors", href: "/admin/founders", icon: Handshake },
   { label: "Community", href: "/admin/community", icon: Network },
   { label: "Blood Donors", href: "/admin/donors", icon: Droplets },

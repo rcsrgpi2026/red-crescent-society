@@ -21,6 +21,18 @@ export const DEPARTMENTS = [
 
 export const SESSIONS = ["22-23", "23-24", "24-25", "25-26", "26-27"] as const;
 
+export const SEMESTERS = [
+  "1st",
+  "2nd",
+  "3rd",
+  "4th",
+  "5th",
+  "6th",
+  "7th",
+  "8th",
+] as const;
+
+
 /** Leadership hierarchy — the admin declares each member's position. */
 export const TEAM_POSITIONS = [
   "Team Leader",
@@ -195,6 +207,46 @@ export const TEAM_MEMBER_STATUS_LABELS: Record<string, string> = {
   APPROVED: "Approved",
   REJECTED: "Rejected",
 };
+
+export const VOLUNTEER_APPLICATION_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Under Review",
+  APPROVED: "Approved",
+  REJECTED: "Not Approved",
+  WITHDRAWN: "Withdrawn",
+};
+
+/**
+ * Normalizes semester input (e.g. "1st Semester", "1st", "1" -> "1st").
+ */
+export function normalizeSemester(sem: string | null | undefined): string {
+  if (!sem) return "";
+  const cleaned = sem.trim().toLowerCase();
+  const match = cleaned.match(/^([1-8])(?:st|nd|rd|th)?(?:\s+semester)?$/i);
+  if (match) {
+    const num = match[1];
+    if (num === "1") return "1st";
+    if (num === "2") return "2nd";
+    if (num === "3") return "3rd";
+    return `${num}th`;
+  }
+  return sem.trim();
+}
+
+/**
+ * Checks whether a student's semester is eligible against allowed semesters.
+ */
+export function isSemesterEligible(
+  studentSemester: string | null | undefined,
+  allowedSemesters: string[] | null | undefined
+): boolean {
+  if (!allowedSemesters || allowedSemesters.length === 0) return true;
+  if (!studentSemester) return false;
+  const normStudent = normalizeSemester(studentSemester).toLowerCase();
+  return allowedSemesters.some(
+    (allowed) => normalizeSemester(allowed).toLowerCase() === normStudent
+  );
+}
+
 
 export const BLOOD_REQUEST_STATUS_LABELS: Record<string, string> = {
   PENDING: "Pending",

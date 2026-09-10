@@ -45,6 +45,7 @@ export interface Student {
   user_id: string | null;
   name: string;
   session: string;
+  semester?: string | null;
   roll: string;
   department: string;
   phone: string;
@@ -55,6 +56,7 @@ export interface Student {
   created_at: string;
   updated_at: string;
 }
+
 
 export interface TeamMember {
   id: string;
@@ -433,3 +435,55 @@ export interface AuditLog {
   details: Record<string, unknown> | null;
   created_at: string;
 }
+
+export type VolunteerApplicationStatus = "PENDING" | "APPROVED" | "REJECTED" | "WITHDRAWN";
+
+export interface RecruitmentCampaign {
+  id: string;
+  title: string;
+  is_active: boolean;
+  popup_title: string;
+  popup_description: string;
+  banner_title: string;
+  banner_subtitle: string;
+  allowed_semesters: string[];
+  start_date: string | null;
+  end_date: string | null;
+  max_applications: number | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VolunteerApplication {
+  id: string;
+  user_id: string;
+  campaign_id: string;
+  student_id: string | null;
+  name: string;
+  roll: string;
+  registration_no: string | null;
+  session: string;
+  department: string;
+  semester: string;
+  email: string;
+  phone: string;
+  blood_group: string;
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
+  previous_volunteer_experience: string | null;
+  motivation: string;
+  skills: string[];
+  status: VolunteerApplicationStatus;
+  rejection_reason: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  /** Joined campaign info if requested */
+  recruitment_campaigns?: {
+    id: string;
+    title: string;
+  } | null;
+}
+

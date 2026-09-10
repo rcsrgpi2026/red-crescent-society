@@ -108,10 +108,13 @@ export const studentSignupSchema = z.object({
   email: z.string().regex(emailRegex, "Enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   session: z.string().min(1, "Academic session is required").max(20),
+  semester: z.string().min(1, "Please select your current semester").max(20),
   roll: z.string().min(1, "Roll number is required").max(30),
   department: z.string().min(1, "Select your department"),
   phone: z.string().regex(phoneRegex, "Enter a valid Bangladeshi mobile number (e.g. 017XXXXXXXX)"),
 });
+
+
 
 export type StudentSignupValues = z.infer<typeof studentSignupSchema>;
 
@@ -140,3 +143,38 @@ export const teamMemberSignupSchema = z.object({
 });
 
 export type TeamMemberSignupValues = z.infer<typeof teamMemberSignupSchema>;
+
+/**
+ * Volunteer recruitment application schema — submitted by existing student accounts.
+ */
+export const volunteerApplicationSchema = z.object({
+  campaignId: z.string().uuid("Invalid recruitment campaign"),
+  phone: z.string().regex(phoneRegex, "Enter a valid Bangladeshi mobile number (e.g. 017XXXXXXXX)"),
+  bloodGroup: z.string().min(1, "Select your blood group"),
+  emergencyContactName: z.string().min(2, "Emergency contact name is required").max(100),
+  emergencyContactPhone: z.string().regex(phoneRegex, "Enter a valid emergency contact phone number"),
+  previousVolunteerExperience: z.string().max(2000).optional().or(z.literal("")),
+  motivation: z.string().min(20, "Tell us why you want to join RGPI Red Crescent Youth (min 20 characters)").max(2000),
+  skills: z.array(z.string()).max(15).default([]),
+  agreement: z.boolean().refine((val) => val === true, {
+    message: "You must confirm that the information provided is correct",
+  }),
+});
+
+export type VolunteerApplicationValues = z.infer<typeof volunteerApplicationSchema>;
+
+export const recruitmentCampaignSchema = z.object({
+  title: z.string().min(3, "Campaign title is required").max(120),
+  isActive: z.boolean().default(false),
+  popupTitle: z.string().min(3, "Popup title is required").max(150),
+  popupDescription: z.string().min(10, "Popup description is required").max(500),
+  bannerTitle: z.string().min(3, "Banner title is required").max(150),
+  bannerSubtitle: z.string().min(5, "Banner subtitle is required").max(300),
+  allowedSemesters: z.array(z.string()).min(1, "Select at least one eligible semester"),
+  startDate: z.string().optional().or(z.literal("")),
+  endDate: z.string().optional().or(z.literal("")),
+  maxApplications: z.coerce.number().int().positive().nullable().optional(),
+});
+
+export type RecruitmentCampaignValues = z.infer<typeof recruitmentCampaignSchema>;
+

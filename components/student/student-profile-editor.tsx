@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { PortalAvatarUploader } from "@/components/portal/portal-avatar-uploader";
 import { updateStudentProfile, updateStudentPhoto } from "@/lib/portal-actions";
-import { DEPARTMENTS, BLOOD_GROUPS } from "@/lib/constants";
+import { DEPARTMENTS, BLOOD_GROUPS, SEMESTERS } from "@/lib/constants";
 import {
   Label,
   Input,
@@ -36,6 +36,7 @@ export function StudentProfileEditor({ student }: { student: Student }) {
   const [formData, setFormData] = useState({
     name: student.name || "",
     session: student.session || "",
+    semester: student.semester || "",
     roll: student.roll || "",
     department: student.department || "",
     phone: student.phone || "",
@@ -84,11 +85,13 @@ export function StudentProfileEditor({ student }: { student: Student }) {
     { icon: CalendarDays, label: "Session", value: formData.session || student.session },
     { icon: Hash, label: "Roll Number", value: formData.roll || student.roll },
     { icon: Building2, label: "Department", value: formData.department || student.department },
+    { icon: CalendarDays, label: "Current Semester", value: formData.semester ? `${formData.semester} Semester` : (student.semester ? `${student.semester} Semester` : "Not specified") },
     { icon: Phone, label: "Mobile Number", value: formData.phone || student.phone },
     { icon: Mail, label: "Email Address", value: student.email },
     { icon: Droplets, label: "Blood Group", value: formData.bloodGroup || student.blood_group || "Not specified" },
     { icon: MapPin, label: "Address", value: formData.address || student.address || "Not specified" },
   ];
+
 
   return (
     <div className="space-y-6">
@@ -251,7 +254,27 @@ export function StudentProfileEditor({ student }: { student: Student }) {
               )}
             </div>
 
+            <div>
+              <Label htmlFor="st-semester">Current Semester</Label>
+              <Select
+                name="semester"
+                value={formData.semester}
+                onValueChange={(val) => handleChange("semester", val)}
+              >
+                <SelectTrigger id="st-semester" className="mt-1.5">
+                  <SelectValue placeholder="Select current semester" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SEMESTERS.map((sem) => (
+                    <SelectItem key={sem} value={sem}>
+                      {sem} Semester
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div>

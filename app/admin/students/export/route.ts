@@ -19,12 +19,17 @@ export async function GET() {
   const columns: PdfColumn<Student>[] = [
     { header: "#", width: 0.8, getValue: (_v, i) => String(i + 1) },
     { header: "Name", width: 3.5, getValue: (v) => v.name },
-    { header: "Roll", width: 2, getValue: (v) => v.roll },
-    { header: "Session", width: 2, getValue: (v) => v.session },
-    { header: "Department", width: 4, getValue: (v) => v.department },
-    { header: "Phone", width: 2.6, getValue: (v) => v.phone },
+    { header: "Roll", width: 1.8, getValue: (v) => v.roll },
+    { header: "Session", width: 1.8, getValue: (v) => v.session },
+    { header: "Semester", width: 1.8, getValue: (v) => v.semester ? `${v.semester} Sem` : "—" },
+    { header: "Department", width: 3.2, getValue: (v) => v.department },
+    { header: "Blood Group", width: 1.8, getValue: (v) => v.blood_group || "—" },
+    { header: "Mobile", width: 2.5, getValue: (v) => v.phone },
     { header: "Email", width: 3.5, getValue: (v) => v.email },
+    { header: "Registered Date", width: 2.4, getValue: (v) => v.created_at ? v.created_at.slice(0, 10) : "—" },
   ];
+
+
 
   const pdf = await buildTablePdf({
     title: "Registered Students",

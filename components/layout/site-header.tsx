@@ -20,7 +20,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SiteLogo } from "@/components/layout/site-logo";
-import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useLocale } from "@/components/providers/locale-provider";
@@ -212,9 +211,6 @@ export function SiteHeader({
 
           <div className="flex items-center gap-2">
             <NotificationBell userId={currentUser?.id} />
-            <div className="hidden sm:block">
-              <LanguageSwitcher />
-            </div>
 
             {currentUser ? (
               <div className="hidden items-center gap-2 sm:flex">
@@ -249,10 +245,11 @@ export function SiteHeader({
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button asChild size="sm" className="hidden sm:inline-flex">
-                  <Link href="/volunteer/login">{t.nav.joinUs}</Link>
+                  <Link href="/apply-volunteer">{t.nav.joinUs}</Link>
                 </Button>
               </>
             )}
+
 
             {/* Mobile menu */}
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -303,9 +300,6 @@ export function SiteHeader({
                       onClick={() => setMenuOpen(false)}
                     />
                   ))}
-                  <div className="mt-3">
-                    <LanguageSwitcher />
-                  </div>
 
                   {currentUser ? (
                     <div className="mt-4 space-y-2 border-t border-line pt-4">
@@ -319,10 +313,11 @@ export function SiteHeader({
                   ) : (
                     <div className="mt-4 space-y-2 border-t border-line pt-4">
                       <Button asChild size="lg" className="w-full">
-                        <Link href="/volunteer/login" onClick={() => setMenuOpen(false)}>
+                        <Link href="/apply-volunteer" onClick={() => setMenuOpen(false)}>
                           {t.nav.joinUs}
                         </Link>
                       </Button>
+
                       <Button asChild size="lg" variant="outline" className="w-full">
                         <Link href="/student/login" onClick={() => setMenuOpen(false)}>
                           {t.nav.studentPortal}

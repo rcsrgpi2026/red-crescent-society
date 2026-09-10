@@ -72,7 +72,7 @@ export function ConfirmDelete({
               handleDelete();
             }}
             disabled={busy}
-            className="bg-crescent hover:bg-crescent-dark"
+            className="bg-crescent hover:bg-crescent-dark text-white font-semibold"
           >
             {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />}
             Delete

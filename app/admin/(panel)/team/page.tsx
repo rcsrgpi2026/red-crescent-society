@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Download, Eye, Search, Users } from "lucide-react";
+import Image from "next/image";
+import { Download, Eye, Search, User, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
@@ -46,9 +47,21 @@ export default async function AdminTeamMembersPage({
       header: "Team Member",
       render: (v) => (
         <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-dark text-sm font-bold text-white">
-            {v.name.charAt(0)}
-          </span>
+          {v.photo_url?.trim() ? (
+            <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-line bg-mist shadow-xs">
+              <Image
+                src={v.photo_url}
+                alt={v.name}
+                fill
+                sizes="36px"
+                className="object-cover"
+              />
+            </div>
+          ) : (
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-brand-soft/60 text-brand">
+              <User className="h-4.5 w-4.5" aria-hidden />
+            </div>
+          )}
           <div className="min-w-0">
             <p className="break-words font-medium text-foreground">{v.name}</p>
             <p className="break-words text-xs text-muted-foreground">{v.phone ?? "—"}</p>

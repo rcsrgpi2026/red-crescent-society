@@ -20,6 +20,7 @@ const RESERVED_POSITIONS = new Set([
 const studentProfileSchema = z.object({
   name: z.string().trim().min(2, "Full name must be at least 2 characters"),
   session: z.string().trim().min(4, "Session is required (e.g. 2024-25)"),
+  semester: z.string().trim().optional(),
   roll: z.string().trim().min(1, "Roll number is required"),
   department: z.string().trim().min(1, "Department is required"),
   phone: z
@@ -29,6 +30,7 @@ const studentProfileSchema = z.object({
   bloodGroup: z.string().trim().optional(),
   address: z.string().trim().optional(),
 });
+
 
 const volunteerProfileSchema = z.object({
   name: z.string().trim().min(2, "Full name must be at least 2 characters"),
@@ -120,12 +122,14 @@ export async function updateStudentProfile(
     .update({
       name: v.name,
       session: v.session,
+      semester: v.semester ?? "",
       roll: v.roll,
       department: v.department,
       phone: v.phone,
       blood_group: v.bloodGroup || null,
       address: v.address || null,
     })
+
     .eq("user_id", user.id);
 
   if (studentError) {

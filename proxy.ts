@@ -7,24 +7,28 @@ import {
 } from "@/lib/i18n/config";
 
 /**
- * Preferred locale: the language switcher's cookie first, then the browser's
- * Accept-Language, then the default ("en").
+ * Preferred locale: locked to English as the primary site language.
  */
-function getPreferredLocale(request: NextRequest): string {
-  const cookie = request.cookies.get("locale")?.value;
-  if (isLocale(cookie)) return cookie;
-
-  const acceptLang = request.headers.get("accept-language") ?? "";
-  for (const part of acceptLang.split(",")) {
-    const code = part.trim().split(";")[0].slice(0, 2);
-    if (isLocale(code)) return code;
-  }
-
+function getPreferredLocale(_request: NextRequest): string {
   return defaultLocale;
 }
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Immediately redirect any /bn links or legacy bookmarks to /en
+  if (pathname === "/bn" || pathname.startsWith("/bn/")) {
+    const rest = pathname.replace(/^\/bn/, "");
+    const url = request.nextUrl.clone();
+    url.pathname = `/en${rest === "" ? "" : rest}`;
+    const response = NextResponse.redirect(url, { status: 301 });
+    response.cookies.set("locale", "en", {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    });
+    return response;
+  }
 
   // These paths are locale-independent: admin stays English, the student and
   // volunteer portals are functional areas, and the special route-handler
@@ -54,21 +58,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Visitors who land on a locale-prefixed page (typed URL or shared link)
-  // get the locale cookie, so their next click on an unprefixed link stays in
-  // that language instead of falling back to the browser default. Same format
-  // as the language switcher writes, so the two never fight.
-  if (hasLocalePrefix(pathname)) {
-    const locale = pathname.split("/")[1] ?? "";
-    if (isLocale(locale) && request.cookies.get("locale")?.value !== locale) {
-      const response = await updateSession(request);
-      response.cookies.set("locale", locale, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 365,
-        sameSite: "lax",
-      });
-      return response;
-    }
+  // Ensure any visitor's stale 'bn' cookie is reset to 'en'
+  if (request.cookies.get("locale")?.value === "bn") {
+    const response = await updateSession(request);
+    response.cookies.set("locale", "en", {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    });
+    return response;
   }
 
   return updateSession(request);

@@ -1,5 +1,5 @@
 // Service Worker for Red Crescent Youth PWA
-const CACHE_NAME = "rcs-rgpi-pwa-v3";
+const CACHE_NAME = "rcs-rgpi-pwa-v4";
 const OFFLINE_URLS = [
   "/",
   "/manifest.webmanifest",

@@ -36,7 +36,8 @@ export const SEMESTERS = [
 /** Leadership hierarchy — the admin declares each member's position. */
 export const TEAM_POSITIONS = [
   "Team Leader",
-  "Deputy Team Leader",
+  "Deputy Leader - 1",
+  "Deputy Leader - 2",
   "Group Leader",
   "Assistant Group Leader",
   "General Member",
@@ -44,10 +45,19 @@ export const TEAM_POSITIONS = [
 
 /**
  * Society-wide leadership positions that are not tied to any RCY department —
- * Team Leader and Deputy Team Leader oversee all wings, so they never get a
+ * Team Leader and Deputy Leaders oversee all wings, so they never get a
  * department assignment.
  */
-export const NON_DEPARTMENT_POSITIONS = ["Team Leader", "Deputy Team Leader"] as const;
+export const NON_DEPARTMENT_POSITIONS = [
+  "Team Leader",
+  "Deputy Leader - 1",
+  "Deputy Leader - 2",
+  "Deputy Team Leader",
+  "Deputy Leader-1",
+  "Deputy Leader-2",
+  "Deputy Team Leader - 1",
+  "Deputy Team Leader - 2",
+] as const;
 
 /** Red Crescent Youth internal departments — the admin assigns one to each member. */
 export const RCY_DEPARTMENTS = [
@@ -139,6 +149,10 @@ export const COMMUNITY_LEVEL_LABELS: Record<number, string> = {
 export const COMMUNITY_POSITIONS = [
   "INCHARGE TEACHER",
   "TEAM LEADER",
+  "DEPUTY LEADER - 01",
+  "DEPUTY LEADER - 02",
+  "DEPUTY LEADER - 1",
+  "DEPUTY LEADER - 2",
   "DEPUTY LEADER",
   "GROUP LEADER",
   "ASST. GROUP LEADER",

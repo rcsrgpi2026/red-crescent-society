@@ -216,6 +216,15 @@ export interface BackSideConfig {
   issuedByTitle: string;
   authorizedSignatureTitle: string;
   signatureImage?: string;
+  signatureScale?: number;
+  signatureX?: number;
+  signatureY?: number;
+  signatureRotation?: number;
+  authorizedSignatureImage?: string;
+  authorizedSignatureScale?: number;
+  authorizedSignatureX?: number;
+  authorizedSignatureY?: number;
+  authorizedSignatureRotation?: number;
   showQrCode: boolean;
   /** May contain {member_id} / {roll} placeholders, resolved per cardholder. */
   qrCodeData: string;

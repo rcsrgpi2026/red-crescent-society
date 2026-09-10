@@ -881,13 +881,11 @@ export function IdCardDesignEditor({
 
           {activeTab === "back" && (
             <div className="space-y-5">
-              <SectionCard title="Back side" description="Terms, instructions, QR and signatures.">
+              <SectionCard title="Back side styling & content" description="Colors, section title, terms and emergency hotline.">
                 <Toggle label="Enable back side" checked={design.backSide.enabled} onChange={(v) => patch("backSide", { enabled: v })} className="sm:col-span-2" />
                 <ColorInput label="Background color" value={design.backSide.bgColor} onChange={(v) => patch("backSide", { bgColor: v })} />
                 <ColorInput label="Text color" value={design.backSide.textColor} onChange={(v) => patch("backSide", { textColor: v })} />
-                <TextInput label="Section title" value={design.backSide.title} onChange={(v) => patch("backSide", { title: v })} />
-                <TextInput label="Issued by" value={design.backSide.issuedByTitle} onChange={(v) => patch("backSide", { issuedByTitle: v })} />
-                <TextInput label="Authorized signature" value={design.backSide.authorizedSignatureTitle} onChange={(v) => patch("backSide", { authorizedSignatureTitle: v })} />
+                <TextInput label="Section title" value={design.backSide.title} onChange={(v) => patch("backSide", { title: v })} className="sm:col-span-2" />
                 <TextInput label="Emergency contact" value={design.backSide.emergencyContact} onChange={(v) => patch("backSide", { emergencyContact: v })} className="sm:col-span-2" />
                 <Field label="Instructions (one per line)" className="sm:col-span-2">
                   <Textarea
@@ -897,6 +895,142 @@ export function IdCardDesignEditor({
                     className="mt-0"
                   />
                 </Field>
+                <Toggle label="Show blood group" checked={design.backSide.bloodGroupVisible} onChange={(v) => patch("backSide", { bloodGroupVisible: v })} className="sm:col-span-2" />
+              </SectionCard>
+
+              <SectionCard
+                title="Signatures"
+                description="Official signatures appearing side-by-side at the bottom of the card back."
+              >
+                <div className="space-y-3.5 rounded-xl border border-line/70 bg-mist/40 p-4">
+                  <div className="border-b border-line/50 pb-2">
+                    <p className="text-xs font-bold uppercase tracking-wider text-brand">
+                      Left Signature
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Typically President or Unit Leader
+                    </p>
+                  </div>
+                  <TextInput
+                    label="Title / Role"
+                    value={design.backSide.issuedByTitle}
+                    onChange={(v) => patch("backSide", { issuedByTitle: v })}
+                    placeholder="President / Unit Leader"
+                  />
+                  <ImageInput
+                    label="Signature image"
+                    value={design.backSide.signatureImage ?? ""}
+                    onChange={(v) => patch("backSide", { signatureImage: v })}
+                    description="Upload transparent PNG signature."
+                  />
+                  <div className="rounded-lg border border-line/60 bg-white/80 p-3">
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Size, Position & Rotation
+                    </p>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <NumInput
+                        label="Size / Scale"
+                        value={design.backSide.signatureScale ?? 1}
+                        onChange={(v) => patch("backSide", { signatureScale: v })}
+                        min={0.2}
+                        max={3}
+                        step={0.05}
+                      />
+                      <NumInput
+                        label="Rotation (°)"
+                        value={design.backSide.signatureRotation ?? 0}
+                        onChange={(v) => patch("backSide", { signatureRotation: v })}
+                        min={-90}
+                        max={90}
+                        step={1}
+                      />
+                      <NumInput
+                        label="Position X (px)"
+                        value={design.backSide.signatureX ?? 0}
+                        onChange={(v) => patch("backSide", { signatureX: v })}
+                        min={-100}
+                        max={100}
+                        step={1}
+                      />
+                      <NumInput
+                        label="Position Y (px)"
+                        value={design.backSide.signatureY ?? 0}
+                        onChange={(v) => patch("backSide", { signatureY: v })}
+                        min={-60}
+                        max={60}
+                        step={1}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3.5 rounded-xl border border-line/70 bg-mist/40 p-4">
+                  <div className="border-b border-line/50 pb-2">
+                    <p className="text-xs font-bold uppercase tracking-wider text-brand">
+                      Right Signature
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Typically Authorized Officer
+                    </p>
+                  </div>
+                  <TextInput
+                    label="Title / Role"
+                    value={design.backSide.authorizedSignatureTitle}
+                    onChange={(v) => patch("backSide", { authorizedSignatureTitle: v })}
+                    placeholder="Authorized Signature"
+                  />
+                  <ImageInput
+                    label="Signature image"
+                    value={design.backSide.authorizedSignatureImage ?? ""}
+                    onChange={(v) => patch("backSide", { authorizedSignatureImage: v })}
+                    description="Upload transparent PNG signature."
+                  />
+                  <div className="rounded-lg border border-line/60 bg-white/80 p-3">
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Size, Position & Rotation
+                    </p>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <NumInput
+                        label="Size / Scale"
+                        value={design.backSide.authorizedSignatureScale ?? 1}
+                        onChange={(v) => patch("backSide", { authorizedSignatureScale: v })}
+                        min={0.2}
+                        max={3}
+                        step={0.05}
+                      />
+                      <NumInput
+                        label="Rotation (°)"
+                        value={design.backSide.authorizedSignatureRotation ?? 0}
+                        onChange={(v) => patch("backSide", { authorizedSignatureRotation: v })}
+                        min={-90}
+                        max={90}
+                        step={1}
+                      />
+                      <NumInput
+                        label="Position X (px)"
+                        value={design.backSide.authorizedSignatureX ?? 0}
+                        onChange={(v) => patch("backSide", { authorizedSignatureX: v })}
+                        min={-100}
+                        max={100}
+                        step={1}
+                      />
+                      <NumInput
+                        label="Position Y (px)"
+                        value={design.backSide.authorizedSignatureY ?? 0}
+                        onChange={(v) => patch("backSide", { authorizedSignatureY: v })}
+                        min={-60}
+                        max={60}
+                        step={1}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </SectionCard>
+
+              <SectionCard
+                title="Verification QR code"
+                description="QR code on the card back for instant online membership verification."
+              >
                 <Toggle label="Show verification QR code" checked={design.backSide.showQrCode} onChange={(v) => patch("backSide", { showQrCode: v })} className="sm:col-span-2" />
                 <TextInput
                   label="QR code data"
@@ -909,7 +1043,6 @@ export function IdCardDesignEditor({
                   <code className="rounded bg-mist px-1">{"{roll}"}</code> and{" "}
                   <code className="rounded bg-mist px-1">{"{name}"}</code> placeholders.
                 </p>
-                <Toggle label="Show blood group" checked={design.backSide.bloodGroupVisible} onChange={(v) => patch("backSide", { bloodGroupVisible: v })} className="sm:col-span-2" />
               </SectionCard>
             </div>
           )}

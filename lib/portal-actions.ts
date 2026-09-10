@@ -12,7 +12,12 @@ import type { ActionResult } from "@/lib/actions";
  */
 const RESERVED_POSITIONS = new Set([
   "Team Leader",
+  "Deputy Leader - 1",
+  "Deputy Leader - 2",
+  "Deputy Leader-1",
+  "Deputy Leader-2",
   "Deputy Team Leader",
+  "Deputy Leader",
   "Group Leader",
   "Assistant Group Leader",
 ]);
@@ -44,13 +49,6 @@ const volunteerProfileSchema = z.object({
     .optional()
     .or(z.literal("")),
   department: z.string().trim().min(1, "Department is required"),
-  designation: z
-    .string()
-    .trim()
-    .min(2, "Designation is required")
-    .max(60)
-    .optional()
-    .or(z.literal("")),
   email: z
     .string()
     .trim()
@@ -185,7 +183,6 @@ export async function updateTeamMemberProfile(
     registrationNo: formData.get("registrationNo") || undefined,
     session: formData.get("session") || undefined,
     department: formData.get("department"),
-    designation: formData.get("designation") || undefined,
     email: formData.get("email") || undefined,
     phone: formData.get("phone"),
     area: formData.get("area"),
@@ -211,13 +208,6 @@ export async function updateTeamMemberProfile(
   }
 
   const v = parsed.data;
-  const designation = v.designation?.trim() || "General Member";
-  if (RESERVED_POSITIONS.has(designation)) {
-    return {
-      success: false,
-      message: "Leadership positions are assigned by the society leadership.",
-    };
-  }
   const skillsArray = v.skills
     ? v.skills.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
@@ -230,7 +220,6 @@ export async function updateTeamMemberProfile(
       registration_no: v.registrationNo || null,
       session: v.session || null,
       department: v.department || null,
-      position: designation,
       email: v.email || null,
       phone: v.phone,
       area: v.area,

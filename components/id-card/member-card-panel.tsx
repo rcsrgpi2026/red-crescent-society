@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CreditCard, ImageDown, FileDown, Loader2, Printer, Camera } from "lucide-react";
+import { CreditCard, ImageDown, FileDown, Loader2, Camera } from "lucide-react";
 import { toast } from "sonner";
 import type { CardConfig, CardSide } from "@/types/id-card";
 import { downloadCardAsPng, downloadCardsAsPng, downloadCardAsPdf } from "@/lib/id-card/export";
@@ -215,14 +215,6 @@ export function MemberCardPanel({
               <FileDown className="h-3.5 w-3.5" aria-hidden />
             )}
             PDF
-          </button>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-brand/40 hover:text-brand-dark"
-          >
-            <Printer className="h-3.5 w-3.5" aria-hidden />
-            Print
           </button>
         </div>
       </div>

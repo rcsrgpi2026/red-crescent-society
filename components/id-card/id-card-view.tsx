@@ -462,8 +462,13 @@ export function IDCardView({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={backSide.signatureImage}
-                    alt="Signature"
-                    className="max-h-6 max-w-full object-contain"
+                    alt="President / Unit Leader Signature"
+                    crossOrigin="anonymous"
+                    className="max-h-7 max-w-full object-contain"
+                    style={{
+                      transform: `translate(${backSide.signatureX ?? 0}px, ${backSide.signatureY ?? 0}px) rotate(${backSide.signatureRotation ?? 0}deg) scale(${backSide.signatureScale ?? 1})`,
+                      transformOrigin: "bottom center",
+                    }}
                   />
                 )}
               </div>
@@ -472,7 +477,21 @@ export function IDCardView({
               </span>
             </div>
             <div>
-              <div className="h-8 w-28 border-b border-dashed border-slate-400" />
+              <div className="flex h-8 w-28 items-end justify-center border-b border-dashed border-slate-400 pb-1">
+                {backSide.authorizedSignatureImage && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={backSide.authorizedSignatureImage}
+                    alt="Authorized Signature"
+                    crossOrigin="anonymous"
+                    className="max-h-7 max-w-full object-contain"
+                    style={{
+                      transform: `translate(${backSide.authorizedSignatureX ?? 0}px, ${backSide.authorizedSignatureY ?? 0}px) rotate(${backSide.authorizedSignatureRotation ?? 0}deg) scale(${backSide.authorizedSignatureScale ?? 1})`,
+                      transformOrigin: "bottom center",
+                    }}
+                  />
+                )}
+              </div>
               <span className="mt-1 block text-[11px] font-semibold text-slate-600">
                 {backSide.authorizedSignatureTitle}
               </span>
@@ -1138,8 +1157,13 @@ export function IDCardView({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={backSide.signatureImage}
-                        alt="Signature"
+                        alt="President / Unit Leader Signature"
+                        crossOrigin="anonymous"
                         className="max-h-8 max-w-full object-contain"
+                        style={{
+                          transform: `translate(${backSide.signatureX ?? 0}px, ${backSide.signatureY ?? 0}px) rotate(${backSide.signatureRotation ?? 0}deg) scale(${backSide.signatureScale ?? 1})`,
+                          transformOrigin: "bottom center",
+                        }}
                       />
                     )}
                   </div>
@@ -1148,7 +1172,21 @@ export function IDCardView({
                   </span>
                 </div>
                 <div>
-                  <div className="h-9 w-32 border-b border-dashed border-slate-400" />
+                  <div className="flex h-9 w-32 items-end justify-center border-b border-dashed border-slate-400 pb-1">
+                    {backSide.authorizedSignatureImage && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={backSide.authorizedSignatureImage}
+                        alt="Authorized Signature"
+                        crossOrigin="anonymous"
+                        className="max-h-8 max-w-full object-contain"
+                        style={{
+                          transform: `translate(${backSide.authorizedSignatureX ?? 0}px, ${backSide.authorizedSignatureY ?? 0}px) rotate(${backSide.authorizedSignatureRotation ?? 0}deg) scale(${backSide.authorizedSignatureScale ?? 1})`,
+                          transformOrigin: "bottom center",
+                        }}
+                      />
+                    )}
+                  </div>
                   <span className="mt-1 block text-[11px] font-semibold text-slate-600">
                     {backSide.authorizedSignatureTitle}
                   </span>

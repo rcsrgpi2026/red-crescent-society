@@ -52,7 +52,6 @@ export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember
     registrationNo: teamMember.registration_no || "",
     session: teamMember.session || "",
     department: teamMember.department || "",
-    designation: teamMember.position || "",
     email: teamMember.email || "",
     phone: teamMember.phone || "",
     area: teamMember.area || "",
@@ -104,7 +103,7 @@ export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember
     { icon: User, label: "Full Name", value: formData.name || teamMember.name },
     { icon: Hash, label: "Roll", value: formData.roll || teamMember.roll || "—" },
     { icon: Hash, label: "Registration No.", value: formData.registrationNo || teamMember.registration_no || "—" },
-    { icon: Shield, label: "Designation", value: formData.designation || teamMember.position || "—", note: "Shown on your ID card" },
+    { icon: Shield, label: "Designation", value: teamMember.position || "—", note: "Declared by admin" },
     { icon: Building2, label: "College Department", value: formData.department || teamMember.department || "—" },
     { icon: Layers, label: "RCY Department", value: teamMember.rcy_department || "—", note: "Declared by admin" },
     { icon: CalendarDays, label: "Session", value: formData.session || teamMember.session || "—" },
@@ -410,22 +409,21 @@ export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <Label htmlFor="vl-designation">Designation</Label>
+              <Label htmlFor="vl-designation" className="flex items-center gap-1.5">
+                Designation
+                <span className="text-[11px] font-normal text-muted-foreground">(Official · Admin only)</span>
+              </Label>
               <Input
                 id="vl-designation"
-                name="designation"
-                value={formData.designation}
-                onChange={(e) => handleChange("designation", e.target.value)}
-                placeholder="e.g. General Member, Executive Member"
-                className="mt-1.5"
-                required
+                value={teamMember.position || "General Member"}
+                disabled
+                readOnly
+                tabIndex={-1}
+                className="mt-1.5 bg-muted/60 text-foreground/80 font-medium cursor-not-allowed border-dashed"
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                Shown on your membership ID card.
+                Assigned by society administrators. Cannot be edited here.
               </p>
-              {errors.designation && (
-                <p className="mt-1 text-xs font-medium text-crescent">{errors.designation[0]}</p>
-              )}
             </div>
 
             <div>
@@ -582,7 +580,7 @@ export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 flex items-start gap-2.5">
             <Shield className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
             <p>
-              Your Membership ID, RCY Department, Membership Status and Points are officially verified and managed by society administrators. Name, roll, registration number, department, designation, and contact details are yours to update — they appear on your membership ID card.
+              Your Membership ID, Designation, RCY Department, Membership Status and Points are officially verified and managed by society administrators. Name, roll, registration number, department, and contact details are yours to update — they appear on your membership ID card.
             </p>
           </div>
 

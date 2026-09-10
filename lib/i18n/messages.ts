@@ -441,8 +441,8 @@ export const messages = {
     foundersEyebrow: "Our legacy",
     foundersTitle: "OUR ADVISORS",
     foundersDescription:
-      "The advisors of the society and the principal of the institute who supports our mission.",
-    foundersPrincipalLabel: "Principal",
+      "The advisors of the society and the principal sir of the institute who supports our mission.",
+    foundersPrincipalLabel: "Principal Sir",
     foundersListLabel: "Advisors",
     foundersEmptyTitle: "Our advisors will be listed here",
     foundersEmptyText:

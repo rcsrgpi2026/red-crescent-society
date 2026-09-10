@@ -112,12 +112,12 @@ export const NOTICE_CATEGORIES = [
 
 export const FOUNDER_CATEGORIES = [
   { value: "FOUNDER", label: "Founder" },
-  { value: "PRINCIPAL", label: "Principal" },
+  { value: "PRINCIPAL", label: "Principal Sir" },
 ] as const;
 
 export const FOUNDER_CATEGORY_LABELS: Record<string, string> = {
   FOUNDER: "Founder",
-  PRINCIPAL: "Principal",
+  PRINCIPAL: "Principal Sir",
 };
 
 export const COMMUNITY_LEVELS = [

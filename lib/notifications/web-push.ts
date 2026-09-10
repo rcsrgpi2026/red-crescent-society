@@ -76,7 +76,7 @@ export async function sendWebPushNotification(
     title: payload.title,
     body: payload.body,
     icon: payload.icon || "/icon-192.png",
-    badge: payload.badge || "/apple-touch-icon.png",
+    badge: payload.badge || "/badge-96.png",
     image: payload.image || undefined,
     tag: payload.tag || `notif-${payload.notificationId || Date.now()}`,
     requireInteraction: payload.priority === "high" || payload.priority === "critical",

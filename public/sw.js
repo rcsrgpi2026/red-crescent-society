@@ -1,11 +1,12 @@
 // Service Worker for Red Crescent Youth PWA
-const CACHE_NAME = "rcs-rgpi-pwa-v2";
+const CACHE_NAME = "rcs-rgpi-pwa-v3";
 const OFFLINE_URLS = [
   "/",
   "/manifest.webmanifest",
   "/favicon.ico",
   "/icon-192.png",
   "/icon-512.png",
+  "/badge-96.png",
   "/apple-touch-icon.png",
 ];
 
@@ -73,7 +74,7 @@ self.addEventListener("push", (event) => {
     title: "Red Crescent Youth",
     body: "You have a new update from Red Crescent Youth.",
     icon: "/icon-192.png",
-    badge: "/apple-touch-icon.png",
+    badge: "/badge-96.png",
     data: { actionUrl: "/" },
   };
 
@@ -84,7 +85,7 @@ self.addEventListener("push", (event) => {
         title: payload.title || data.title,
         body: payload.body || data.body,
         icon: payload.icon || "/icon-192.png",
-        badge: payload.badge || "/apple-touch-icon.png",
+        badge: payload.badge || "/badge-96.png",
         image: payload.image || undefined,
         tag: payload.tag || `rcy-${Date.now()}`,
         requireInteraction: true,

@@ -56,10 +56,10 @@ export function BloodGuideModal() {
         type="button"
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 rounded-full border border-crescent/30 bg-crescent-soft/70 px-4 py-2 text-xs font-semibold text-crescent shadow-sm transition-all hover:bg-crescent hover:text-white"
-        aria-label="কীভাবে রক্ত পাবেন নির্দেশিকা"
+        aria-label="How it works guide"
       >
         <HelpCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        <span>কীভাবে কাজ করে? (টিউটোরিয়াল)</span>
+        <span>How it works?</span>
       </button>
 
       {/* Tutorial Dialog */}
@@ -142,7 +142,7 @@ export function BloodGuideModal() {
                   <h4 className="text-sm font-bold text-foreground">ডোনার না পেলে সরাসরি আবেদন করুন</h4>
                 </div>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  তাত্ক্ষণিক ডোনার না পেলে <strong>&ldquo;জরুরি রক্তের আবেদন&rdquo;</strong> করুন। আমাদের রেড ক্রিসেন্ট যুব সদস্যরা তাৎক্ষণিক ডোনার ম্যানেজ করার চেষ্টা করবে।
+                  তাৎক্ষণিক ডোনার না পেলে <strong>&ldquo;জরুরি রক্তের আবেদন&rdquo;</strong> করুন। আমাদের রেড ক্রিসেন্ট যুব সদস্যরা তাৎক্ষণিক ডোনার ম্যানেজ করার চেষ্টা করবে।
                 </p>
               </div>
             </div>
@@ -151,7 +151,7 @@ export function BloodGuideModal() {
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-xs text-amber-950">
               <div className="flex items-center gap-2">
                 <HeartHandshake className="h-4 w-4 shrink-0 text-amber-700" />
-                <span>তাত্ক্ষণিক জরুরি প্রয়োজনে হটলাইনে কল করুন:</span>
+                <span>তাৎক্ষণিক জরুরি প্রয়োজনে হটলাইনে কল করুন:</span>
               </div>
               <a
                 href="tel:01614424259"

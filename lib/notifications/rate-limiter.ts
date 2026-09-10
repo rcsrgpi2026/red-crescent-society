@@ -50,8 +50,12 @@ export function checkRateLimits(
     return { allowed: true };
   }
 
-  // CRITICAL alerts bypass normal rate limits and quiet hours
-  if (priority === "critical") {
+  // CRITICAL and HIGH priority alerts (and Admin notifications) bypass normal rate limits and quiet hours
+  if (
+    priority === "critical" ||
+    priority === "high" ||
+    ((candidate.role === "SUPER_ADMIN" || candidate.role === "ADMIN") && type === "system")
+  ) {
     return { allowed: true, isBypassedByCritical: true };
   }
 
@@ -77,15 +81,12 @@ export function checkRateLimits(
       diffMinutes < NOTIFICATION_CONFIG.rateLimits.COOLDOWN_MINUTES_SIMILAR &&
       candidate.recentSimilarNotificationsCount24h > 0
     ) {
-      // HIGH priority can bypass 30-min cooldown if not exceeding daily limit
-      if (priority !== "high") {
-        return {
-          allowed: false,
-          reason: `Similar notification cooldown active (${Math.round(
-            NOTIFICATION_CONFIG.rateLimits.COOLDOWN_MINUTES_SIMILAR - diffMinutes
-          )}m remaining)`,
-        };
-      }
+      return {
+        allowed: false,
+        reason: `Similar notification cooldown active (${Math.round(
+          NOTIFICATION_CONFIG.rateLimits.COOLDOWN_MINUTES_SIMILAR - diffMinutes
+        )}m remaining)`,
+      };
     }
   }
 
@@ -100,12 +101,10 @@ export function checkRateLimits(
   }
 
   if (candidate.recentNotificationsCount24h >= NOTIFICATION_CONFIG.rateLimits.MAX_NORMAL_PER_DAY) {
-    if (priority !== "high") {
-      return {
-        allowed: false,
-        reason: `Daily notification limit reached (${NOTIFICATION_CONFIG.rateLimits.MAX_NORMAL_PER_DAY}/day)`,
-      };
-    }
+    return {
+      allowed: false,
+      reason: `Daily notification limit reached (${NOTIFICATION_CONFIG.rateLimits.MAX_NORMAL_PER_DAY}/day)`,
+    };
   }
 
   return { allowed: true };

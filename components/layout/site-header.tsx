@@ -37,6 +37,7 @@ const NAV_LINKS: { key: NavKey; href: string; highlight?: boolean }[] = [
 ];
 
 const MORE_LINKS: { key: NavKey; href: string }[] = [
+  { key: "legacyMembers", href: "/legacy-members" },
   { key: "training", href: "/training" },
   { key: "notices", href: "/notices" },
   { key: "emergency", href: "/emergency" },

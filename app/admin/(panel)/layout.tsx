@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { adminGetUnreadMessageCount } from "@/lib/queries";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminMobileNav } from "@/components/admin/admin-mobile-nav";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { ROLE_LABELS } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 
@@ -49,6 +50,7 @@ export default async function AdminPanelLayout({
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
+            <NotificationBell userId={profile.id} />
             <Badge
               variant="secondary"
               className="hidden items-center gap-1.5 border-brand/20 bg-brand-soft text-brand-ink sm:inline-flex"

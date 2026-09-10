@@ -20,6 +20,7 @@ import { getProfile, isAdminRole } from "@/lib/auth";
 
 const QUICK_LINKS = [
   { key: "team", href: "/team" },
+  { key: "legacyMembers", href: "/legacy-members" },
   { key: "events", href: "/events" },
   { key: "activitiesGallery", href: "/gallery" },
   { key: "training", href: "/training" },

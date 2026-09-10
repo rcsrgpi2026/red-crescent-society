@@ -16,6 +16,7 @@ interface PositionDepartmentProps {
   /** Width classes for the position trigger (desktop vs mobile). */
   positionTriggerClassName?: string;
   departmentTriggerClassName?: string;
+  layout?: "horizontal" | "vertical";
 }
 
 /**
@@ -32,6 +33,7 @@ export function PositionDepartment({
   departmentOptions,
   positionTriggerClassName = "w-44",
   departmentTriggerClassName = "w-56",
+  layout = "horizontal",
 }: PositionDepartmentProps) {
   const [currentPosition, setCurrentPosition] = useState(position);
 
@@ -63,7 +65,12 @@ export function PositionDepartment({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-1.5 md:flex-row md:items-center">
+    <div
+      className={cn(
+        "flex min-w-0 flex-col gap-1.5",
+        layout === "horizontal" && "md:flex-row md:items-center"
+      )}
+    >
       <Select value={currentPosition} onValueChange={onPositionChange}>
         <SelectTrigger
           className={cn("h-8 min-w-0 text-xs", positionTriggerClassName)}

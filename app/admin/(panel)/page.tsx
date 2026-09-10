@@ -23,6 +23,8 @@ import { formatDate, formatDateTime, BLOOD_REQUEST_STATUS_LABELS } from "@/lib/c
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { Reveal } from "@/components/shared/reveal";
 import { NumberTicker } from "@/components/ui/number-ticker";
+import { ConfirmDelete } from "@/components/admin/confirm-delete";
+import { deleteBloodRequest } from "@/lib/admin-actions";
 
 export default async function AdminDashboardPage() {
   const [volunteers, requests, events, messages, recruitmentStats] = await Promise.all([
@@ -177,11 +179,20 @@ export default async function AdminDashboardPage() {
                         {r.hospital || r.location} · {formatDate(r.created_at)}
                       </p>
                     </div>
-                    <StatusBadge
-                      label={BLOOD_REQUEST_STATUS_LABELS[r.status] ?? r.status}
-                      tone={statusTone(r.status)}
-                      className="ml-auto shrink-0"
-                    />
+                    <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                      <StatusBadge
+                        label={BLOOD_REQUEST_STATUS_LABELS[r.status] ?? r.status}
+                        tone={statusTone(r.status)}
+                      />
+                      {r.status === "CANCELLED" && (
+                        <ConfirmDelete
+                          action={deleteBloodRequest}
+                          id={r.id}
+                          label=""
+                          description={`Permanently delete the cancelled request for "${r.patient_name}"?`}
+                        />
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>

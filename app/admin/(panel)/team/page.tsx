@@ -1,21 +1,23 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Download, Eye, Search, User, Users } from "lucide-react";
+import { Download, Eye, GraduationCap, Network, Search, User, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { InlineStatus } from "@/components/admin/inline-status";
 import { PositionDepartment } from "@/components/admin/position-department";
+import { LegacyMemberDialog } from "@/components/admin/legacy-member-dialog";
+import { AddToCommunityDialog } from "@/components/admin/add-to-community-dialog";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import {
   ResponsiveTable,
   type Column,
 } from "@/components/admin/responsive-table";
 import { Reveal } from "@/components/shared/reveal";
-import { adminGetTeamMembers } from "@/lib/queries";
+import { adminGetTeamMembers, adminGetCommunityMembers } from "@/lib/queries";
 import { updateTeamMemberStatus } from "@/lib/admin-actions";
-import { formatDateTime, TEAM_POSITIONS, RCY_DEPARTMENTS } from "@/lib/constants";
+import { formatDate, formatDateTime, TEAM_POSITIONS, RCY_DEPARTMENTS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const STATUS_TABS = [
@@ -23,6 +25,12 @@ const STATUS_TABS = [
   { value: "PENDING", label: "Pending" },
   { value: "APPROVED", label: "Approved" },
   { value: "REJECTED", label: "Rejected" },
+];
+
+const ROSTER_TABS = [
+  { value: "", label: "All Roster" },
+  { value: "active", label: "Active Team" },
+  { value: "legacy", label: "Legacy Members" },
 ];
 
 const STATUS_LABELS: Record<string, string> = {
@@ -34,13 +42,26 @@ const STATUS_LABELS: Record<string, string> = {
 export default async function AdminTeamMembersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; search?: string }>;
+  searchParams: Promise<{ status?: string; search?: string; view?: string }>;
 }) {
   const params = await searchParams;
-  const volunteers = await adminGetTeamMembers({
-    status: params.status || undefined,
-    search: params.search,
-  });
+  const isLegacy =
+    params.view === "legacy" ? true : params.view === "active" ? false : undefined;
+
+  const [volunteers, communityMembers] = await Promise.all([
+    adminGetTeamMembers({
+      status: params.status || undefined,
+      search: params.search,
+      isLegacy,
+    }),
+    adminGetCommunityMembers(),
+  ]);
+
+  const communityMap = new Map(
+    communityMembers
+      .filter((c) => c.team_member_id)
+      .map((c) => [c.team_member_id!, c])
+  );
 
   const columns: Column<(typeof volunteers)[number]>[] = [
     {
@@ -63,34 +84,52 @@ export default async function AdminTeamMembersPage({
             </div>
           )}
           <div className="min-w-0">
-            <p className="break-words font-medium text-foreground">{v.name}</p>
-            <p className="break-words text-xs text-muted-foreground">{v.phone ?? "—"}</p>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="font-semibold text-foreground">{v.name}</p>
+              {v.blood_group && (
+                <span className="inline-flex rounded bg-crescent-soft px-1.5 py-0.2 text-[10px] font-bold text-crescent">
+                  {v.blood_group}
+                </span>
+              )}
+              {v.is_legacy && (
+                <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.2 text-[10px] font-semibold text-amber-800">
+                  <GraduationCap className="h-2.5 w-2.5" />
+                  Legacy
+                </span>
+              )}
+              {communityMap.has(v.id) && (
+                <span
+                  className="inline-flex items-center gap-0.5 rounded border border-teal-200 bg-teal-50 px-1.5 py-0.2 text-[10px] font-semibold text-teal-800"
+                  title={`In Community Tree (Level ${communityMap.get(v.id)!.level})`}
+                >
+                  <Network className="h-2.5 w-2.5 text-teal-600" />
+                  Tree L{communityMap.get(v.id)!.level}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">{v.phone ?? "—"}</p>
           </div>
         </div>
       ),
     },
     {
-      header: "Member ID",
+      header: "ID & Academic",
       render: (v) => (
-        <span className="text-xs font-semibold text-brand-dark">
-          {v.member_id ?? "—"}
-        </span>
-      ),
-    },
-    {
-      header: "Roll / Reg. No.",
-      render: (v) => (
-        <span className="text-xs text-muted-foreground">
-          {[v.roll, v.registration_no].filter(Boolean).join(" / ") || "—"}
-        </span>
-      ),
-    },
-    {
-      header: "Department",
-      render: (v) => (
-        <span className="text-xs text-muted-foreground">
-          {v.department || "—"}
-        </span>
+        <div className="text-xs space-y-0.5">
+          <span className="font-mono font-bold text-brand-dark">
+            {v.member_id ?? "—"}
+          </span>
+          <p className="font-medium text-foreground truncate max-w-[170px]">
+            {v.department || "—"}
+          </p>
+          {(v.roll || v.registration_no) && (
+            <p className="text-[11px] text-muted-foreground">
+              {[v.roll && `Roll: ${v.roll}`, v.registration_no && `Reg: ${v.registration_no}`]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
+        </div>
       ),
     },
     {
@@ -102,12 +141,11 @@ export default async function AdminTeamMembersPage({
           rcyDepartment={v.rcy_department}
           positionOptions={TEAM_POSITIONS as unknown as string[]}
           departmentOptions={RCY_DEPARTMENTS as unknown as string[]}
-          positionTriggerClassName="w-44"
-          departmentTriggerClassName="w-56"
+          layout="vertical"
+          positionTriggerClassName="w-38 max-w-[160px] h-7 text-xs"
+          departmentTriggerClassName="w-38 max-w-[160px] h-7 text-xs"
         />
       ),
-      // Keep both dropdowns usable on the mobile card view too — full width,
-      // stacked vertically by PositionDepartment itself on small screens.
       mobileRender: (v) => (
         <PositionDepartment
           memberId={v.id}
@@ -121,18 +159,10 @@ export default async function AdminTeamMembersPage({
       ),
     },
     {
-      header: "Blood",
-      render: (v) => (
-        <span className="inline-flex rounded-md bg-crescent-soft px-2 py-0.5 text-xs font-bold text-crescent">
-          {v.blood_group ?? "—"}
-        </span>
-      ),
-    },
-    {
       header: "Registered",
       render: (v) => (
-        <span className="text-xs text-muted-foreground">
-          {formatDateTime(v.created_at)}
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
+          {formatDate(v.created_at)}
         </span>
       ),
     },
@@ -159,6 +189,17 @@ export default async function AdminTeamMembersPage({
     },
   ];
 
+  const buildFilterUrl = (newParams: { status?: string; view?: string }) => {
+    const q = new URLSearchParams();
+    const status = newParams.status !== undefined ? newParams.status : params.status;
+    const view = newParams.view !== undefined ? newParams.view : params.view;
+    if (status) q.set("status", status);
+    if (view) q.set("view", view);
+    if (params.search) q.set("search", params.search);
+    const qs = q.toString();
+    return qs ? `/admin/team?${qs}` : "/admin/team";
+  };
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -177,47 +218,74 @@ export default async function AdminTeamMembersPage({
 
       {/* Tabs + search */}
       <Reveal>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap gap-2">
-            {STATUS_TABS.map((tab) => {
-              const active = (params.status ?? "") === tab.value;
+        <div className="space-y-3">
+          {/* Roster Type Tabs */}
+          <div className="flex flex-wrap gap-2 border-b border-line pb-2.5">
+            {ROSTER_TABS.map((tab) => {
+              const active = (params.view ?? "") === tab.value;
               return (
                 <Link
                   key={tab.value}
-                  href={tab.value ? `/admin/team?status=${tab.value}` : "/admin/team"}
+                  href={buildFilterUrl({ view: tab.value })}
                   className={cn(
-                    "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+                    "flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold transition-colors",
                     active
-                      ? "border-brand bg-brand text-white shadow-sm shadow-brand/20"
-                      : "border-line bg-white text-muted-foreground hover:border-brand/40 hover:text-brand-dark"
+                      ? "bg-brand-dark text-white"
+                      : "bg-mist text-muted-foreground hover:bg-mist/80 hover:text-foreground"
                   )}
                 >
+                  {tab.value === "legacy" && <GraduationCap className="h-3.5 w-3.5" />}
                   {tab.label}
                 </Link>
               );
             })}
           </div>
 
-          <form
-            method="get"
-            action="/admin/team"
-            className="relative w-full sm:max-w-xs"
-          >
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden
-            />
-            <Input
-              name="search"
-              placeholder="Search team members…"
-              defaultValue={params.search}
-              className="pl-9"
-              aria-label="Search team members"
-            />
-            {params.status && (
-              <input type="hidden" name="status" value={params.status} />
-            )}
-          </form>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap gap-2">
+              {STATUS_TABS.map((tab) => {
+                const active = (params.status ?? "") === tab.value;
+                return (
+                  <Link
+                    key={tab.value}
+                    href={buildFilterUrl({ status: tab.value })}
+                    className={cn(
+                      "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+                      active
+                        ? "border-brand bg-brand text-white shadow-sm shadow-brand/20"
+                        : "border-line bg-white text-muted-foreground hover:border-brand/40 hover:text-brand-dark"
+                    )}
+                  >
+                    {tab.label}
+                  </Link>
+                );
+              })}
+            </div>
+
+            <form
+              method="get"
+              action="/admin/team"
+              className="relative w-full sm:max-w-xs"
+            >
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                name="search"
+                placeholder="Search team members…"
+                defaultValue={params.search}
+                className="pl-9"
+                aria-label="Search team members"
+              />
+              {params.status && (
+                <input type="hidden" name="status" value={params.status} />
+              )}
+              {params.view && (
+                <input type="hidden" name="view" value={params.view} />
+              )}
+            </form>
+          </div>
         </div>
       </Reveal>
 
@@ -225,15 +293,40 @@ export default async function AdminTeamMembersPage({
         columns={columns}
         rows={volunteers}
         keyFor={(v) => v.id}
-        minWidth="min-w-[760px]"
+        minWidth="min-w-full"
         mobileCardColumns={1}
         actions={(v) => (
-          <Button asChild variant="ghost" size="sm">
-            <Link href={`/admin/team/${v.id}`}>
-              <Eye className="h-3.5 w-3.5" aria-hidden />
-              <span className="ml-1">View</span>
-            </Link>
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <AddToCommunityDialog
+              member={v}
+              linkedCommunityMember={communityMap.get(v.id)}
+            />
+            <LegacyMemberDialog
+              member={v}
+              trigger={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "h-7 px-2 text-xs font-semibold",
+                    v.is_legacy
+                      ? "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  title="Edit Legacy Status"
+                >
+                  <GraduationCap className="mr-1 h-3.5 w-3.5 text-amber-600" />
+                  Legacy
+                </Button>
+              }
+            />
+            <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs">
+              <Link href={`/admin/team/${v.id}`}>
+                <Eye className="h-3.5 w-3.5" aria-hidden />
+                <span className="ml-1">View</span>
+              </Link>
+            </Button>
+          </div>
         )}
         empty={
           <EmptyState

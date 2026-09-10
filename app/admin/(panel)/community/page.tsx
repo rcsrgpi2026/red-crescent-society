@@ -75,7 +75,14 @@ export default async function AdminCommunityPage() {
                 </p>
               )}
               <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
-                <span className="text-xs text-muted-foreground">Order: {member.display_order}</span>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>Order: {member.display_order}</span>
+                  {member.team_member_id && (
+                    <span className="inline-flex items-center rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 text-[10px] font-semibold text-teal-700">
+                      Team Linked
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-1">
                   <AdminFormDialog
                     trigger={

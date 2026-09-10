@@ -335,14 +335,20 @@ export async function submitBloodRequest(
   try {
     const priority = v.emergencyLevel === "EMERGENCY" ? "critical" : "high";
     const locInfo = v.hospital ? `${v.hospital}, ${v.location}` : v.location;
-    await createAndDispatchNotification({
-      title: `🩸 Urgent Blood Needed: ${v.bloodGroup} (${v.location})`,
-      body: `${v.units} bag(s) of ${v.bloodGroup} needed at ${locInfo} for ${v.patientName}. Tap to view details and help save a life.`,
-      type: "blood_request",
-      priority,
-      actionUrl: `/blood-support`,
-      metadata: { requestId: String(id), bloodGroup: v.bloodGroup, location: v.location },
-    });
+    await createAndDispatchNotification(
+      {
+        title: `🩸 Urgent Blood Needed: ${v.bloodGroup} (${v.location})`,
+        body: `${v.units} bag(s) of ${v.bloodGroup} needed at ${locInfo} for ${v.patientName}. Tap to view details and help save a life.`,
+        type: "blood_request",
+        priority,
+        actionUrl: `/blood-support/request/${id}`,
+        metadata: { requestId: String(id), bloodGroup: v.bloodGroup, location: v.location },
+      },
+      {
+        bloodGroups: [v.bloodGroup],
+        districts: v.location ? [v.location] : undefined,
+      }
+    );
   } catch (notifErr) {
     console.warn("Could not dispatch blood request notification:", notifErr);
   }

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Search, Users } from "lucide-react";
+import { Search, Users, Award } from "lucide-react";
 import { PageHero } from "@/components/shared/page-hero";
 import { EmptyState } from "@/components/shared/empty-state";
 import { TeamMemberCard } from "@/components/cards/team-member-card";
@@ -33,6 +33,7 @@ export default async function VolunteersPage({
   const volunteers = await adminGetTeamMembers({
     status: "APPROVED",
     publicProfile: true,
+    isLegacy: false,
     search: params.search,
     department: params.department,
   });
@@ -54,13 +55,22 @@ export default async function VolunteersPage({
         title={t.volunteers.heroTitle}
         description={t.volunteers.heroDescription}
       >
-        <Link
-          href="/volunteer/login"
-          className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
-        >
-          <Users className="h-4 w-4" aria-hidden />
-          {t.volunteers.becomeVolunteer}
-        </Link>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href="/volunteer/login"
+            className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
+          >
+            <Users className="h-4 w-4" aria-hidden />
+            {t.volunteers.becomeVolunteer}
+          </Link>
+          <Link
+            href="/legacy-members"
+            className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-900 shadow-xs transition-colors hover:bg-amber-100"
+          >
+            <Award className="h-4 w-4 text-amber-700" />
+            <span>Legacy Members / Alumni &rarr;</span>
+          </Link>
+        </div>
       </PageHero>
       <section className="bg-white">
         <div className="container-site py-12 lg:py-16">

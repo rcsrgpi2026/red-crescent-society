@@ -85,6 +85,10 @@ export interface TeamMember {
   position: string;
   status: TeamMemberStatus;
   public_profile: boolean;
+  is_legacy?: boolean;
+  legacy_tenure?: string | null;
+  legacy_designation?: string | null;
+  legacy_note?: string | null;
   points: number;
   joined_at: string | null;
   created_at: string;
@@ -102,6 +106,23 @@ export interface PublicTeamMember {
   position: string;
   points: number;
   joined_at: string | null;
+}
+
+/** Safe, public-facing legacy member record (view) for alumni & former leaders. */
+export interface PublicLegacyMember {
+  id: string;
+  member_id: string | null;
+  name: string;
+  department: string | null;
+  session: string | null;
+  area: string | null;
+  photo_url: string | null;
+  position: string;
+  legacy_designation: string | null;
+  legacy_tenure: string | null;
+  legacy_note: string | null;
+  joined_at: string | null;
+  points: number;
 }
 
 export type FounderCategory = "FOUNDER" | "PRINCIPAL";
@@ -132,6 +153,7 @@ export interface CommunityMember {
   level: number;
   display_order: number;
   is_active: boolean;
+  team_member_id?: string | null;
   created_at: string;
   updated_at: string;
 }

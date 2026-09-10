@@ -123,7 +123,9 @@ export default async function HomePage() {
         notices={notices}
         events={events}
         trainings={trainings}
+        activities={activities}
         recruitmentCampaign={activeCampaign}
+        liveBloodRequest={liveRequest}
         storageKey="rcy_site_announcement_seen"
         showTrigger={false}
       />
@@ -232,6 +234,43 @@ export default async function HomePage() {
             <Button asChild variant="outline">
               <Link href="/gallery">
                 {t.home.openGallery}
+                <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
+              </Link>
+            </Button>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Field Activities — on-the-ground volunteer campaigns & stories */}
+      <section className="border-b border-line bg-mist/50">
+        <div className="container-site py-16 lg:py-24">
+          <Reveal>
+            <SectionHeader
+              eyebrow={t.gallery.fieldActivitiesTitle || "Humanitarian Actions"}
+              title="Recent Activities"
+              description="Explore our volunteer operations, emergency relief, blood donation camps, and community services."
+            />
+          </Reveal>
+          {activities.length > 0 ? (
+            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {activities.slice(0, 6).map((activity, i) => (
+                <Reveal key={activity.id} delay={(i % 3) * 0.06}>
+                  <ActivityStoryCard activity={activity} />
+                </Reveal>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-10">
+              <EmptyState
+                title="No activities published yet"
+                description="Recent humanitarian campaigns and volunteer activities will appear here."
+              />
+            </div>
+          )}
+          <Reveal className="mt-8 text-center">
+            <Button asChild variant="outline">
+              <Link href="/gallery">
+                View All Activities & Photos
                 <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
               </Link>
             </Button>

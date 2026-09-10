@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Bell,
   Calendar,
@@ -15,6 +16,11 @@ import {
   Users,
   ChevronRight,
   Megaphone,
+  HandHeart,
+  Droplets,
+  Siren,
+  Building2,
+  HeartPulse,
 } from "lucide-react";
 import {
   Dialog,
@@ -23,13 +29,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatDate } from "@/lib/constants";
-import type { Notice, Event, Training, RecruitmentCampaign } from "@/types/database";
+import type {
+  Notice,
+  Event,
+  Training,
+  RecruitmentCampaign,
+  Activity,
+  PublicBloodRequest,
+} from "@/types/database";
 
 interface SiteAnnouncementModalProps {
   notices?: Notice[];
   events?: Event[];
   trainings?: Training[];
+  activities?: Activity[];
   recruitmentCampaign?: RecruitmentCampaign | null;
+  liveBloodRequest?: PublicBloodRequest | null;
   /** Custom storage key prefix so volunteer portal or homepage can track separately if desired */
   storageKey?: string;
   /** Optional trigger label shown on page so members can open the announcements anytime */
@@ -40,7 +55,9 @@ export function SiteAnnouncementModal({
   notices = [],
   events = [],
   trainings = [],
+  activities = [],
   recruitmentCampaign = null,
+  liveBloodRequest = null,
   storageKey = "rcy_latest_announcement_seen",
   showTrigger = true,
 }: SiteAnnouncementModalProps) {
@@ -48,19 +65,34 @@ export function SiteAnnouncementModal({
   const [activeTab, setActiveTab] = useState<"updates" | "recruitment">("updates");
   const [hasNewAnnouncements, setHasNewAnnouncements] = useState(false);
 
+  const hasEmergencyBlood = Boolean(
+    liveBloodRequest &&
+      liveBloodRequest.status !== "COMPLETED" &&
+      liveBloodRequest.status !== "CANCELLED"
+  );
   const hasNotices = notices.length > 0;
   const hasEvents = events.length > 0;
   const hasTrainings = trainings.length > 0;
+  const hasActivities = activities.length > 0;
   const hasRecruitment = Boolean(recruitmentCampaign?.is_active);
 
   // If there is literally nothing to announce, don't show the popup
-  const hasAnyContent = hasNotices || hasEvents || hasTrainings || hasRecruitment;
+  const hasAnyContent =
+    hasEmergencyBlood ||
+    hasNotices ||
+    hasEvents ||
+    hasTrainings ||
+    hasActivities ||
+    hasRecruitment;
 
   // Compute a distinct fingerprint for the latest items so any new publication re-triggers the modal
   const fingerprint = [
+    hasEmergencyBlood ? `blood_${liveBloodRequest?.id}` : "",
     notices[0]?.id ?? "",
     events[0]?.id ?? "",
     trainings[0]?.id ?? "",
+    activities[0]?.id ?? "",
+    activities[0]?.updated_at ?? "",
     recruitmentCampaign?.id ?? "",
     recruitmentCampaign?.is_active ? "rec_on" : "rec_off",
   ].join("_");
@@ -104,15 +136,23 @@ export function SiteAnnouncementModal({
             setActiveTab("updates");
             setOpen(true);
           }}
-          className="relative inline-flex items-center gap-1.5 rounded-full border border-line bg-white/90 px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs transition-all hover:border-brand/40 hover:bg-white hover:text-brand"
+          className={`relative inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-xs transition-all ${
+            hasEmergencyBlood
+              ? "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+              : "border-line bg-white/90 text-foreground hover:border-brand/40 hover:bg-white hover:text-brand"
+          }`}
           aria-label="View latest updates and notices"
         >
-          <Bell className="h-3.5 w-3.5 text-brand" />
-          <span>Notices & Updates</span>
-          {hasNewAnnouncements && (
+          {hasEmergencyBlood ? (
+            <Droplets className="h-3.5 w-3.5 text-red-600 fill-red-600" />
+          ) : (
+            <Bell className="h-3.5 w-3.5 text-brand" />
+          )}
+          <span>{hasEmergencyBlood ? "জরুরি রক্ত ও নোটিশ" : "Notices & Updates"}</span>
+          {(hasNewAnnouncements || hasEmergencyBlood) && (
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-crescent opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-crescent" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-600 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-600" />
             </span>
           )}
         </button>
@@ -139,11 +179,17 @@ export function SiteAnnouncementModal({
 
             <DialogHeader className="text-left pr-8 sm:pr-10">
               <DialogTitle className="text-lg sm:text-2xl font-bold tracking-tight text-white leading-tight">
-                {activeTab === "updates" ? "Latest Notices, Events & Trainings" : "New Member Recruitment"}
+                {activeTab === "updates"
+                  ? hasEmergencyBlood
+                    ? "জরুরি রক্তের আবেদন ও সর্বশেষ তথ্য"
+                    : "Latest Notices, Events & Activities"
+                  : "New Member Recruitment"}
               </DialogTitle>
               <p className="mt-1 text-[11px] sm:text-sm leading-relaxed text-white/90">
                 {activeTab === "updates"
-                  ? "Stay updated with recent notices, events and training sessions"
+                  ? hasEmergencyBlood
+                    ? "জীবন বাঁচাতে জরুরি রক্ত প্রয়োজন! নিচে বিস্তারিত দেখে পাশে দাঁড়ান।"
+                    : "Stay updated with recent notices, activities, events and training sessions"
                   : "Join the Red Crescent Youth Unit today"}
               </p>
             </DialogHeader>
@@ -160,8 +206,18 @@ export function SiteAnnouncementModal({
                       : "bg-white/20 text-white hover:bg-white/30"
                   }`}
                 >
-                  <Megaphone className="h-3 w-3" />
-                  1. Updates
+                  {hasEmergencyBlood ? (
+                    <span className="flex items-center gap-1 text-red-600 font-bold">
+                      <Droplets className="h-3 w-3 fill-current animate-pulse" />
+                      1. Updates
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-600 animate-ping" />
+                    </span>
+                  ) : (
+                    <>
+                      <Megaphone className="h-3 w-3" />
+                      1. Updates
+                    </>
+                  )}
                 </button>
                 <button
                   type="button"
@@ -183,6 +239,75 @@ export function SiteAnnouncementModal({
           {/* Tab 1: Updates (Notices, Events, Trainings) */}
           {activeTab === "updates" && (
             <div className="space-y-3.5 sm:space-y-4 max-h-[68vh] overflow-y-auto p-4 sm:p-6">
+              {/* Urgent Emergency Blood Request Alert (Life-Saving, if active) */}
+              {hasEmergencyBlood && liveBloodRequest && (
+                <div className="relative overflow-hidden rounded-2xl border-2 border-red-500 bg-gradient-to-br from-red-50 via-rose-50/80 to-red-100/60 p-3.5 sm:p-4 shadow-sm shadow-red-500/10">
+                  {/* Alert Header */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600" />
+                      </span>
+                      <span className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-red-700">
+                        <Siren className="h-4 w-4 text-red-600 animate-pulse" />
+                        জরুরি রক্তের আবেদন
+                      </span>
+                    </div>
+                    <span className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-0.5 text-xs font-black text-white shadow-xs">
+                      <Droplets className="h-3.5 w-3.5 fill-white" />
+                      {liveBloodRequest.blood_group}
+                    </span>
+                  </div>
+
+                  {/* Patient & Need Details */}
+                  <div className="mt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                        {liveBloodRequest.patient_name
+                          ? `রোগী: ${liveBloodRequest.patient_name}`
+                          : "জরুরি রক্ত প্রয়োজন"}
+                        {liveBloodRequest.units ? ` · ${liveBloodRequest.units} ব্যাগ প্রয়োজন` : ""}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-600">
+                        {liveBloodRequest.hospital && (
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3 shrink-0 text-red-500" />
+                            <span className="truncate max-w-[180px] sm:max-w-[240px] font-medium">
+                              {liveBloodRequest.hospital}
+                            </span>
+                          </span>
+                        )}
+                        {liveBloodRequest.location && !liveBloodRequest.hospital && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3 shrink-0 text-red-500" />
+                            <span className="truncate max-w-[180px] sm:max-w-[240px] font-medium">
+                              {liveBloodRequest.location}
+                            </span>
+                          </span>
+                        )}
+                        {liveBloodRequest.required_date && (
+                          <span className="flex items-center gap-1 text-slate-500">
+                            <Clock className="h-3 w-3 shrink-0" />
+                            {formatDate(liveBloodRequest.required_date)}
+                            {liveBloodRequest.required_time ? ` (${liveBloodRequest.required_time})` : ""}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <Link
+                      href={`/blood-support/request/${liveBloodRequest.id}`}
+                      onClick={handleClose}
+                      className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-red-600 hover:bg-red-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <HeartPulse className="h-3.5 w-3.5" />
+                      রক্ত দিন / বিস্তারিত
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                </div>
+              )}
               {/* Recruitment Active Teaser Banner */}
               {hasRecruitment && (
                 <button
@@ -344,6 +469,72 @@ export function SiteAnnouncementModal({
                           </div>
                         </div>
                         <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-emerald-700 transition-colors" />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Latest Activities */}
+              {hasActivities && (
+                <div className="space-y-2 sm:space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      <HandHeart className="h-3.5 w-3.5 text-emerald-600" />
+                      Recent Activities & Field Work
+                    </h4>
+                    <Link
+                      href="/gallery#activities"
+                      onClick={handleClose}
+                      className="text-xs font-semibold text-brand hover:underline"
+                    >
+                      View All
+                    </Link>
+                  </div>
+                  <div className="grid gap-2">
+                    {activities.slice(0, 2).map((act) => (
+                      <Link
+                        key={act.id}
+                        href={`/activities/${act.slug}`}
+                        onClick={handleClose}
+                        className="group flex items-center justify-between gap-2.5 sm:gap-3 rounded-2xl border border-line/80 bg-mist/30 p-2.5 sm:p-3 transition-colors hover:border-emerald-500/40 hover:bg-white"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {act.images?.[0] ? (
+                            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-line bg-mist shadow-2xs">
+                              <Image
+                                src={act.images[0]}
+                                alt={act.title}
+                                fill
+                                sizes="40px"
+                                className="object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                              <HandHeart className="h-4 w-4" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-foreground group-hover:text-emerald-700 transition-colors sm:text-sm line-clamp-1">
+                              {act.title}
+                            </p>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] sm:text-[11px] text-muted-foreground">
+                              {act.date && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {formatDate(act.date)}
+                                </span>
+                              )}
+                              {act.category && (
+                                <span className="rounded bg-poly-soft px-1.5 py-0.2 font-semibold text-poly">
+                                  {act.category}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-emerald-700 transition-colors" />
                       </Link>
                     ))}
                   </div>

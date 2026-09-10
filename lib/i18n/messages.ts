@@ -47,6 +47,11 @@ export const messages = {
       description:
         "Meet the approved team members of the Rajshahi Polytechnic Institute Red Crescent Society.",
     },
+    legacyMembers: {
+      title: "Legacy Members",
+      description:
+        "Honoring our former leaders, seniors and alumni who served Rajshahi Govt. Polytechnic Institute Red Crescent Youth with dedication.",
+    },
     community: {
       title: "Community",
       description:
@@ -104,6 +109,7 @@ export const messages = {
     more: "More",
     training: "Training",
     team: "Team",
+    legacyMembers: "Legacy Members",
     emergency: "Emergency",
     joinUs: "Join Us",
     login: "Login",
@@ -580,6 +586,28 @@ export const messages = {
     basedIn: "Based in {area} — part of the society's community service network.",
     memberOfSociety: "Member of the society",
     volunteerOf: "{name} — team member of {position}",
+  },
+
+  legacyMembers: {
+    heroEyebrow: "Hall of Fame & Alumni",
+    heroTitle: "Our Legacy Members",
+    heroDescription:
+      "Honoring the dedicated former leaders, seniors, and alumni who served Rajshahi Govt. Polytechnic Institute Red Crescent Youth with honor. Their leadership and selfless service pave the way for future generations.",
+    searchPlaceholder: "Search legacy members by name…",
+    searchAria: "Search legacy members by name",
+    allDepartments: "All Departments",
+    allSessions: "All Sessions",
+    showing: "Showing {n} legacy member{s}",
+    emptyTitle: "No legacy members found",
+    emptyText: "Try adjusting your search query or department/session filters.",
+    clear: "Clear filters",
+    servedWithHonor: "Served with Honor",
+    formerTitle: "Former Leadership",
+    tenure: "Tenure / Period",
+    department: "Department",
+    session: "Academic Session",
+    memberId: "Member ID",
+    farewellNote: "Farewell Note",
   },
 
   blood: {

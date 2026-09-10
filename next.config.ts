@@ -85,27 +85,11 @@ const nextConfig: NextConfig = {
         destination: "/team/:path*",
         permanent: true,
       },
-      // Locale-prefixed old URLs (en/bn)
-      {
-        source: "/:locale(en|bn)/volunteers",
-        destination: "/:locale/team",
-        permanent: true,
-      },
-      {
-        source: "/:locale(en|bn)/volunteers/:path*",
-        destination: "/:locale/team/:path*",
-        permanent: true,
-      },
       // Activities listing merged into the Gallery of Activities (/gallery).
       // Activity detail pages stay at /activities/:slug.
       {
         source: "/activities",
         destination: "/gallery",
-        permanent: true,
-      },
-      {
-        source: "/:locale(en|bn)/activities",
-        destination: "/:locale/gallery",
         permanent: true,
       },
       // Admin panel moved from /admin/volunteers to /admin/team
@@ -126,11 +110,6 @@ const nextConfig: NextConfig = {
         destination: "/team",
         permanent: true,
       },
-      {
-        source: "/:locale(en|bn)/team/:path+",
-        destination: "/:locale/team",
-        permanent: true,
-      },
       // Principal message and founders archive pages were removed — the
       // homepage founders section still shows both groups.
       {
@@ -139,18 +118,19 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
-        source: "/:locale(en|bn)/principal",
-        destination: "/:locale#founders",
-        permanent: true,
-      },
-      {
         source: "/founders",
         destination: "/#founders",
         permanent: true,
       },
+      // Clean up legacy locale URLs (/en, /bn)
       {
-        source: "/:locale(en|bn)/founders",
-        destination: "/:locale#founders",
+        source: "/:locale(en|bn)",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/:locale(en|bn)/:path*",
+        destination: "/:path*",
         permanent: true,
       },
     ];

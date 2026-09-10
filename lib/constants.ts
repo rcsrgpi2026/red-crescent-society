@@ -316,3 +316,34 @@ export function formatDateTime(
     minute: "2-digit",
   });
 }
+
+/**
+ * Automatically maps a team member's position and RCY department
+ * to their corresponding level and designation in the community leadership tree.
+ */
+export function getCommunityMappingForPosition(position: string, rcyDepartment?: string | null): {
+  level: number;
+  position: string;
+  subRole: string | null;
+} {
+  const norm = (position || "").trim().toLowerCase();
+  if (norm.includes("team leader") && !norm.includes("deputy") && !norm.includes("asst") && !norm.includes("assistant")) {
+    return { level: 2, position: "TEAM LEADER", subRole: null };
+  }
+  if (norm.includes("deputy leader - 1") || norm.includes("deputy leader - 01") || norm.includes("deputy leader 1") || norm.includes("deputy leader-1")) {
+    return { level: 3, position: "DEPUTY LEADER - 01", subRole: null };
+  }
+  if (norm.includes("deputy leader - 2") || norm.includes("deputy leader - 02") || norm.includes("deputy leader 2") || norm.includes("deputy leader-2")) {
+    return { level: 3, position: "DEPUTY LEADER - 02", subRole: null };
+  }
+  if (norm.includes("deputy")) {
+    return { level: 3, position: "DEPUTY LEADER", subRole: null };
+  }
+  if (norm.includes("assistant group leader") || norm.includes("asst. group leader") || norm.includes("asst group leader")) {
+    return { level: 5, position: "ASST. GROUP LEADER", subRole: rcyDepartment || null };
+  }
+  if (norm.includes("group leader")) {
+    return { level: 4, position: "GROUP LEADER", subRole: rcyDepartment || null };
+  }
+  return { level: 4, position: (position || "MEMBER").toUpperCase(), subRole: rcyDepartment || null };
+}

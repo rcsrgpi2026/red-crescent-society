@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured, isServiceRoleConfigured } from "@/lib/supabase/config";
 import { isAdminRole, homeForRole } from "@/lib/auth";
 import { studentSignupSchema, teamMemberSignupSchema } from "@/lib/validation";
+import { createAndDispatchNotification } from "@/lib/notifications/notification-service";
 import type { ActionResult } from "@/lib/actions";
 
 export interface LoginResult extends ActionResult {
@@ -253,6 +254,24 @@ export async function volunteerSignUp(
       success: false,
       message: "Something went wrong while submitting your application. Please try again.",
     };
+  }
+
+  // Instant push & in-app notification to Admins for approval
+  try {
+    await createAndDispatchNotification(
+      {
+        title: `👤 নতুন মেম্বার আবেদন: ${v.name}`,
+        body: `${v.name} (${v.department || "ভলান্টিয়ার"}) মেম্বারশিপের জন্য রেজিস্ট্রেশন করেছেন। অনুমোদনের জন্য ক্লিক করুন।`,
+        type: "system",
+        priority: "high",
+        actionUrl: "/admin/team",
+      },
+      {
+        roles: ["SUPER_ADMIN", "ADMIN", "VOLUNTEER_MANAGER"],
+      }
+    );
+  } catch (notifErr) {
+    console.warn("Could not dispatch volunteer signup admin notification:", notifErr);
   }
 
   if (data.session) {

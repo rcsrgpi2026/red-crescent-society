@@ -231,7 +231,7 @@ export async function submitVolunteerApplication(
     };
   }
 
-  // Send smart notification
+  // Send smart notification to applicant
   try {
     await createAndDispatchNotification(
       {
@@ -247,6 +247,24 @@ export async function submitVolunteerApplication(
     );
   } catch (notifErr) {
     console.warn("Notification error after application submission:", notifErr);
+  }
+
+  // Also dispatch push notification to Admins for application review
+  try {
+    await createAndDispatchNotification(
+      {
+        title: `📋 নতুন ভলান্টিয়ার আবেদন: ${student.name}`,
+        body: `${student.name} (${student.department}) "${campaign.title}"-এ আবেদন করেছেন। অনুমোদনের জন্য ক্লিক করুন।`,
+        type: "system",
+        priority: "high",
+        actionUrl: "/admin/recruitment/applications",
+      },
+      {
+        roles: ["SUPER_ADMIN", "ADMIN", "VOLUNTEER_MANAGER"],
+      }
+    );
+  } catch (adminNotifErr) {
+    console.warn("Admin notification error after application submission:", adminNotifErr);
   }
 
   await logAudit("volunteer_application_submitted", "volunteer_application", createdApp.id, {

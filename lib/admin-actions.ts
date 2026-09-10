@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { logAudit, requireAdmin } from "@/lib/auth";
-import { slugify, TEAM_POSITIONS, RCY_DEPARTMENTS, NON_DEPARTMENT_POSITIONS } from "@/lib/constants";
+import { slugify, TEAM_POSITIONS, RCY_DEPARTMENTS, NON_DEPARTMENT_POSITIONS, getCommunityMappingForPosition } from "@/lib/constants";
 import { ID_CARD_SETTINGS_KEY } from "@/lib/id-card/constants";
 import { createAndDispatchNotification } from "@/lib/notifications/notification-service";
 import type { ActionResult } from "@/lib/actions";
@@ -82,7 +82,7 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
     return { success: false, message: "Could not update the team member." };
   }
 
-  // Trigger system notification if approved
+  // Trigger system notification if approved or rejected
   if (status === "APPROVED") {
     try {
       const { data: member } = await supabase
@@ -107,6 +107,31 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
       }
     } catch (notifErr) {
       console.warn("Could not dispatch volunteer approval notification:", notifErr);
+    }
+  } else if (status === "REJECTED") {
+    try {
+      const { data: member } = await supabase
+        .from("team_members")
+        .select("name, user_id")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (member?.user_id) {
+        await createAndDispatchNotification(
+          {
+            title: "Membership Application Update",
+            body: `Dear ${member.name}, your volunteer application could not be approved at this time. Please contact the society office for details.`,
+            type: "system",
+            priority: "normal",
+            actionUrl: "/volunteer",
+          },
+          {
+            specificUserIds: [member.user_id],
+          }
+        );
+      }
+    } catch (notifErr) {
+      console.warn("Could not dispatch volunteer rejection notification:", notifErr);
     }
   }
 
@@ -263,6 +288,50 @@ export async function updateTeamMemberRcyDepartment(formData: FormData): Promise
   return {
     success: true,
     message: value ? `RCY department set to ${value}.` : "RCY department cleared.",
+  };
+}
+
+/**
+ * Toggles or updates a team member's legacy (alumni / former leader) status.
+ */
+export async function updateTeamMemberLegacyStatus(formData: FormData): Promise<ActionResult> {
+  await guard();
+  const id = String(formData.get("id"));
+  const isLegacy = formData.get("isLegacy") === "true";
+  const legacyTenure = formData.get("legacyTenure") ? String(formData.get("legacyTenure")).trim() : null;
+  const legacyDesignation = formData.get("legacyDesignation") ? String(formData.get("legacyDesignation")).trim() : null;
+  const legacyNote = formData.get("legacyNote") ? String(formData.get("legacyNote")).trim() : null;
+
+  if (!id) return { success: false, message: "Team member ID is required." };
+
+  const supabase = await createClient();
+  const patch: Record<string, unknown> = {
+    is_legacy: isLegacy,
+    legacy_tenure: legacyTenure || null,
+    legacy_designation: legacyDesignation || null,
+    legacy_note: legacyNote || null,
+  };
+
+  const { error } = await supabase
+    .from("team_members")
+    .update(patch)
+    .eq("id", id);
+
+  if (error) {
+    return { success: false, message: "Could not update legacy status." };
+  }
+
+  await logAudit("legacy_status_changed", "team_member", id, patch);
+  revalidatePath("/admin/team");
+  revalidatePath("/team");
+  revalidatePath("/legacy-members");
+  updateTag("volunteers");
+
+  return {
+    success: true,
+    message: isLegacy
+      ? "Team member marked as Legacy Member."
+      : "Member restored to active team roster.",
   };
 }
 
@@ -429,6 +498,102 @@ export async function deleteCommunityMember(id: string): Promise<ActionResult> {
   revalidatePath("/");
   updateTag("community");
   return { success: true, message: "Community member deleted." };
+}
+
+/**
+ * Adds or updates an approved team member into the Community leadership tree.
+ */
+export async function addTeamMemberToCommunity(formData: FormData): Promise<ActionResult> {
+  await guard();
+  const teamMemberId = String(formData.get("teamMemberId") ?? "").trim();
+  if (!teamMemberId) return { success: false, message: "Team member ID is required." };
+
+  const supabase = await createClient();
+
+  const { data: member, error: memberError } = await supabase
+    .from("team_members")
+    .select("id, name, photo_url, position, rcy_department, status")
+    .eq("id", teamMemberId)
+    .maybeSingle();
+
+  if (memberError || !member) {
+    return { success: false, message: "Team member not found." };
+  }
+
+  const defaultMapping = getCommunityMappingForPosition(member.position, member.rcy_department);
+  const level = formData.get("level") ? Number(formData.get("level")) : defaultMapping.level;
+  const position = formData.get("position") ? String(formData.get("position")).trim() : defaultMapping.position;
+  const subRole = formData.get("subRole") !== null
+    ? (String(formData.get("subRole")).trim() || null)
+    : defaultMapping.subRole;
+  const displayOrder = formData.get("displayOrder") ? Number(formData.get("displayOrder")) : 0;
+
+  const { data: existing } = await supabase
+    .from("community_members")
+    .select("id")
+    .eq("team_member_id", teamMemberId)
+    .maybeSingle();
+
+  const payload = {
+    name: member.name,
+    photo_url: member.photo_url || null,
+    position,
+    sub_role: subRole,
+    level,
+    display_order: displayOrder,
+    is_active: true,
+    team_member_id: member.id,
+  };
+
+  if (existing) {
+    const { error: updateError } = await supabase
+      .from("community_members")
+      .update(payload)
+      .eq("id", existing.id);
+    if (updateError) return { success: false, message: "Could not update community member." };
+    await logAudit("community_linked_updated", "community_member", existing.id, { team_member_id: member.id });
+  } else {
+    const { error: insertError } = await supabase
+      .from("community_members")
+      .insert(payload);
+    if (insertError) return { success: false, message: "Could not add to community tree." };
+    await logAudit("community_linked_created", "community_member", undefined, { team_member_id: member.id });
+  }
+
+  revalidatePath("/admin/team");
+  revalidatePath("/admin/community");
+  revalidatePath("/community");
+  revalidatePath("/");
+  updateTag("community");
+
+  return { success: true, message: `${member.name} has been placed in Level ${level} (${position}) of the Community tree.` };
+}
+
+/**
+ * Removes a linked team member from the Community leadership tree.
+ */
+export async function removeTeamMemberFromCommunity(formData: FormData): Promise<ActionResult> {
+  await guard();
+  const teamMemberId = String(formData.get("teamMemberId") ?? "").trim();
+  if (!teamMemberId) return { success: false, message: "Team member ID is required." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("community_members")
+    .delete()
+    .eq("team_member_id", teamMemberId);
+
+  if (error) return { success: false, message: "Could not remove from community tree." };
+
+  await logAudit("community_linked_removed", "community_member", undefined, { team_member_id: teamMemberId });
+
+  revalidatePath("/admin/team");
+  revalidatePath("/admin/community");
+  revalidatePath("/community");
+  revalidatePath("/");
+  updateTag("community");
+
+  return { success: true, message: "Removed from Community leadership tree." };
 }
 
 // ---------------------------------------------------------------------------
@@ -608,6 +773,98 @@ export async function unconfirmBloodDonation(formData: FormData): Promise<Action
   return { success: true, message: "Donation confirmation removed." };
 }
 
+/**
+ * Permanently deletes a CANCELLED blood request.
+ * Pending, in-progress, and completed requests cannot be deleted to protect actual records.
+ */
+export async function deleteBloodRequest(id: string): Promise<ActionResult> {
+  await guard();
+  if (!id) return { success: false, message: "Blood request ID is required." };
+
+  const supabase = await createClient();
+
+  // Safety check: ensure only CANCELLED requests can be deleted
+  const { data: request, error: findError } = await supabase
+    .from("blood_requests")
+    .select("id, status, patient_name")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (findError || !request) {
+    return { success: false, message: "Blood request not found." };
+  }
+
+  if (request.status !== "CANCELLED") {
+    return {
+      success: false,
+      message: "Only cancelled requests can be deleted. Completed and pending requests are protected.",
+    };
+  }
+
+  const { error } = await supabase.from("blood_requests").delete().eq("id", id);
+  if (error) {
+    return { success: false, message: "Could not delete the request." };
+  }
+
+  await logAudit("blood_request_deleted", "blood_request", id, {
+    patient_name: request.patient_name,
+  });
+
+  revalidatePath("/admin/blood-requests");
+  revalidatePath("/admin");
+  revalidatePath("/blood-support");
+  updateTag("blood");
+
+  return { success: true, message: `Cancelled request for ${request.patient_name} deleted.` };
+}
+
+/**
+ * Permanently deletes ALL cancelled blood requests in bulk.
+ * Preserves all pending, in-progress, and completed records.
+ */
+export async function deleteCancelledBloodRequests(): Promise<ActionResult> {
+  await guard();
+  const supabase = await createClient();
+
+  const { data: cancelled, error: fetchError } = await supabase
+    .from("blood_requests")
+    .select("id")
+    .eq("status", "CANCELLED");
+
+  if (fetchError || !cancelled) {
+    return { success: false, message: "Failed to fetch cancelled requests." };
+  }
+
+  if (cancelled.length === 0) {
+    return { success: false, message: "No cancelled requests found to delete." };
+  }
+
+  const { error } = await supabase
+    .from("blood_requests")
+    .delete()
+    .eq("status", "CANCELLED");
+
+  if (error) {
+    return { success: false, message: "Could not delete cancelled requests." };
+  }
+
+  await logAudit("blood_requests_bulk_deleted", "blood_request", "all_cancelled", {
+    count: cancelled.length,
+  });
+
+  revalidatePath("/admin/blood-requests");
+  revalidatePath("/admin");
+  revalidatePath("/blood-support");
+  updateTag("blood");
+
+  return {
+    success: true,
+    message: `Successfully deleted ${cancelled.length} cancelled request${
+      cancelled.length === 1 ? "" : "s"
+    }.`,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Events
 // ---------------------------------------------------------------------------
@@ -643,6 +900,21 @@ export async function saveEvent(formData: FormData): Promise<ActionResult> {
     const { error } = await supabase.from("events").insert(payload);
     if (error) return { success: false, message: "Could not create the event." };
     await logAudit("event_created", "event", payload.title);
+
+    // Trigger event announcement notification for new upcoming events
+    if (payload.status === "UPCOMING") {
+      try {
+        await createAndDispatchNotification({
+          title: `📅 New Event: ${payload.title}`,
+          body: `Date: ${payload.date || "Soon"} ${payload.time ? `(${payload.time})` : ""} · Location: ${payload.location || "RGPI"}. Tap to view details and register.`,
+          type: "event",
+          priority: "normal",
+          actionUrl: `/events/${payload.slug}`,
+        });
+      } catch (notifErr) {
+        console.warn("Could not dispatch event notification:", notifErr);
+      }
+    }
   }
   revalidatePath("/admin/events");
   revalidatePath("/events");
@@ -862,6 +1134,49 @@ export async function updateTrainingParticipantStatus(formData: FormData): Promi
     .update({ status })
     .eq("id", id);
   if (error) return { success: false, message: "Could not update the enrollment." };
+
+  // Dispatch notification to participant on status change
+  if (status === "APPROVED" || status === "REJECTED") {
+    try {
+      const { data: part } = await supabase
+        .from("training_participants")
+        .select("team_members(user_id, name), training(title)")
+        .eq("id", id)
+        .maybeSingle();
+
+      const memberUserId = (part?.team_members as any)?.user_id;
+      const memberName = (part?.team_members as any)?.name || "Participant";
+      const trainingTitle = (part?.training as any)?.title || "Training";
+
+      if (memberUserId) {
+        if (status === "APPROVED") {
+          await createAndDispatchNotification(
+            {
+              title: "🎓 Training Enrollment Approved!",
+              body: `Congratulations ${memberName}! Your enrollment for "${trainingTitle}" has been approved. See you at the session.`,
+              type: "system",
+              priority: "high",
+              actionUrl: "/volunteer",
+            },
+            { specificUserIds: [memberUserId] }
+          );
+        } else {
+          await createAndDispatchNotification(
+            {
+              title: "Training Enrollment Update",
+              body: `Dear ${memberName}, your enrollment request for "${trainingTitle}" could not be accommodated at this time.`,
+              type: "system",
+              priority: "normal",
+              actionUrl: "/volunteer",
+            },
+            { specificUserIds: [memberUserId] }
+          );
+        }
+      }
+    } catch (notifErr) {
+      console.warn("Could not dispatch training participant notification:", notifErr);
+    }
+  }
   await logAudit("training_participant_status", "training_participant", id, { status });
   revalidatePath("/admin/training");
   revalidatePath("/training");
@@ -901,6 +1216,30 @@ export async function issueTrainingCertificate(formData: FormData): Promise<Acti
   });
   if (error) return { success: false, message: "Could not issue the certificate." };
   await logAudit("certificate_issued", "certificate", participant.volunteer_id, { title });
+
+  // Dispatch notification to volunteer about issued certificate
+  try {
+    const { data: member } = await supabase
+      .from("team_members")
+      .select("user_id, name")
+      .eq("id", participant.volunteer_id)
+      .maybeSingle();
+
+    if (member?.user_id) {
+      await createAndDispatchNotification(
+        {
+          title: "🎖️ New Certificate Issued!",
+          body: `Congratulations ${member.name}! Your official certificate for "${trainingTitle}" has been issued and is available on your portal.`,
+          type: "system",
+          priority: "high",
+          actionUrl: "/volunteer",
+        },
+        { specificUserIds: [member.user_id] }
+      );
+    }
+  } catch (notifErr) {
+    console.warn("Could not dispatch certificate notification:", notifErr);
+  }
   revalidatePath("/admin/training");
   revalidatePath("/admin/certificates");
   updateTag("certificates");
@@ -936,6 +1275,21 @@ export async function saveTraining(formData: FormData): Promise<ActionResult> {
     const { error } = await supabase.from("training").insert(payload);
     if (error) return { success: false, message: "Could not create the training." };
     await logAudit("training_created", "training", payload.title);
+
+    // Trigger training announcement notification for new upcoming sessions
+    if (payload.status === "UPCOMING") {
+      try {
+        await createAndDispatchNotification({
+          title: `🎓 New Training Session: ${payload.title}`,
+          body: `Date: ${payload.date || "Soon"} · Location: ${payload.location || "RGPI"}. Tap to view details and enroll.`,
+          type: "system",
+          priority: "normal",
+          actionUrl: `/training`,
+        });
+      } catch (notifErr) {
+        console.warn("Could not dispatch training announcement notification:", notifErr);
+      }
+    }
   }
   revalidatePath("/admin/training");
   revalidatePath("/training");

@@ -28,6 +28,7 @@ import type {
   PublicBloodDonor,
   PublicBloodRequest,
   PublicTeamMember,
+  PublicLegacyMember,
   RecruitmentCampaign,
   Student,
   TeamMember,
@@ -630,6 +631,7 @@ export async function adminGetTeamMembers(params?: {
   search?: string;
   department?: string;
   publicProfile?: boolean;
+  isLegacy?: boolean;
   limit?: number;
 }): Promise<TeamMember[]> {
   const supabase = await db();
@@ -639,8 +641,33 @@ export async function adminGetTeamMembers(params?: {
   if (params?.search) query = query.ilike("name", `%${params.search}%`);
   if (params?.department) query = query.eq("department", params.department);
   if (params?.publicProfile !== undefined) query = query.eq("public_profile", params.publicProfile);
+  if (params?.isLegacy !== undefined) query = query.eq("is_legacy", params.isLegacy);
   const { data } = await query.order("created_at", { ascending: false }).limit(params?.limit ?? 200);
-  return data ?? [];
+  return (data as TeamMember[]) ?? [];
+}
+
+export async function getLegacyMembers(params?: {
+  search?: string;
+  department?: string;
+  session?: string;
+}): Promise<PublicLegacyMember[]> {
+  const supabase = await db();
+  if (!supabase) return [];
+  let query = supabase
+    .from("team_members")
+    .select(
+      "id, member_id, name, department, session, area, photo_url, position, legacy_designation, legacy_tenure, legacy_note, joined_at, points"
+    )
+    .eq("is_legacy", true)
+    .eq("status", "APPROVED")
+    .eq("public_profile", true);
+
+  if (params?.search) query = query.ilike("name", `%${params.search}%`);
+  if (params?.department) query = query.eq("department", params.department);
+  if (params?.session) query = query.eq("session", params.session);
+
+  const { data } = await query.order("created_at", { ascending: false });
+  return (data as PublicLegacyMember[]) ?? [];
 }
 
 export async function adminGetTeamMember(id: string): Promise<TeamMember | null> {

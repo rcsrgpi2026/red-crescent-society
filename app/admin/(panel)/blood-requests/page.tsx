@@ -1,28 +1,62 @@
+import Link from "next/link";
 import { HeartPulse, CheckCircle2, Circle } from "lucide-react";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { InlineStatus } from "@/components/admin/inline-status";
 import { AdminPageHeader } from "@/components/admin/page-header";
+import { ConfirmDelete } from "@/components/admin/confirm-delete";
+import { ClearCancelledRequestsButton } from "@/components/admin/clear-cancelled-requests";
 import {
   ResponsiveTable,
   type Column,
 } from "@/components/admin/responsive-table";
+import { Reveal } from "@/components/shared/reveal";
 import { adminGetBloodRequests } from "@/lib/queries";
 import {
   updateBloodRequestStatus,
   submitConfirmBloodDonation,
   submitUnconfirmBloodDonation,
+  deleteBloodRequest,
+  deleteCancelledBloodRequests,
 } from "@/lib/admin-actions";
 import { formatDate, BLOOD_REQUEST_STATUS_LABELS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 const STATUS_OPTIONS = Object.entries(BLOOD_REQUEST_STATUS_LABELS).map(
   ([value, label]) => ({ value, label })
 );
 
-export default async function AdminBloodRequestsPage() {
-  const requests = await adminGetBloodRequests();
+export default async function AdminBloodRequestsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ status?: string }>;
+}) {
+  const params = (await searchParams) ?? {};
+  const allRequests = await adminGetBloodRequests();
 
-  const columns: Column<(typeof requests)[number]>[] = [
+  const counts = {
+    all: allRequests.length,
+    PENDING: allRequests.filter((r) => r.status === "PENDING").length,
+    CONTACTING_DONOR: allRequests.filter((r) => r.status === "CONTACTING_DONOR").length,
+    DONOR_FOUND: allRequests.filter((r) => r.status === "DONOR_FOUND").length,
+    COMPLETED: allRequests.filter((r) => r.status === "COMPLETED").length,
+    CANCELLED: allRequests.filter((r) => r.status === "CANCELLED").length,
+  };
+
+  const requests = params.status
+    ? allRequests.filter((r) => r.status === params.status)
+    : allRequests;
+
+  const STATUS_TABS = [
+    { value: "", label: "All", count: counts.all },
+    { value: "PENDING", label: "Pending", count: counts.PENDING },
+    { value: "CONTACTING_DONOR", label: "Contacting Donor", count: counts.CONTACTING_DONOR },
+    { value: "DONOR_FOUND", label: "Donor Found", count: counts.DONOR_FOUND },
+    { value: "COMPLETED", label: "Completed", count: counts.COMPLETED },
+    { value: "CANCELLED", label: "Cancelled", count: counts.CANCELLED },
+  ];
+
+  const columns: Column<(typeof allRequests)[number]>[] = [
     {
       header: "Patient",
       render: (r) => (
@@ -197,20 +231,75 @@ export default async function AdminBloodRequestsPage() {
       <AdminPageHeader
         icon={HeartPulse}
         title="Blood Requests"
-        description="Track every request through its lifecycle. When you confirm a completed donation, enter how many units were actually donated — only those count toward Blood Units Donated."
+        description="Track every request through its lifecycle. Cancelled test or duplicate requests can be permanently deleted. Pending and completed records are safely protected."
         tone="bg-gradient-to-br from-crescent to-crescent-dark"
+        actions={
+          counts.CANCELLED > 0 ? (
+            <ClearCancelledRequestsButton
+              action={deleteCancelledBloodRequests}
+              count={counts.CANCELLED}
+            />
+          ) : undefined
+        }
       />
+
+      {/* Filter Tabs */}
+      <Reveal>
+        <div className="flex flex-wrap gap-2 border-b border-line pb-2.5">
+          {STATUS_TABS.map((tab) => {
+            const active = (params.status ?? "") === tab.value;
+            return (
+              <Link
+                key={tab.value}
+                href={tab.value ? `/admin/blood-requests?status=${tab.value}` : "/admin/blood-requests"}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                  active
+                    ? "bg-brand-dark text-white shadow-xs"
+                    : "bg-mist text-muted-foreground hover:bg-mist/80 hover:text-foreground"
+                )}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.2 text-[10px] font-bold tabular-nums",
+                    active
+                      ? "bg-white/20 text-white"
+                      : "bg-white text-muted-foreground"
+                  )}
+                >
+                  {tab.count}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </Reveal>
 
       <ResponsiveTable
         columns={columns}
         rows={requests}
         keyFor={(r) => r.id}
         minWidth="min-w-[760px]"
+        actions={(r) =>
+          r.status === "CANCELLED" ? (
+            <ConfirmDelete
+              action={deleteBloodRequest}
+              id={r.id}
+              label="Delete"
+              description={`Permanently delete the cancelled request for "${r.patient_name}"? This action cannot be undone.`}
+            />
+          ) : null
+        }
         empty={
           <EmptyState
             icon={HeartPulse}
-            title="No blood requests yet"
-            description="Requests submitted through the public form appear here."
+            title="No blood requests found"
+            description={
+              params.status
+                ? `No blood requests with status "${BLOOD_REQUEST_STATUS_LABELS[params.status] ?? params.status}".`
+                : "Requests submitted through the public form appear here."
+            }
           />
         }
       />

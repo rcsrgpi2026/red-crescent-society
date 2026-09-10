@@ -33,7 +33,7 @@ import {
 } from "@/lib/queries";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 import { format } from "@/lib/i18n";
-import { getProfile, isAdminRole } from "@/lib/auth";
+import { getProfile, isAdminRole, getCurrentTeamMember } from "@/lib/auth";
 
 /** Real photos from activities and albums, deduplicated, newest first. */
 function heroPhotos(images: (string | null | undefined)[]): string[] {
@@ -53,6 +53,7 @@ export default async function HomePage() {
   // and students should not see the team on the home page.
   const [
     profile,
+    teamMember,
     t,
     locale,
     settings,
@@ -68,6 +69,7 @@ export default async function HomePage() {
     activeCampaign,
   ] = await Promise.all([
     getProfile(),
+    getCurrentTeamMember(),
     getServerMessages(),
     getServerLocale(),
     getSettings(),
@@ -84,6 +86,8 @@ export default async function HomePage() {
   ]);
 
   const isAdmin = isAdminRole(profile?.role);
+  const isRegisteredMember = profile?.role === "VOLUNTEER" || Boolean(teamMember);
+  const shouldShowPopup = !isAdmin && !isRegisteredMember;
   const team = isAdmin ? await getPublicTeamMembers({ limit: 18 }) : [];
 
   const homepage = settings.homepage ?? {};
@@ -113,9 +117,9 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* Volunteer Recruitment Banner & Modal Popup */}
+      {/* Volunteer Recruitment Banner & Modal Popup (hidden for admins and registered members) */}
       <RecruitmentBanner campaign={activeCampaign} />
-      <RecruitmentPopup campaign={activeCampaign} />
+      {shouldShowPopup && <RecruitmentPopup campaign={activeCampaign} />}
 
       {/* Serve. Respond. Make a Difference. */}
       <Hero

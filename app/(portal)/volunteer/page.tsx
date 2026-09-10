@@ -14,6 +14,9 @@ import {
   getMyTrainingEnrollments,
   getMyCertificates,
   getSettings,
+  getPublishedNotices,
+  getPublicTrainings,
+  getActiveRecruitmentCampaign,
 } from "@/lib/queries";
 import {
   designFromSettings,
@@ -33,6 +36,7 @@ import { MyTrainings } from "@/components/team/my-trainings";
 import { MyCertificates } from "@/components/team/my-certificates";
 import { NotificationPreferencesForm } from "@/components/notifications/preference-form";
 import { getMyNotificationPreferences } from "@/lib/notifications/actions";
+import { SiteAnnouncementModal } from "@/components/announcement/site-announcement-modal";
 
 export const metadata: Metadata = {
   title: "Team Member Portal & Profile",
@@ -48,10 +52,14 @@ export default async function TeamMemberPortalPage() {
   let requests: Awaited<ReturnType<typeof getTeamMemberParticipation>> = [];
   let trainings: Awaited<ReturnType<typeof getMyTrainingEnrollments>> = [];
   let certificates: Awaited<ReturnType<typeof getMyCertificates>> = [];
-  const [notifications, settings, notifPrefs] = await Promise.all([
+  const [notifications, settings, notifPrefs, portalNotices, publicTrainings, activeCampaign, upcomingEvents] = await Promise.all([
     getMyDonorContactRequests(),
     getSettings(),
     getMyNotificationPreferences(),
+    getPublishedNotices(3),
+    getPublicTrainings(),
+    getActiveRecruitmentCampaign(),
+    getUpcomingEvents(4),
   ]);
   const cardConfig = buildCardConfig(
     designFromSettings(settings),
@@ -94,6 +102,13 @@ export default async function TeamMemberPortalPage() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
+            <SiteAnnouncementModal
+              notices={portalNotices}
+              events={upcomingEvents}
+              trainings={publicTrainings}
+              recruitmentCampaign={activeCampaign}
+              storageKey="rcy_volunteer_announcement_seen"
+            />
             <Link
               href="/"
               className="text-xs font-semibold text-brand hover:underline hidden sm:inline-block"

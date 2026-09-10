@@ -16,7 +16,7 @@ import { NoticeCard } from "@/components/cards/notice-card";
 import { AlbumCard } from "@/components/cards/album-card";
 import { NotificationPermissionCard } from "@/components/notifications/permission-banner";
 import { RecruitmentBanner } from "@/components/home/recruitment-banner";
-import { RecruitmentPopup } from "@/components/home/recruitment-popup";
+import { SiteAnnouncementModal } from "@/components/announcement/site-announcement-modal";
 import {
   getSettings,
   getHomeStats,
@@ -117,9 +117,16 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* Volunteer Recruitment Banner & Modal Popup (hidden for admins and registered members) */}
+      {/* Volunteer Recruitment Banner & Modal Popup */}
       <RecruitmentBanner campaign={activeCampaign} />
-      {shouldShowPopup && <RecruitmentPopup campaign={activeCampaign} />}
+      <SiteAnnouncementModal
+        notices={notices}
+        events={events}
+        trainings={trainings}
+        recruitmentCampaign={activeCampaign}
+        storageKey="rcy_site_announcement_seen"
+        showTrigger={false}
+      />
 
       {/* Serve. Respond. Make a Difference. */}
       <Hero

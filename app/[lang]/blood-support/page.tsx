@@ -9,6 +9,7 @@ import { DonorCard } from "@/components/blood/donor-card";
 import { DonorRegisterForm } from "@/components/forms/donor-register-form";
 import { DonorSelfService } from "@/components/forms/donor-self-service";
 import { ContactRequestRecovery } from "@/components/blood/contact-request-recovery";
+import { BloodGuideModal } from "@/components/blood/blood-guide-modal";
 import { getDonors, getPublicBloodRequests } from "@/lib/queries";
 import { formatDate } from "@/lib/constants";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
@@ -59,6 +60,7 @@ export default async function BloodSupportPage({
             <Droplets className="h-4 w-4" aria-hidden />
             {t.blood.registerAsDonor}
           </a>
+          <BloodGuideModal />
         </div>
       </PageHero>
 

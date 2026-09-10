@@ -137,14 +137,7 @@ export function SiteAnnouncementModal({
               <X className="h-4 w-4" />
             </button>
 
-            <div className="flex items-center gap-2">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 sm:px-3 sm:py-1 text-xs font-medium backdrop-blur-xs">
-                <Sparkles className="h-3.5 w-3.5 text-amber-300" aria-hidden />
-                <span>Red Crescent Updates</span>
-              </div>
-            </div>
-
-            <DialogHeader className="mt-2.5 sm:mt-3 text-left">
+            <DialogHeader className="text-left pr-8 sm:pr-10">
               <DialogTitle className="text-lg sm:text-2xl font-bold tracking-tight text-white leading-tight">
                 {activeTab === "updates" ? "Latest Notices, Events & Trainings" : "New Member Recruitment"}
               </DialogTitle>

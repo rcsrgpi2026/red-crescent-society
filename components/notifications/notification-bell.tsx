@@ -101,6 +101,12 @@ export function NotificationBell({ userId }: { userId?: string | null }) {
 
   useEffect(() => {
     loadData();
+
+    // Auto-sync push subscription in the background if browser permission is already granted
+    if (isPushSupported() && getNotificationPermissionState() === "granted") {
+      subscribeUserToPush().catch(() => {});
+    }
+
     // Poll every 45s for fresh notifications
     const interval = setInterval(loadData, 45000);
     return () => clearInterval(interval);

@@ -318,8 +318,8 @@ export default async function HomePage() {
       {/* Notices + Join CTA */}
       <section className="border-b border-line bg-mist/50">
         <div className="container-site py-16 lg:py-24">
-          <div className="grid gap-10 lg:grid-cols-[1fr_1.2fr]">
-            <Reveal>
+          <div className="grid gap-10 lg:grid-cols-[1fr_1.2fr] min-w-0 max-w-full">
+            <Reveal className="min-w-0 max-w-full">
               <div className="flex h-full flex-col">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
                   {t.home.noticesEyebrow}
@@ -338,10 +338,10 @@ export default async function HomePage() {
                 </Button>
               </div>
             </Reveal>
-            <div className="space-y-3">
+            <div className="space-y-3 min-w-0 max-w-full">
               {notices.length > 0 ? (
                 notices.map((notice, i) => (
-                  <Reveal key={notice.id} delay={i * 0.05}>
+                  <Reveal key={notice.id} delay={i * 0.05} className="min-w-0 max-w-full">
                     <NoticeCard notice={notice} />
                   </Reveal>
                 ))

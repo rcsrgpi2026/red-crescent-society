@@ -26,7 +26,19 @@ interface AdminFormDialogProps {
   action: AdminAction;
   children: React.ReactNode;
   submitLabel?: string;
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  className?: string;
 }
+
+const sizeClasses: Record<string, string> = {
+  sm: "sm:max-w-sm",
+  md: "sm:max-w-md",
+  lg: "sm:max-w-lg",
+  xl: "sm:max-w-xl",
+  "2xl": "sm:max-w-2xl",
+  "3xl": "sm:max-w-3xl",
+  "4xl": "sm:max-w-4xl",
+};
 
 export function AdminFormDialog({
   trigger,
@@ -35,6 +47,8 @@ export function AdminFormDialog({
   action,
   children,
   submitLabel = "Save",
+  size = "lg",
+  className,
 }: AdminFormDialogProps) {
   const [open, setOpen] = useState(false);
   const [resetKey, setResetKey] = useState(0);
@@ -65,7 +79,11 @@ export function AdminFormDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent
+        className={`max-h-[90vh] overflow-y-auto overflow-x-hidden w-[95vw] ${sizeClasses[size] || "sm:max-w-lg"} ${
+          className ?? ""
+        }`}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

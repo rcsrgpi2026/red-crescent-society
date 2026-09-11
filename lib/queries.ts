@@ -36,6 +36,7 @@ import type {
   Training,
   VolunteerApplication,
 } from "@/types/database";
+import { DEFAULT_FORM_CONFIGS, type FormConfig, type FormKey } from "@/types/form-editor";
 
 
 /**
@@ -68,6 +69,52 @@ export const getSettings = unstable_cache(
   ["settings"],
   { tags: ["settings"], revalidate: 60 }
 );
+
+export async function getFormConfigs(): Promise<Record<FormKey, FormConfig>> {
+  const supabase = getPublicClient();
+  if (!supabase) return DEFAULT_FORM_CONFIGS;
+  const { data } = await supabase
+    .from("website_settings")
+    .select("value")
+    .eq("key", "form_configs")
+    .maybeSingle();
+
+  if (!data?.value || typeof data.value !== "object") {
+    return DEFAULT_FORM_CONFIGS;
+  }
+
+  const saved = data.value as Partial<Record<FormKey, FormConfig>>;
+  return {
+    event_registration: {
+      ...DEFAULT_FORM_CONFIGS.event_registration,
+      ...(saved.event_registration ?? {}),
+      title: saved.event_registration?.title || DEFAULT_FORM_CONFIGS.event_registration.title,
+      description: saved.event_registration?.description || DEFAULT_FORM_CONFIGS.event_registration.description,
+      fields: saved.event_registration?.fields ?? DEFAULT_FORM_CONFIGS.event_registration.fields,
+    },
+    volunteer_application: {
+      ...DEFAULT_FORM_CONFIGS.volunteer_application,
+      ...(saved.volunteer_application ?? {}),
+      title: saved.volunteer_application?.title || DEFAULT_FORM_CONFIGS.volunteer_application.title,
+      description: saved.volunteer_application?.description || DEFAULT_FORM_CONFIGS.volunteer_application.description,
+      fields: saved.volunteer_application?.fields ?? DEFAULT_FORM_CONFIGS.volunteer_application.fields,
+    },
+    blood_request: {
+      ...DEFAULT_FORM_CONFIGS.blood_request,
+      ...(saved.blood_request ?? {}),
+      title: saved.blood_request?.title || DEFAULT_FORM_CONFIGS.blood_request.title,
+      description: saved.blood_request?.description || DEFAULT_FORM_CONFIGS.blood_request.description,
+      fields: saved.blood_request?.fields ?? DEFAULT_FORM_CONFIGS.blood_request.fields,
+    },
+    contact: {
+      ...DEFAULT_FORM_CONFIGS.contact,
+      ...(saved.contact ?? {}),
+      title: saved.contact?.title || DEFAULT_FORM_CONFIGS.contact.title,
+      description: saved.contact?.description || DEFAULT_FORM_CONFIGS.contact.description,
+      fields: saved.contact?.fields ?? DEFAULT_FORM_CONFIGS.contact.fields,
+    },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Homepage / public
@@ -213,11 +260,14 @@ export const getPublishedNotices = unstable_cache(
     if (!supabase) return [];
     const { data } = await supabase
       .from("notices")
-      .select("*")
+      .select("*, notice_attachments(id, notice_id, name, url, size, created_at)")
       .order("pinned", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(limit);
-    return data ?? [];
+    return (data ?? []).map((n: any) => ({
+      ...n,
+      cover_image: n.notice_attachments?.[0]?.url ?? null,
+    }));
   },
   ["published-notices"],
   { tags: ["notices"], revalidate: 60 }
@@ -439,14 +489,21 @@ export const getPublicEvents = unstable_cache(
   { tags: ["events"], revalidate: 60 }
 );
 
-export const getPublicEventBySlug = unstable_cache(
-  async (slug: string): Promise<Event | null> => {
+export async function getPublicEventBySlug(slug: string): Promise<Event | null> {
+  const supabase = getPublicClient();
+  if (!supabase) return null;
+  const { data } = await supabase.from("events").select("*").eq("slug", slug).maybeSingle();
+  return data;
+}
+
+export const getPublicEventById = unstable_cache(
+  async (id: string): Promise<Event | null> => {
     const supabase = getPublicClient();
     if (!supabase) return null;
-    const { data } = await supabase.from("events").select("*").eq("slug", slug).maybeSingle();
+    const { data } = await supabase.from("events").select("*").eq("id", id).maybeSingle();
     return data;
   },
-  ["public-event"],
+  ["public-event-by-id"],
   { tags: ["events"], revalidate: 60 }
 );
 
@@ -474,10 +531,13 @@ export const getPublicNotices = unstable_cache(
     if (!supabase) return [];
     const { data } = await supabase
       .from("notices")
-      .select("*")
+      .select("*, notice_attachments(id, notice_id, name, url, size, created_at)")
       .order("pinned", { ascending: false })
       .order("created_at", { ascending: false });
-    return data ?? [];
+    return (data ?? []).map((n: any) => ({
+      ...n,
+      cover_image: n.notice_attachments?.[0]?.url ?? null,
+    }));
   },
   ["public-notices"],
   { tags: ["notices"], revalidate: 60 }
@@ -489,13 +549,26 @@ export const getPublicNoticeBySlug = unstable_cache(
     if (!supabase) return null;
     const { data } = await supabase
       .from("notices")
-      .select("*")
+      .select("*, events(*), notice_attachments(id, notice_id, name, url, size, created_at)")
       .eq("slug", slug)
       .maybeSingle();
-    return data;
+    if (!data) return null;
+
+    let linkedEvent: Event | null = null;
+    if (data.events) {
+      linkedEvent = Array.isArray(data.events) ? (data.events[0] as Event) : (data.events as Event);
+    } else if (data.event_id) {
+      linkedEvent = await getPublicEventById(data.event_id);
+    }
+
+    return {
+      ...(data as any),
+      events: linkedEvent,
+      cover_image: (data as any).notice_attachments?.[0]?.url ?? null,
+    };
   },
   ["public-notice"],
-  { tags: ["notices"], revalidate: 60 }
+  { tags: ["notices", "events"], revalidate: 60 }
 );
 
 export const getNoticeAttachments = unstable_cache(
@@ -510,6 +583,25 @@ export const getNoticeAttachments = unstable_cache(
   },
   ["notice-attachments"],
   { tags: ["notices"], revalidate: 60 }
+);
+
+export const getPublicNoticesByEventId = unstable_cache(
+  async (eventId: string): Promise<Notice[]> => {
+    const supabase = getPublicClient();
+    if (!supabase) return [];
+    const { data } = await supabase
+      .from("notices")
+      .select("*, notice_attachments(id, notice_id, name, url, size, created_at)")
+      .eq("event_id", eventId)
+      .eq("published", true)
+      .order("created_at", { ascending: false });
+    return (data ?? []).map((n: any) => ({
+      ...n,
+      cover_image: n.notice_attachments?.[0]?.url ?? null,
+    }));
+  },
+  ["public-notices-by-event"],
+  { tags: ["notices", "events"], revalidate: 60 }
 );
 
 export const getAllAlbums = unstable_cache(
@@ -762,9 +854,12 @@ export async function adminGetNotices(): Promise<Notice[]> {
   if (!supabase) return [];
   const { data } = await supabase
     .from("notices")
-    .select("*")
+    .select("*, notice_attachments(id, notice_id, name, url, size, created_at)")
     .order("created_at", { ascending: false });
-  return data ?? [];
+  return (data ?? []).map((n: any) => ({
+    ...n,
+    cover_image: n.notice_attachments?.[0]?.url ?? null,
+  }));
 }
 
 export async function adminGetNoticeAttachments(noticeId: string) {

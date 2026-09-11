@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Loader2, LogIn } from "lucide-react";
 import { portalLogin, type LoginResult } from "@/lib/auth-actions";
 import { Label, Input, Button } from "@/components/ui";
@@ -54,9 +55,17 @@ export function PortalLoginForm() {
         />
       </div>
       <div>
-        <Label htmlFor="portal-password" className="text-xs sm:text-sm">
-          Password
-        </Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="portal-password" className="text-xs sm:text-sm">
+            Password
+          </Label>
+          <Link
+            href="/forgot-password"
+            className="text-xs font-medium text-crescent hover:underline transition-colors"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <Input
           id="portal-password"
           name="password"

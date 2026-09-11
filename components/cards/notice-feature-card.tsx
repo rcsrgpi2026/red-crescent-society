@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Pin, ArrowRight } from "lucide-react";
+import Image from "next/image";
+import { Pin, ArrowRight, CalendarDays } from "lucide-react";
 import type { Notice } from "@/types/database";
 import { formatDate } from "@/lib/constants";
 import type { Locale } from "@/lib/i18n";
@@ -26,14 +27,34 @@ export function NoticeFeatureCard({
     >
       {/* Accent band */}
       <span
-        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand via-crescent to-crescent"
+        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand via-crescent to-crescent z-10"
         aria-hidden
       />
+
+      {notice.cover_image && (
+        <div className="relative -mx-6 -mt-6 sm:-mx-7 sm:-mt-7 mb-5 aspect-[16/9] w-[calc(100%+3rem)] sm:w-[calc(100%+3.5rem)] overflow-hidden bg-mist">
+          <Image
+            src={notice.cover_image}
+            alt={notice.title}
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span className="inline-flex items-center gap-1 rounded-full bg-crescent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
           <Pin className="h-3 w-3" aria-hidden />
           {pinnedLabel}
         </span>
+        {notice.event_id && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 text-brand px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">
+            <CalendarDays className="h-3 w-3" />
+            {locale === "bn" ? "ইভেন্ট সংযুক্ত" : "Event Circular"}
+          </span>
+        )}
         {notice.category && (
           <span className="text-[11px] font-semibold uppercase tracking-wider text-poly">
             {notice.category}

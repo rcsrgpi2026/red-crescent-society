@@ -100,6 +100,7 @@ export default async function AdminEventsPage() {
             title="Create event"
             action={saveEvent}
             submitLabel="Create event"
+            size="2xl"
           >
             <EventFields />
           </AdminFormDialog>
@@ -122,6 +123,7 @@ export default async function AdminEventsPage() {
               title={`Edit ${event.title}`}
               action={saveEvent}
               submitLabel="Save changes"
+              size="2xl"
             >
               <EventFields event={event} />
             </AdminFormDialog>
@@ -159,6 +161,9 @@ function EventFields({
     category: string | null;
     organizer: string | null;
     registration_enabled: boolean;
+    registration_type?: string;
+    registration_link?: string | null;
+    registration_instructions?: string | null;
     max_participants: number | null;
     status: string;
     report: string | null;
@@ -233,10 +238,55 @@ function EventFields({
         <Label htmlFor="ev-report">Report (after the event)</Label>
         <Textarea id="ev-report" name="report" defaultValue={event?.report ?? ""} rows={3} className="mt-1.5" />
       </div>
-      <label className="flex items-center gap-2 text-sm">
-        <Checkbox name="registrationEnabled" defaultChecked={event?.registration_enabled ?? true} />
-        Registration enabled (show form on the event page)
-      </label>
+
+      <div className="rounded-2xl border border-brand/20 bg-mist/30 p-4 space-y-3">
+        <label className="flex items-center gap-2 text-sm font-semibold text-foreground cursor-pointer">
+          <Checkbox name="registrationEnabled" defaultChecked={event?.registration_enabled ?? true} />
+          Registration enabled (রেজিস্ট্রেশন চালু রাখুন)
+        </label>
+
+        <div className="space-y-3 pt-1">
+          <div>
+            <Label htmlFor="ev-reg-type" className="text-xs">Registration Method / ফরমের মাধ্যম</Label>
+            <select
+              id="ev-reg-type"
+              name="registrationType"
+              defaultValue={event?.registration_type ?? "BUILT_IN"}
+              className="mt-1 h-9 w-full rounded-md border border-input bg-white px-3 text-xs"
+            >
+              <option value="BUILT_IN">Built-in Website Form (ওয়েবসাইটে নিজস্ব ফর্ম)</option>
+              <option value="EXTERNAL">External Form Link (Google Form / Microsoft Form লিংক)</option>
+              <option value="BOTH">Both (ওয়েবসাইট ফর্ম + গুগল ফর্ম লিংক)</option>
+            </select>
+          </div>
+
+          <div>
+            <Label htmlFor="ev-reg-link" className="text-xs">External Form Link (ঐচ্ছিক - গুগল ফর্ম / অন্য সাইটের URL)</Label>
+            <Input
+              id="ev-reg-link"
+              name="registrationLink"
+              type="url"
+              defaultValue={event?.registration_link ?? ""}
+              placeholder="https://forms.gle/... বা https://forms.office.com/..."
+              className="mt-1 h-8 text-xs bg-white"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="ev-reg-instructions" className="text-xs">
+              Registration Details & Instructions (রেজিস্ট্রেশন সম্পর্কিত বিবরণ, ফি বা শর্তাবলি)
+            </Label>
+            <Textarea
+              id="ev-reg-instructions"
+              name="registrationInstructions"
+              defaultValue={event?.registration_instructions ?? ""}
+              rows={2}
+              placeholder="e.g. রেজিস্ট্রেশন ফি ৫০ টাকা অথবা শুধুমাত্র ৩য় পর্বের শিক্ষার্থীদের জন্য প্রযোজ্য।"
+              className="mt-1 text-xs bg-white"
+            />
+          </div>
+        </div>
+      </div>
     </>
   );
 }

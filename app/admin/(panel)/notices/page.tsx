@@ -1,22 +1,27 @@
-import { Plus, Pencil, Megaphone } from "lucide-react";
+import Image from "next/image";
+import { Plus, Pencil, Megaphone, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
-import { AdminFormDialog, FieldError } from "@/components/admin/admin-form-dialog";
+import { AdminFormDialog } from "@/components/admin/admin-form-dialog";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
-import { ImageListUploadField } from "@/components/admin/image-list-upload-field";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import {
   ResponsiveTable,
   type Column,
 } from "@/components/admin/responsive-table";
-import { adminGetNotices, adminGetNoticeAttachments } from "@/lib/queries";
+import { adminGetNotices, adminGetNoticeAttachments, adminGetEvents } from "@/lib/queries";
 import { saveNotice, deleteNotice } from "@/lib/admin-actions";
-import { NOTICE_CATEGORIES, formatDate } from "@/lib/constants";
-import { Input, Label, Textarea, Checkbox } from "@/components/ui";
+import { formatDate } from "@/lib/constants";
+import { NoticeFormFields } from "@/components/admin/notice-form-fields";
 
 export default async function AdminNoticesPage() {
-  const notices = await adminGetNotices();
+  const [notices, events] = await Promise.all([
+    adminGetNotices(),
+    adminGetEvents(),
+  ]);
+  const eventsById = new Map(events.map((e) => [e.id, e]));
+
   const attachmentLists = await Promise.all(
     notices.map((notice) => adminGetNoticeAttachments(notice.id))
   );
@@ -28,9 +33,22 @@ export default async function AdminNoticesPage() {
     {
       header: "Notice",
       render: (notice) => (
-        <div>
-          <p className="font-medium text-foreground">{notice.title}</p>
-          <p className="text-xs text-muted-foreground">/notices/{notice.slug}</p>
+        <div className="flex items-center gap-3">
+          {notice.cover_image && (
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-line bg-mist">
+              <Image
+                src={notice.cover_image}
+                alt={notice.title}
+                fill
+                sizes="40px"
+                className="object-cover"
+              />
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="font-medium text-foreground truncate max-w-xs">{notice.title}</p>
+            <p className="text-xs text-muted-foreground">/notices/{notice.slug}</p>
+          </div>
         </div>
       ),
     },
@@ -41,6 +59,21 @@ export default async function AdminNoticesPage() {
           {notice.category ?? "—"}
         </span>
       ),
+    },
+    {
+      header: "Linked Event",
+      render: (notice) => {
+        const linkedEvent = notice.event_id ? eventsById.get(notice.event_id) : null;
+        if (!linkedEvent) {
+          return <span className="text-xs text-muted-foreground/60">—</span>;
+        }
+        return (
+          <div className="flex items-center gap-1.5 text-xs font-medium text-brand">
+            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate max-w-[150px]">{linkedEvent.title}</span>
+          </div>
+        );
+      },
     },
     {
       header: "Created",
@@ -87,8 +120,9 @@ export default async function AdminNoticesPage() {
             title="Create notice"
             action={saveNotice}
             submitLabel="Publish notice"
+            size="3xl"
           >
-            <NoticeFields />
+            <NoticeFormFields events={events} />
           </AdminFormDialog>
         }
       />
@@ -109,10 +143,12 @@ export default async function AdminNoticesPage() {
               title={`Edit ${notice.title}`}
               action={saveNotice}
               submitLabel="Save changes"
+              size="3xl"
             >
-              <NoticeFields
+              <NoticeFormFields
                 notice={notice}
                 attachments={attachmentsByNotice.get(notice.id) ?? []}
+                events={events}
               />
             </AdminFormDialog>
             <ConfirmDelete
@@ -131,68 +167,5 @@ export default async function AdminNoticesPage() {
         }
       />
     </div>
-  );
-}
-
-function NoticeFields({
-  notice,
-  attachments,
-}: {
-  notice?: {
-    id: string;
-    title: string;
-    slug: string;
-    content: string | null;
-    category: string | null;
-    pinned: boolean;
-    published: boolean;
-  };
-  attachments?: { url: string }[];
-}) {
-  return (
-    <>
-      {notice && <input type="hidden" name="id" value={notice.id} />}
-      <div>
-        <Label htmlFor="n-title">Title</Label>
-        <Input id="n-title" name="title" defaultValue={notice?.title} placeholder="e.g. General meeting this Friday" className="mt-1.5" />
-        <FieldError name="title" />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="n-slug">Slug</Label>
-          <Input id="n-slug" name="slug" defaultValue={notice?.slug} placeholder="auto" className="mt-1.5" />
-        </div>
-        <div>
-          <Label htmlFor="n-category">Category</Label>
-          <select id="n-category" name="category" defaultValue={notice?.category ?? NOTICE_CATEGORIES[0]} className="mt-1.5 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm">
-            {NOTICE_CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <div>
-        <Label htmlFor="n-content">Content</Label>
-        <Textarea id="n-content" name="content" defaultValue={notice?.content ?? ""} rows={6} className="mt-1.5" />
-      </div>
-      <div className="flex gap-6">
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox name="published" defaultChecked={notice?.published ?? true} />
-          Published (visible immediately)
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox name="pinned" defaultChecked={notice?.pinned} />
-          Pinned (highlight)
-        </label>
-      </div>
-      <ImageListUploadField
-        name="attachments"
-        label="Attachment images"
-        defaultValue={attachments?.map((a) => a.url).join("\n") ?? ""}
-        folder="notices"
-        uploadLabel="Upload attachments"
-        description="Shown as downloadable attachments on the notice. Saving replaces this list."
-      />
-    </>
   );
 }

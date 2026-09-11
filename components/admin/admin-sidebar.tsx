@@ -27,6 +27,7 @@ import {
   Loader2,
   X,
   UserPlus,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -57,6 +58,7 @@ const NAV = [
   { label: "Attendance", href: "/admin/attendance", icon: ClipboardCheck },
   { label: "Participants", href: "/admin/participants", icon: UserCheck },
   { label: "Messages", href: "/admin/messages", icon: MessageSquare },
+  { label: "Form Editor", href: "/admin/form-editor", icon: SlidersHorizontal },
   { label: "Settings", href: "/admin/settings", icon: Settings },
   { label: "Audit Log", href: "/admin/audit", icon: ScrollText },
 ];

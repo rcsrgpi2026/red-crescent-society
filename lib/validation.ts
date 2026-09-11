@@ -58,6 +58,9 @@ export const eventRegistrationSchema = z.object({
   name: z.string().min(2, "Your name is required").max(100),
   phone: z.string().regex(phoneRegex, "Enter a valid Bangladeshi mobile number"),
   department: z.string().max(100).optional().or(z.literal("")),
+  roll: z.string().max(50).optional().or(z.literal("")),
+  email: z.string().max(100).optional().or(z.literal("")),
+  note: z.string().max(500).optional().or(z.literal("")),
 });
 
 export type EventRegistrationFormValues = z.infer<typeof eventRegistrationSchema>;

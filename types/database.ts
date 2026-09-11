@@ -267,6 +267,9 @@ export interface Event {
   category: string | null;
   organizer: string | null;
   registration_enabled: boolean;
+  registration_type?: "BUILT_IN" | "EXTERNAL" | "BOTH";
+  registration_link?: string | null;
+  registration_instructions?: string | null;
   max_participants: number | null;
   status: EventStatus;
   report: string | null;
@@ -283,6 +286,9 @@ export interface EventRegistration {
   name: string;
   phone: string;
   department: string | null;
+  roll?: string | null;
+  email?: string | null;
+  note?: string | null;
   status: "REGISTERED" | "ATTENDED" | "CANCELLED";
   created_at: string;
   /** Joined team member (admin view) — member id and name from team_members. */
@@ -325,8 +331,13 @@ export interface Notice {
   category: string | null;
   pinned: boolean;
   published: boolean;
+  event_id?: string | null;
+  events?: Event | null;
   created_at: string;
   updated_at: string;
+  /** Primary attachment used as notice cover photo */
+  cover_image?: string | null;
+  notice_attachments?: NoticeAttachment[];
 }
 
 export interface NoticeAttachment {

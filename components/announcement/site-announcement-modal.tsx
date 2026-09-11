@@ -358,20 +358,33 @@ export function SiteAnnouncementModal({
                         onClick={handleClose}
                         className="group flex items-start justify-between gap-2.5 sm:gap-3 rounded-2xl border border-line/80 bg-mist/30 p-2.5 sm:p-3 transition-colors hover:border-crescent/40 hover:bg-white"
                       >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            {n.category && (
-                              <span className="inline-block rounded-md bg-crescent-soft px-1.5 py-0.5 text-[10px] font-bold text-crescent">
-                                {n.category}
+                        <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                          {n.cover_image && (
+                            <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-line bg-mist mt-0.5">
+                              <Image
+                                src={n.cover_image}
+                                alt={n.title}
+                                fill
+                                sizes="44px"
+                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                              />
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              {n.category && (
+                                <span className="inline-block rounded-md bg-crescent-soft px-1.5 py-0.5 text-[10px] font-bold text-crescent">
+                                  {n.category}
+                                </span>
+                              )}
+                              <span className="text-[10px] sm:text-[11px] text-muted-foreground">
+                                {formatDate(n.created_at)}
                               </span>
-                            )}
-                            <span className="text-[10px] sm:text-[11px] text-muted-foreground">
-                              {formatDate(n.created_at)}
-                            </span>
+                            </div>
+                            <p className="mt-1 line-clamp-2 text-xs font-semibold text-foreground group-hover:text-brand transition-colors sm:text-sm">
+                              {n.title}
+                            </p>
                           </div>
-                          <p className="mt-1 line-clamp-2 text-xs font-semibold text-foreground group-hover:text-brand transition-colors sm:text-sm">
-                            {n.title}
-                          </p>
                         </div>
                         <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-brand transition-colors" />
                       </Link>

@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { Mail, Phone, MapPin, Clock } from "lucide-react";
 import { PageHero } from "@/components/shared/page-hero";
 import { ContactForm } from "@/components/forms/contact-form";
-import { getSettings } from "@/lib/queries";
+import { getSettings, getFormConfigs } from "@/lib/queries";
 import { getServerMessages } from "@/lib/i18n/server";
+
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerMessages();
@@ -14,7 +16,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ContactPage() {
-  const [t, settings] = await Promise.all([getServerMessages(), getSettings()]);
+  const [t, settings, formConfigs] = await Promise.all([
+    getServerMessages(),
+    getSettings(),
+    getFormConfigs(),
+  ]);
   const contact = settings.contact ?? {};
 
   const items = [
@@ -108,7 +114,7 @@ export default async function ContactPage() {
             <h2 className="text-xl font-bold text-foreground">{t.contact.sendUsMessage}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{t.contact.sendUsMessageText}</p>
             <div className="mt-6">
-              <ContactForm />
+              <ContactForm fields={formConfigs.contact.fields} />
             </div>
           </div>
         </div>

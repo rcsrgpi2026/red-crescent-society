@@ -41,6 +41,7 @@ function statusTone(status: string) {
 function identityLabel(r: EventRegistration): string | null {
   if (r.team_members?.member_id) return r.team_members.member_id;
   if (r.students?.roll) return `Roll ${r.students.roll}`;
+  if (r.roll) return `Roll ${r.roll}`;
   return null;
 }
 
@@ -58,10 +59,11 @@ function IdentityBadge({ r }: { r: EventRegistration }) {
     <span
       className={cn(
         "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold",
-        isTeam ? "bg-brand-soft text-brand-dark" : "bg-poly-soft text-poly"
+        isTeam
+          ? "bg-brand/10 text-brand-dark"
+          : "bg-poly/10 text-poly"
       )}
     >
-      {isTeam ? "Team · " : "Student · "}
       {label}
     </span>
   );
@@ -164,7 +166,11 @@ export function EventRegistrations({
             <TableBody>
               {registrations.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div>{r.name}</div>
+                    {r.email && <div className="text-[11px] text-muted-foreground font-normal">{r.email}</div>}
+                    {r.note && <div className="text-[11px] text-brand font-normal truncate max-w-xs" title={r.note}>Note: {r.note}</div>}
+                  </TableCell>
                   <TableCell>
                     <IdentityBadge r={r} />
                   </TableCell>

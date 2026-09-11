@@ -5,6 +5,7 @@ import {
   HeartHandshake,
   ShieldCheck,
   Clock,
+  KeyRound,
 } from "lucide-react";
 import { SiteLogo } from "@/components/layout/site-logo";
 
@@ -16,12 +17,19 @@ export function PortalShell({
   kind,
   children,
 }: {
-  kind: "student" | "volunteer";
+  kind: "student" | "volunteer" | "recovery";
   children: React.ReactNode;
 }) {
   const isStudent = kind === "student";
-  const Icon = isStudent ? GraduationCap : HeartHandshake;
-  const highlights = isStudent
+  const isRecovery = kind === "recovery";
+  const Icon = isRecovery ? KeyRound : isStudent ? GraduationCap : HeartHandshake;
+  const highlights = isRecovery
+    ? [
+        "Secure single-use reset link sent to your email",
+        "Direct access restored immediately upon reset",
+        "Available for students, members and administrators",
+      ]
+    : isStudent
     ? [
         "Instant access — no approval needed",
         "Your session, roll and department",
@@ -57,10 +65,16 @@ export function PortalShell({
         <div className="relative">
           <Icon className="h-10 w-10 text-crescent" aria-hidden />
           <h1 className="mt-5 max-w-md text-balance text-3xl font-bold leading-tight text-white">
-            {isStudent ? "Your student portal" : "Your volunteer portal"}
+            {isRecovery
+              ? "Account Recovery"
+              : isStudent
+              ? "Your student portal"
+              : "Your volunteer portal"}
           </h1>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-white/70">
-            {isStudent
+            {isRecovery
+              ? "Reset your portal access password securely using your registered email address."
+              : isStudent
               ? "Sign in to view and manage your student record with the society."
               : "Sign in to track your application and, once approved, access your volunteer membership."}
           </p>
@@ -78,7 +92,9 @@ export function PortalShell({
         </div>
         <p className="relative flex items-center gap-1.5 text-xs text-white/40">
           <Clock className="h-3.5 w-3.5" aria-hidden />
-          {isStudent
+          {isRecovery
+            ? "Reset links expire in 1 hour for account security."
+            : isStudent
             ? "Student accounts are activated immediately."
             : "Volunteer applications are reviewed by the leadership."}
         </p>

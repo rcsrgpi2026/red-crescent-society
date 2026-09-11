@@ -5,7 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured, isServiceRoleConfigured } from "@/lib/supabase/config";
 import { isAdminRole, homeForRole } from "@/lib/auth";
+import { z } from "zod";
 import { studentSignupSchema, teamMemberSignupSchema } from "@/lib/validation";
+import { sendPasswordResetEmail } from "@/lib/email/resend";
 import { createAndDispatchNotification } from "@/lib/notifications/notification-service";
 import type { ActionResult } from "@/lib/actions";
 
@@ -283,3 +285,133 @@ export async function volunteerSignUp(
       "Application submitted! The society leadership will review it and approve your membership. You can sign in anytime to check your status.",
   };
 }
+
+/**
+ * Initiates a password reset. First attempts to generate an action link and
+ * send a custom branded email via Resend if configured; otherwise falls back
+ * to Supabase's native auth mailer (which also routes through custom SMTP).
+ */
+export async function requestPasswordReset(email: string): Promise<ActionResult> {
+  const cleanEmail = email.trim().toLowerCase();
+  const parsed = z.string().email("Please provide a valid email address").safeParse(cleanEmail);
+  if (!parsed.success) {
+    return { success: false, message: "Please provide a valid email address." };
+  }
+
+  if (!isSupabaseConfigured) {
+    return {
+      success: false,
+      message: "Authentication service is not configured. Please contact the administrator.",
+    };
+  }
+
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const redirectTo = `${appUrl}/auth/callback?next=/reset-password`;
+
+  // 1. Direct email delivery via Gmail SMTP or Resend using admin generateLink
+  const hasCustomMailer = !!(process.env.SMTP_PASS || process.env.RESEND_API_KEY);
+  if (hasCustomMailer && isServiceRoleConfigured) {
+    try {
+      const admin = createAdminClient();
+      const { data, error } = await admin.auth.admin.generateLink({
+        type: "recovery",
+        email: cleanEmail,
+        options: {
+          redirectTo,
+        },
+      });
+
+      if (!error && data?.properties?.action_link) {
+        const { data: profile } = await admin
+          .from("profiles")
+          .select("full_name")
+          .eq("id", data.user.id)
+          .maybeSingle();
+
+        const emailResult = await sendPasswordResetEmail({
+          to: cleanEmail,
+          resetLink: data.properties.action_link,
+          recipientName: profile?.full_name || null,
+        });
+
+        if (emailResult.success) {
+          return {
+            success: true,
+            message: "Password reset link sent! Please check your email inbox and spam folder.",
+          };
+        } else {
+          console.warn("[requestPasswordReset] Email delivery failed, falling back to Supabase auth:", emailResult.error);
+        }
+      }
+    } catch (adminErr) {
+      console.warn("[requestPasswordReset] Admin generateLink error, falling back to Supabase auth:", adminErr);
+    }
+  }
+
+  // 2. Fallback: Supabase native resetPasswordForEmail
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+      redirectTo,
+    });
+
+    if (error) {
+      console.error("[requestPasswordReset] Supabase reset error:", error);
+      return { success: false, message: error.message };
+    }
+
+    return {
+      success: true,
+      message: "Password reset link sent! Please check your email inbox and spam folder.",
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to send reset link.";
+    return { success: false, message: msg };
+  }
+}
+
+/**
+ * Updates the user's password once they have authenticated via the password recovery link.
+ */
+export async function updatePassword(newPassword: string): Promise<LoginResult> {
+  if (!newPassword || newPassword.length < 8) {
+    return {
+      success: false,
+      message: "Password must be at least 8 characters long.",
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (!user || userError) {
+    return {
+      success: false,
+      message: "Your reset session has expired or is invalid. Please request a new reset link.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) {
+    return { success: false, message: error.message };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const role = profile?.role ?? null;
+  const destination = isAdminRole(role) ? "/admin" : homeForRole(role);
+
+  return {
+    success: true,
+    message: "Password updated successfully! Welcome back.",
+    redirectTo: destination,
+  };
+}
+

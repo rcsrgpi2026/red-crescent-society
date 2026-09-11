@@ -1,7 +1,7 @@
 "use server";
 
 import { randomBytes } from "crypto";
-import { revalidatePath, updateTag } from "next/cache";
+import { revalidatePath, updateTag, refresh } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -886,6 +886,9 @@ export async function saveEvent(formData: FormData): Promise<ActionResult> {
     category: String(formData.get("category") ?? "") || null,
     organizer: String(formData.get("organizer") ?? "") || null,
     registration_enabled: formData.get("registrationEnabled") === "on",
+    registration_type: String(formData.get("registrationType") ?? "BUILT_IN"),
+    registration_link: String(formData.get("registrationLink") ?? "").trim() || null,
+    registration_instructions: String(formData.get("registrationInstructions") ?? "").trim() || null,
     max_participants: Number(formData.get("maxParticipants") ?? 0) || null,
     status: String(formData.get("status") ?? "UPCOMING"),
     report: String(formData.get("report") ?? "") || null,
@@ -1034,6 +1037,128 @@ export async function saveNotice(formData: FormData): Promise<ActionResult> {
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { success: false, message: "Title is required." };
 
+  const supabase = await createClient();
+
+  const eventMode = String(formData.get("event_mode") ?? "none");
+  let event_id = String(formData.get("event_id") ?? "").trim() || null;
+
+  // Parse structured attachments (images and external links)
+  const attachmentsJson = String(formData.get("attachments_json") ?? "").trim();
+  let parsedAttachments: { name: string; url: string }[] = [];
+
+  if (attachmentsJson) {
+    try {
+      const raw = JSON.parse(attachmentsJson);
+      if (Array.isArray(raw)) {
+        parsedAttachments = raw
+          .filter((i) => i && typeof i.url === "string" && i.url.trim())
+          .map((i, idx) => ({
+            name: String(i.name ?? "").trim() || `Attachment ${idx + 1}`,
+            url: String(i.url).trim(),
+          }));
+      }
+    } catch (e) {
+      console.warn("Could not parse attachments_json:", e);
+    }
+  }
+
+  // Fallback to newline-separated URLs if attachments_json was empty
+  if (parsedAttachments.length === 0) {
+    const rawAttachments = String(formData.get("attachments") ?? "").trim();
+    if (rawAttachments) {
+      parsedAttachments = rawAttachments
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((url, idx) => ({
+          name: url.split("/").pop()?.split("?")[0] || `Attachment ${idx + 1}`,
+          url,
+        }));
+    }
+  }
+
+  const firstImageItem = parsedAttachments.find(
+    (a) => a.url.match(/\.(jpg|jpeg|png|webp|gif|svg|avif)$/i) || a.url.includes("images/notices")
+  );
+  const coverUrl = firstImageItem?.url || parsedAttachments[0]?.url || null;
+
+  if (eventMode === "create_new") {
+    const eventTitle = String(formData.get("event_title") ?? "").trim() || title;
+    const eventDate = String(formData.get("event_date") ?? "").trim() || null;
+    const eventTime = String(formData.get("event_time") ?? "").trim() || null;
+    const eventLocation = String(formData.get("event_location") ?? "").trim() || null;
+    const eventCategory = String(formData.get("event_category") ?? "").trim() || null;
+    const registrationEnabled = formData.get("event_registration_enabled") === "on";
+    const registrationType = String(formData.get("event_registration_type") ?? "BUILT_IN");
+    const registrationLink = String(formData.get("event_registration_link") ?? "").trim() || null;
+    const registrationInstructions = String(formData.get("event_registration_instructions") ?? "").trim() || null;
+    const maxParticipants = Number(formData.get("event_max_participants") ?? 0) || null;
+
+    const eventSlug = slugify(eventTitle);
+    const eventPayload = {
+      title: eventTitle,
+      slug: eventSlug,
+      cover_image: coverUrl,
+      description: String(formData.get("content") ?? "") || null,
+      date: eventDate,
+      time: eventTime,
+      location: eventLocation,
+      category: eventCategory,
+      organizer: "RGPI Red Crescent Youth",
+      registration_enabled: registrationEnabled,
+      registration_type: registrationType,
+      registration_link: registrationLink,
+      registration_instructions: registrationInstructions,
+      max_participants: maxParticipants,
+      status: "UPCOMING",
+      report: null,
+    };
+
+    const { data: existingEvent } = await supabase
+      .from("events")
+      .select("id")
+      .eq("slug", eventSlug)
+      .maybeSingle();
+
+    if (existingEvent) {
+      // Event already exists with this slug — update it and link it
+      const { error: updateErr } = await supabase
+        .from("events")
+        .update(eventPayload)
+        .eq("id", existingEvent.id);
+
+      if (!updateErr) {
+        event_id = existingEvent.id;
+        await logAudit("event_updated", "event", existingEvent.id);
+        revalidatePath("/admin/events");
+        revalidatePath("/events");
+        revalidatePath(`/events/${eventSlug}`);
+        updateTag("events");
+      } else {
+        console.warn("Could not update existing event from notice form:", updateErr);
+      }
+    } else {
+      const { data: newEvent, error: eventErr } = await supabase
+        .from("events")
+        .insert(eventPayload)
+        .select("id")
+        .single();
+
+      if (!eventErr && newEvent) {
+        event_id = newEvent.id;
+        await logAudit("event_created", "event", eventPayload.title);
+        revalidatePath("/admin/events");
+        revalidatePath("/events");
+        revalidatePath(`/events/${eventSlug}`);
+        updateTag("events");
+      } else if (eventErr) {
+        console.warn("Could not create linked event from notice form:", eventErr);
+      }
+    }
+  } else if (eventMode === "none") {
+    event_id = null;
+  }
+
   const payload = {
     title,
     slug: String(formData.get("slug") ?? "") ? String(formData.get("slug")) : slugify(title),
@@ -1041,13 +1166,16 @@ export async function saveNotice(formData: FormData): Promise<ActionResult> {
     category: String(formData.get("category") ?? "") || null,
     pinned: formData.get("pinned") === "on",
     published: formData.get("published") === "on",
+    event_id,
   };
 
-  const supabase = await createClient();
   let noticeId = id;
   if (id) {
     const { error } = await supabase.from("notices").update(payload).eq("id", id);
-    if (error) return { success: false, message: "Could not update the notice." };
+    if (error) {
+      console.error("[saveNotice update error]:", error);
+      return { success: false, message: error.message || "Could not update the notice." };
+    }
     await logAudit("notice_updated", "notice", id);
   } else {
     const { data, error } = await supabase
@@ -1055,24 +1183,23 @@ export async function saveNotice(formData: FormData): Promise<ActionResult> {
       .insert(payload)
       .select("id")
       .single();
-    if (error || !data) return { success: false, message: "Could not create the notice." };
+    if (error || !data) {
+      console.error("[saveNotice insert error]:", error);
+      return { success: false, message: error?.message || "Could not create the notice." };
+    }
     noticeId = data.id;
     await logAudit("notice_created", "notice", payload.title);
   }
 
-  // Replace attachments (one image URL per line).
-  const attachmentUrls = String(formData.get("attachments") ?? "")
-    .split("\n")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  // Replace attachments with structured names and URLs
   if (noticeId) {
     await supabase.from("notice_attachments").delete().eq("notice_id", noticeId);
-    if (attachmentUrls.length > 0) {
+    if (parsedAttachments.length > 0) {
       await supabase.from("notice_attachments").insert(
-        attachmentUrls.map((url) => ({
+        parsedAttachments.map((item) => ({
           notice_id: noticeId,
-          name: url.split("/").pop()?.split("?")[0] || "attachment",
-          url,
+          name: item.name,
+          url: item.url,
         }))
       );
     }
@@ -1088,16 +1215,20 @@ export async function saveNotice(formData: FormData): Promise<ActionResult> {
         type: "notice",
         priority: payload.pinned ? "high" : "normal",
         actionUrl: `/notices/${payload.slug}`,
+        imageUrl: coverUrl || undefined,
       });
     } catch (notifErr) {
       console.warn("Could not dispatch notice notification:", notifErr);
     }
   }
 
+  revalidatePath("/");
   revalidatePath("/admin/notices");
   revalidatePath("/notices");
   revalidatePath("/notices/[slug]");
+  revalidatePath("/events");
   updateTag("notices");
+  updateTag("events");
   return { success: true, message: "Notice saved." };
 }
 
@@ -1621,4 +1752,116 @@ export async function saveIdCardDesign(configJson: string): Promise<ActionResult
     success: true,
     message: "ID card design saved — it now applies to every member card.",
   };
+}
+
+// ---------------------------------------------------------------------------
+// Dynamic Form Editor Configurations
+// ---------------------------------------------------------------------------
+
+export async function saveFormConfigsAction(
+  formKey: string,
+  fieldsJson: string
+): Promise<ActionResult> {
+  await guard();
+  let parsedFields: unknown;
+  try {
+    parsedFields = JSON.parse(fieldsJson);
+  } catch {
+    return { success: false, message: "Invalid form configuration format." };
+  }
+
+  if (!Array.isArray(parsedFields)) {
+    return { success: false, message: "Fields configuration must be an array." };
+  }
+
+  const supabase = await createClient();
+
+  // Get current form configs
+  const { data: current } = await supabase
+    .from("website_settings")
+    .select("value")
+    .eq("key", "form_configs")
+    .maybeSingle();
+
+  const { DEFAULT_FORM_CONFIGS } = await import("@/types/form-editor");
+  const defaultForm = (DEFAULT_FORM_CONFIGS as Record<string, any>)[formKey];
+
+  const currentConfigs = (current?.value as Record<string, any>) ?? {};
+  const updatedForm = {
+    ...(defaultForm ?? {}),
+    ...(currentConfigs[formKey] ?? {}),
+    key: formKey,
+    title: defaultForm?.title ?? formKey,
+    description: defaultForm?.description ?? "",
+    fields: parsedFields,
+    updated_at: new Date().toISOString(),
+  };
+
+  const newConfigs = {
+    ...currentConfigs,
+    [formKey]: updatedForm,
+  };
+
+  const { error } = await supabase
+    .from("website_settings")
+    .upsert(
+      { key: "form_configs", value: newConfigs },
+      { onConflict: "key" }
+    );
+
+  if (error) {
+    console.error("[saveFormConfigsAction error]:", error);
+    return { success: false, message: "Could not save form settings." };
+  }
+
+  await logAudit("form_config_updated", "website_settings", formKey);
+  revalidatePath("/", "layout");
+  revalidatePath("/admin/form-editor");
+  updateTag("settings");
+  updateTag("form-configs");
+  try { refresh(); } catch {}
+
+  return { success: true, message: "Form configuration saved successfully!" };
+}
+
+export async function resetFormConfigsAction(formKey: string): Promise<ActionResult> {
+  await guard();
+  const { DEFAULT_FORM_CONFIGS } = await import("@/types/form-editor");
+  const defaultForm = (DEFAULT_FORM_CONFIGS as Record<string, any>)[formKey];
+  if (!defaultForm) {
+    return { success: false, message: "Unknown form key." };
+  }
+
+  const supabase = await createClient();
+  const { data: current } = await supabase
+    .from("website_settings")
+    .select("value")
+    .eq("key", "form_configs")
+    .maybeSingle();
+
+  const currentConfigs = (current?.value as Record<string, any>) ?? {};
+  const newConfigs = {
+    ...currentConfigs,
+    [formKey]: defaultForm,
+  };
+
+  const { error } = await supabase
+    .from("website_settings")
+    .upsert(
+      { key: "form_configs", value: newConfigs },
+      { onConflict: "key" }
+    );
+
+  if (error) {
+    return { success: false, message: "Could not reset form settings." };
+  }
+
+  await logAudit("form_config_reset", "website_settings", formKey);
+  revalidatePath("/", "layout");
+  revalidatePath("/admin/form-editor");
+  updateTag("settings");
+  updateTag("form-configs");
+  try { refresh(); } catch {}
+
+  return { success: true, message: "Form reset to default settings." };
 }

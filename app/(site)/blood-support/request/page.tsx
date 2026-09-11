@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { AlertTriangle, PhoneCall, HeartPulse } from "lucide-react";
 import { PageHero } from "@/components/shared/page-hero";
 import { BloodRequestForm } from "@/components/forms/blood-request-form";
-import { getSettings } from "@/lib/queries";
+import { getSettings, getFormConfigs } from "@/lib/queries";
 import { getServerMessages } from "@/lib/i18n/server";
+
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerMessages();
@@ -14,7 +16,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function BloodRequestPage() {
-  const [t, settings] = await Promise.all([getServerMessages(), getSettings()]);
+  const [t, settings, formConfigs] = await Promise.all([
+    getServerMessages(),
+    getSettings(),
+    getFormConfigs(),
+  ]);
   const emergency = settings.emergency ?? {};
   const helpline = typeof emergency.bloodHelpline === "string" ? emergency.bloodHelpline : "";
 
@@ -67,7 +73,7 @@ export default async function BloodRequestPage() {
           <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-xl font-bold text-foreground">{t.bloodRequest.formTitle}</h2>
             <div className="mt-6">
-              <BloodRequestForm />
+              <BloodRequestForm fields={formConfigs.blood_request.fields} />
             </div>
           </div>
         </div>

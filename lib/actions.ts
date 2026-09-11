@@ -776,6 +776,9 @@ export async function registerForEvent(
     name: formData.get("name"),
     phone: formData.get("phone"),
     department: formData.get("department"),
+    roll: formData.get("roll"),
+    email: formData.get("email"),
+    note: formData.get("note"),
   });
 
   if (!parsed.success) {
@@ -814,6 +817,23 @@ export async function registerForEvent(
     studentId = studentRes.data?.id ?? null;
   }
 
+  // Collect any custom fields submitted through the Form Editor
+  const customEntries: string[] = [];
+  formData.forEach((value, key) => {
+    if (!["eventId", "name", "phone", "department", "roll", "email", "note", "website_url"].includes(key)) {
+      if (typeof value === "string" && value.trim()) {
+        const formattedKey = key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+        customEntries.push(`${formattedKey}: ${value.trim()}`);
+      }
+    }
+  });
+
+  let finalNote = v.note || null;
+  if (customEntries.length > 0) {
+    const customSummary = customEntries.join(" | ");
+    finalNote = finalNote ? `${finalNote}\n[Extra Fields]: ${customSummary}` : customSummary;
+  }
+
   const { error } = await supabase.from("event_registrations").insert({
     event_id: eventId,
     volunteer_id: volunteerId,
@@ -821,6 +841,9 @@ export async function registerForEvent(
     name: v.name,
     phone: v.phone,
     department: v.department || null,
+    roll: v.roll || null,
+    email: v.email || null,
+    note: finalNote,
     status: "REGISTERED",
   });
 

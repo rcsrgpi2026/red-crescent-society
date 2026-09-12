@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import {
   Bell,
   HeartPulse,
@@ -30,9 +30,13 @@ export function NotificationPreferencesForm({
 }) {
   const [isPending, startTransition] = useTransition();
   const [pushLoading, setPushLoading] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission>(
-    getNotificationPermissionState()
-  );
+  const [mounted, setMounted] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermission>("default");
+
+  useEffect(() => {
+    setMounted(true);
+    setPermission(getNotificationPermissionState());
+  }, []);
 
   const [form, setForm] = useState({
     general_notice: initialPreferences?.general_notice ?? true,
@@ -90,9 +94,9 @@ export function NotificationPreferencesForm({
             <div>
               <h4 className="text-sm font-semibold text-foreground">Device Push Notifications</h4>
               <p className="text-xs text-muted-foreground">
-                {permission === "granted"
+                {mounted && permission === "granted"
                   ? "Push alerts are active on this browser/device."
-                  : permission === "denied"
+                  : mounted && permission === "denied"
                   ? "Push alerts are blocked in browser settings."
                   : "Enable push notifications to receive real-time alerts even when the tab is closed."}
               </p>

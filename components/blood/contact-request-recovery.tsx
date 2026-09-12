@@ -11,6 +11,8 @@ import {
   Ban,
   ArrowRight,
   ShieldCheck,
+  Phone,
+  HeartPulse,
 } from "lucide-react";
 import {
   findMyContactRequests,
@@ -121,6 +123,37 @@ export function ContactRequestRecovery({ strings }: { strings: ContactRecoverySt
           {strings.find}
         </button>
       </form>
+
+      {/* Forgotten passcode or lost link helper options */}
+      <div className="mt-4 rounded-2xl border border-line/70 bg-mist/30 p-3.5 sm:p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs text-muted-foreground leading-relaxed">
+            <span className="font-semibold text-foreground flex items-center gap-1.5 mb-0.5">
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-crescent/10 text-crescent text-[10px] font-bold">
+                ?
+              </span>
+              পাসকোড বা ট্র্যাকিং লিংক হারিয়েছেন? / Lost passcode or link?
+            </span>
+            আপনার রিকোয়েস্টটি অ্যাডমিন প্যানেলে সুরক্ষিত রয়েছে। জরুরি প্রয়োজনে সরাসরি যোগাযোগ করুন:
+          </div>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <a
+              href="tel:01614424259"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs transition-colors hover:border-crescent/40 hover:bg-crescent-soft hover:text-crescent"
+            >
+              <Phone className="h-3.5 w-3.5 text-crescent" />
+              <span>জরুরি হটলাইন: ০১৬১৪-৪২৪২৫৯</span>
+            </a>
+            <Link
+              href="/blood-support/request"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-crescent/30 bg-crescent-soft px-3 py-1.5 text-xs font-semibold text-crescent shadow-xs transition-colors hover:bg-crescent hover:text-white"
+            >
+              <HeartPulse className="h-3.5 w-3.5" />
+              <span>জরুরি রক্তের পোস্ট করুন</span>
+            </Link>
+          </div>
+        </div>
+      </div>
 
       {requests && requests.length > 0 && (
         <ul className="mt-5 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">

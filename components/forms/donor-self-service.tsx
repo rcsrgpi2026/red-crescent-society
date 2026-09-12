@@ -12,6 +12,8 @@ import {
   KeyRound,
   Eye,
   EyeOff,
+  Phone,
+  MessageCircle,
 } from "lucide-react";
 import {
   findMyDonorListing,
@@ -135,51 +137,86 @@ export function DonorSelfService() {
   return (
     <div>
       {!listing ? (
-        <form onSubmit={handleFind} className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
-          <div>
-            <Label htmlFor="ds-name">Full name</Label>
-            <Input
-              id="ds-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Name used at registration"
-              className="mt-1.5"
-              required
-            />
+        <div>
+          <form onSubmit={handleFind} className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
+            <div>
+              <Label htmlFor="ds-name">Full name</Label>
+              <Input
+                id="ds-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Name used at registration"
+                className="mt-1.5"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="ds-phone">Mobile number</Label>
+              <Input
+                id="ds-phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="017XXXXXXXX"
+                className="mt-1.5"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="ds-passcode">Passcode</Label>
+              <Input
+                id="ds-passcode"
+                type="password"
+                inputMode="numeric"
+                value={passcode}
+                onChange={(e) => setPasscode(e.target.value)}
+                placeholder="Your 4–6 digit code"
+                className="mt-1.5"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={busy}
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-crescent px-4 text-sm font-semibold text-white transition-colors hover:bg-crescent-dark disabled:opacity-50"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Search className="h-4 w-4" aria-hidden />}
+              Find my listing
+            </button>
+          </form>
+
+          {/* Forgotten passcode helper options */}
+          <div className="mt-4 rounded-2xl border border-line/70 bg-mist/30 p-3.5 sm:p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs text-muted-foreground leading-relaxed">
+                <span className="font-semibold text-foreground flex items-center gap-1.5 mb-0.5">
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-crescent/10 text-crescent text-[10px] font-bold">
+                    ?
+                  </span>
+                  পাসকোড ভুলে গেছেন? / Forgot your passcode?
+                </span>
+                অ্যাডমিন প্যানেল থেকে আপনার স্ট্যাটাস পরিবর্তন বা পুরনো লিস্টিং রিসেট করে নতুন পাসকোড সেট করতে আমাদের সাথে যোগাযোগ করুন:
+              </div>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <a
+                  href="tel:01614424259"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs transition-colors hover:border-crescent/40 hover:bg-crescent-soft hover:text-crescent"
+                >
+                  <Phone className="h-3.5 w-3.5 text-crescent" />
+                  <span>হটলাইন: ০১৬১৪-৪২৪২৫৯</span>
+                </a>
+                <a
+                  href="https://wa.me/8801614424259?text=Hello%2C%20I%20am%20a%20registered%20blood%20donor%20and%20forgot%20my%20passcode.%20Please%20help%20me%20update%20or%20reset%20my%20listing."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-xs transition-colors hover:bg-emerald-50"
+                >
+                  <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>WhatsApp সাহায্য</span>
+                </a>
+              </div>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="ds-phone">Mobile number</Label>
-            <Input
-              id="ds-phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="017XXXXXXXX"
-              className="mt-1.5"
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="ds-passcode">Passcode</Label>
-            <Input
-              id="ds-passcode"
-              type="password"
-              inputMode="numeric"
-              value={passcode}
-              onChange={(e) => setPasscode(e.target.value)}
-              placeholder="Your 4–6 digit code"
-              className="mt-1.5"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={busy}
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-crescent px-4 text-sm font-semibold text-white transition-colors hover:bg-crescent-dark disabled:opacity-50"
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Search className="h-4 w-4" aria-hidden />}
-            Find my listing
-          </button>
-        </form>
+        </div>
       ) : listing.needsPasscode ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
           <p className="flex items-center gap-2 text-sm font-bold text-amber-900">

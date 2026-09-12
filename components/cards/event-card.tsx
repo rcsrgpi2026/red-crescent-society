@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { CalendarDays, MapPin, ArrowRight } from "lucide-react";
 import type { Event } from "@/types/database";
-import { EVENT_STATUS_LABELS, formatDate } from "@/lib/constants";
+import { EVENT_STATUS_LABELS, formatDate, formatEventDateRange } from "@/lib/constants";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 
 export function EventCard({ event }: { event: Event }) {
@@ -33,7 +33,7 @@ export function EventCard({ event }: { event: Event }) {
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <CalendarDays className="h-3.5 w-3.5 text-brand" aria-hidden />
-            {formatDate(event.date)}
+            {formatEventDateRange(event.date, event.end_date)}
           </span>
           {event.location && (
             <span className="flex items-center gap-1 truncate">

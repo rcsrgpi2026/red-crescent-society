@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { DEFAULT_COMMUNITY_MEMBERS } from "@/lib/constants";
+import { DEFAULT_COMMUNITY_MEMBERS, resolveEventStatus } from "@/lib/constants";
 import type {
   Achievement,
   Activity,
@@ -238,6 +238,13 @@ function defaultCommunityMember(
   };
 }
 
+function mapEventWithResolvedStatus(event: any): Event {
+  return {
+    ...event,
+    status: resolveEventStatus(event),
+  };
+}
+
 export const getUpcomingEvents = unstable_cache(
   async (limit = 3): Promise<Event[]> => {
     const supabase = getPublicClient();
@@ -245,10 +252,13 @@ export const getUpcomingEvents = unstable_cache(
     const { data } = await supabase
       .from("events")
       .select("*")
-      .in("status", ["UPCOMING", "ONGOING"])
+      .not("status", "in", '("CANCELLED","DRAFT")')
       .order("date", { ascending: true })
-      .limit(limit);
-    return data ?? [];
+      .limit(limit * 3);
+
+    const mapped = (data ?? []).map(mapEventWithResolvedStatus);
+    const active = mapped.filter((e) => e.status === "UPCOMING" || e.status === "ONGOING");
+    return active.slice(0, limit);
   },
   ["upcoming-events"],
   { tags: ["events"], revalidate: 60 }
@@ -478,12 +488,16 @@ export const getPublicEvents = unstable_cache(
     let query = supabase.from("events").select("*");
 
     if (params?.category) query = query.eq("category", params.category);
-    if (params?.status) query = query.eq("status", params.status);
 
     const { data } = await query
       .order("date", { ascending: true })
       .limit(params?.limit ?? 60);
-    return data ?? [];
+
+    const mapped = (data ?? []).map(mapEventWithResolvedStatus);
+    if (params?.status) {
+      return mapped.filter((e) => e.status === params.status);
+    }
+    return mapped;
   },
   ["public-events"],
   { tags: ["events"], revalidate: 60 }
@@ -493,7 +507,7 @@ export async function getPublicEventBySlug(slug: string): Promise<Event | null> 
   const supabase = getPublicClient();
   if (!supabase) return null;
   const { data } = await supabase.from("events").select("*").eq("slug", slug).maybeSingle();
-  return data;
+  return data ? mapEventWithResolvedStatus(data) : null;
 }
 
 export const getPublicEventById = unstable_cache(
@@ -501,7 +515,7 @@ export const getPublicEventById = unstable_cache(
     const supabase = getPublicClient();
     if (!supabase) return null;
     const { data } = await supabase.from("events").select("*").eq("id", id).maybeSingle();
-    return data;
+    return data ? mapEventWithResolvedStatus(data) : null;
   },
   ["public-event-by-id"],
   { tags: ["events"], revalidate: 60 }
@@ -813,7 +827,7 @@ export async function adminGetEvents(): Promise<Event[]> {
   const supabase = await db();
   if (!supabase) return [];
   const { data } = await supabase.from("events").select("*").order("created_at", { ascending: false });
-  return data ?? [];
+  return (data ?? []).map(mapEventWithResolvedStatus);
 }
 
 export async function adminGetEventRegistrations(eventId: string): Promise<EventRegistration[]> {

@@ -1,3 +1,4 @@
+import "regenerator-runtime/runtime";
 import fs from "fs";
 import path from "path";
 import { PDFDocument, PDFPage, rgb, type RGB } from "pdf-lib";

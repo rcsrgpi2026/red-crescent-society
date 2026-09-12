@@ -9,6 +9,7 @@ import {
   DEFAULT_CARD_DESIGN,
   ID_CARD_SETTINGS_KEY,
 } from "@/lib/id-card/constants";
+import { resolvePhotoUrl } from "@/lib/photo-url";
 
 /**
  * Deep-enough merge of a stored design over the defaults. Each section of the
@@ -131,10 +132,28 @@ export function buildCardConfig(
   member: MemberData,
   photoUrl?: string | null
 ): CardConfig {
+  const resolvedPhoto =
+    resolvePhotoUrl(photoUrl) || resolvePhotoUrl(design.photo.src) || "";
+
   return {
     ...design,
     member,
-    photo: { ...design.photo, src: photoUrl || design.photo.src || "" },
+    logos: {
+      ...design.logos,
+      instituteLogo: {
+        ...design.logos.instituteLogo,
+        src:
+          resolvePhotoUrl(design.logos.instituteLogo.src) ||
+          design.logos.instituteLogo.src,
+      },
+      redCrescentLogo: {
+        ...design.logos.redCrescentLogo,
+        src:
+          resolvePhotoUrl(design.logos.redCrescentLogo.src) ||
+          design.logos.redCrescentLogo.src,
+      },
+    },
+    photo: { ...design.photo, src: resolvedPhoto },
   };
 }
 

@@ -248,9 +248,65 @@ async function ensureImagesReady(node: HTMLElement) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Capture
-// ---------------------------------------------------------------------------
+/** Inlines all remote raster images inside the card as base64 data URLs before capture. */
+async function inlineAllCardImages(node: HTMLElement): Promise<() => void> {
+  const images = Array.from(node.querySelectorAll<HTMLImageElement>("img"));
+  const originals: { img: HTMLImageElement; src: string }[] = [];
+
+  const pending = images.map(async (img) => {
+    const src = img.currentSrc || img.src;
+    if (!src || src.startsWith("data:")) return;
+
+    originals.push({ img, src });
+
+    try {
+      let dataUrl: string | null = null;
+      try {
+        const proxyRes = await fetch(`/api/id-card/image-data?url=${encodeURIComponent(src)}`);
+        if (proxyRes.ok) {
+          const json = await proxyRes.json();
+          if (json.dataUrl) dataUrl = json.dataUrl;
+        }
+      } catch {
+        // Fallback to direct client fetch
+      }
+
+      if (!dataUrl) {
+        const directRes = await fetch(src, { mode: "cors" });
+        if (directRes.ok) {
+          const blob = await directRes.blob();
+          dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject();
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+
+      if (dataUrl) {
+        img.src = dataUrl;
+        if (!img.complete) {
+          await new Promise<void>((resolve) => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+            setTimeout(resolve, 3000);
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("[id-card-export] Could not inline image:", src, err);
+    }
+  });
+
+  await Promise.all(pending);
+
+  return () => {
+    for (const item of originals) {
+      item.img.src = item.src;
+    }
+  };
+}
 
 /**
  * Captures a card element as a PNG data URL at full resolution. Printed CR80
@@ -263,7 +319,9 @@ async function captureCardNode(elementId: string, pixelRatio: number): Promise<s
   if (!node) throw new Error(`Card element #${elementId} not found`);
 
   await ensureFontsReady(node);
+  const restoreImages = await inlineAllCardImages(node);
   await ensureImagesReady(node);
+
   const fontEmbedCSS = await buildFontEmbedCSS(node);
   if (fontEmbedCSS) {
     console.log(`[id-card-export] capture #${elementId} will embed ${fontEmbedCSS.length} bytes of fonts`);
@@ -277,12 +335,13 @@ async function captureCardNode(elementId: string, pixelRatio: number): Promise<s
     return await toPng(node, {
       pixelRatio,
       quality: 1,
-      cacheBust: true,
+      cacheBust: false,
       filter: EXPORT_FILTER,
       fontEmbedCSS: fontEmbedCSS || undefined,
     });
   } finally {
     node.style.borderRadius = originalRadius;
+    restoreImages();
   }
 }
 

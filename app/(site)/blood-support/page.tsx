@@ -32,10 +32,16 @@ export default async function BloodSupportPage({
     getServerLocale(),
     searchParams,
   ]);
-  const [donors, requests] = await Promise.all([
+  const [donors, allRequests] = await Promise.all([
     getDonors({ bloodGroup: params.bloodGroup, area: params.area }),
     getPublicBloodRequests(),
   ]);
+
+  // Only show active/ongoing blood requests (hide COMPLETED and CANCELLED to prevent donor confusion)
+  const activeRequests = allRequests.filter(
+    (r) => r.status !== "COMPLETED" && r.status !== "CANCELLED"
+  );
+  const completedCount = allRequests.filter((r) => r.status === "COMPLETED").length;
 
   return (
     <>
@@ -64,97 +70,37 @@ export default async function BloodSupportPage({
         </div>
       </PageHero>
 
-      {/* How it works guide */}
-      <section className="border-b border-line bg-mist/50">
-        <div className="container-site py-12 lg:py-16">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-crescent">
-            {t.blood.guideEyebrow}
-          </p>
-          <h2 className="mt-3 text-balance text-2xl font-bold tracking-tight text-foreground lg:text-3xl">
-            {t.blood.guideTitle}
-          </h2>
-          <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {t.blood.guideSteps.map((step, i) => (
-              <li
-                key={step.title}
-                className="rounded-2xl border border-line bg-white p-5 shadow-sm"
-              >
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-crescent text-sm font-bold text-white shadow-sm shadow-crescent/20">
-                  {i + 1}
-                </span>
-                <h3 className="mt-3 font-semibold text-foreground">{step.title}</h3>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{step.text}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* Donor directory */}
+      {/* Recent blood requests (placed above donors for immediate emergency visibility) */}
       <section className="border-b border-line bg-white">
-        <div className="container-site py-14 lg:py-20">
-          <h2 className="text-2xl font-bold text-foreground">{t.blood.availableDonors}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t.blood.availableDonorsText}</p>
-          <div className="mt-6">
-            <DonorSearch current={{ bloodGroup: params.bloodGroup, area: params.area }} />
-          </div>
-          {donors.length > 0 ? (
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {donors.map((donor) => (
-                <DonorCard key={donor.id} donor={donor} />
-              ))}
-            </div>
-          ) : (
-            <div className="mt-8">
-              <EmptyState
-                icon={Droplets}
-                title={
-                  params.bloodGroup || params.area
-                    ? t.blood.noDonorsMatch
-                    : t.blood.noDonorsYet
-                }
-                description={
-                  params.bloodGroup || params.area
-                    ? t.blood.noDonorsMatchText
-                    : t.blood.noDonorsYetText
-                }
-              />
-            </div>
-          )}
-          <div className="mt-8 flex items-start gap-2.5 rounded-xl border border-brand/20 bg-brand-soft/60 p-4 text-sm text-brand-ink">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            <p>
-              <span className="font-semibold">{t.blood.privacyFirst}</span> {t.blood.privacyText}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Recent requests */}
-      <section className="border-b border-line bg-mist/50">
-        <div className="container-site py-14 lg:py-20">
+        <div className="container-site py-12 lg:py-16">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-bold text-foreground">{t.blood.recentRequests}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{t.blood.recentRequestsText}</p>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <span className="flex h-2 w-2 rounded-full bg-crescent animate-ping" />
+                <h2 className="text-2xl font-bold text-foreground">{t.blood.recentRequests}</h2>
+                {completedCount > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200">
+                    ✨ সফল রক্তদান: {completedCount} জন
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                এই মুহূর্তে যেসব রোগীর জরুরি রক্তের প্রয়োজন (সক্রিয় অনুরোধসমূহ)
+              </p>
             </div>
             <Link
               href="/blood-support/request"
-              className="text-sm font-semibold text-crescent hover:underline"
+              className="inline-flex items-center gap-1.5 rounded-full border border-crescent/30 bg-crescent-soft px-4 py-2 text-xs font-bold text-crescent transition-colors hover:bg-crescent hover:text-white"
             >
+              <HeartPulse className="h-3.5 w-3.5" />
               {t.blood.submitRequest}
             </Link>
           </div>
-          {requests.length > 0 ? (
-            <div className="mt-8 overflow-hidden rounded-2xl border border-line bg-white">
+          {activeRequests.length > 0 ? (
+            <div className="mt-6 overflow-hidden rounded-2xl border border-line bg-white shadow-xs">
               <ul className="divide-y divide-line">
-                {requests.slice(0, 8).map((request) => (
+                {activeRequests.slice(0, 8).map((request) => (
                   <li key={request.id}>
-                    {/* Responsive card: on mobile the info column is a
-                        flexible 1fr (min-width 0 so text wraps instead of
-                        overflowing) and the status badges move to their own
-                        full-width row below; on desktop it returns to the
-                        single horizontal row with badges right-aligned. */}
                     <Link
                       href={`/blood-support/request/${request.id}`}
                       className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2 px-4 py-4 transition-colors hover:bg-mist/60 sm:flex sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2 sm:px-5"
@@ -204,13 +150,54 @@ export default async function BloodSupportPage({
               </ul>
             </div>
           ) : (
-            <div className="mt-8">
+            <div className="mt-6">
               <EmptyState
-                title={t.blood.noRequestsTitle}
-                description={t.blood.noRequestsText}
+                icon={HeartPulse}
+                title="বর্তমানে কোনো সক্রিয় রক্তের অনুরোধ নেই"
+                description="আলহামদুলিল্লাহ, পূর্বের রক্তের অনুরোধগুলো সফলভাবে সম্পন্ন হয়েছে। নতুন কোনো রোগীর জরুরি রক্তের প্রয়োজন হলে উপরের বাটনে ক্লিক করে অনুরোধ জানাতে পারেন।"
               />
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Donor directory */}
+      <section className="border-b border-line bg-mist/40">
+        <div className="container-site py-14 lg:py-20">
+          <h2 className="text-2xl font-bold text-foreground">{t.blood.availableDonors}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t.blood.availableDonorsText}</p>
+          <div className="mt-6">
+            <DonorSearch current={{ bloodGroup: params.bloodGroup, area: params.area }} />
+          </div>
+          {donors.length > 0 ? (
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {donors.map((donor) => (
+                <DonorCard key={donor.id} donor={donor} />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-8">
+              <EmptyState
+                icon={Droplets}
+                title={
+                  params.bloodGroup || params.area
+                    ? t.blood.noDonorsMatch
+                    : t.blood.noDonorsYet
+                }
+                description={
+                  params.bloodGroup || params.area
+                    ? t.blood.noDonorsMatchText
+                    : t.blood.noDonorsYetText
+                }
+              />
+            </div>
+          )}
+          <div className="mt-8 flex items-start gap-2.5 rounded-xl border border-brand/20 bg-white p-4 text-sm text-brand-ink shadow-2xs">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
+            <p>
+              <span className="font-semibold">{t.blood.privacyFirst}</span> {t.blood.privacyText}
+            </p>
+          </div>
         </div>
       </section>
 
@@ -263,6 +250,32 @@ export default async function BloodSupportPage({
             <ContactRequestRecovery strings={t.contactRequest} />
           </div>
         </div>
+        </div>
+      </section>
+
+      {/* How it works guide - bottom placement right above footer */}
+      <section className="border-t border-line bg-mist/50">
+        <div className="container-site py-12 lg:py-16">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-crescent">
+            {t.blood.guideEyebrow}
+          </p>
+          <h2 className="mt-3 text-balance text-2xl font-bold tracking-tight text-foreground lg:text-3xl">
+            {t.blood.guideTitle}
+          </h2>
+          <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {t.blood.guideSteps.map((step, i) => (
+              <li
+                key={step.title}
+                className="rounded-2xl border border-line bg-white p-5 shadow-sm"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-crescent text-sm font-bold text-white shadow-sm shadow-crescent/20">
+                  {i + 1}
+                </span>
+                <h3 className="mt-3 font-semibold text-foreground">{step.title}</h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{step.text}</p>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
     </>

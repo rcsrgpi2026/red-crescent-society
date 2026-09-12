@@ -82,13 +82,26 @@ export function EventRegistrations({
   const cancelledCount = registrations.filter((r) => r.status === "CANCELLED").length;
 
   function exportCsv() {
-    const header = ["Name", "Identity", "Phone", "Department", "Status", "Registered At"];
+    const header = [
+      "Name",
+      "Identity",
+      "Phone",
+      "Department",
+      "Roll",
+      "Email",
+      "Status",
+      "Notes & Custom Fields",
+      "Registered At",
+    ];
     const rows = registrations.map((r) => [
       r.name,
       identityLabel(r) ?? "Community",
       r.phone,
       r.department ?? "",
+      r.roll ?? "",
+      r.email ?? "",
       r.status,
+      r.note ?? "",
       r.created_at,
     ]);
     const csv = [header, ...rows]

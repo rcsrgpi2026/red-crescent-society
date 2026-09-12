@@ -15,7 +15,7 @@ import {
   Info,
 } from "lucide-react";
 import { getPublicEventBySlug, getParticipationCounts, getPublicNoticesByEventId, getFormConfigs } from "@/lib/queries";
-import { formatDate } from "@/lib/constants";
+import { formatDate, formatEventDateRange } from "@/lib/constants";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { EventRegistrationForm } from "@/components/forms/event-registration-form";
 import { SiteLogo } from "@/components/layout/site-logo";
@@ -172,7 +172,7 @@ export default async function EventDetailPage({
                       <CalendarDays className="h-4 w-4 shrink-0 text-brand" aria-hidden />
                       <div>
                         <dt className="text-xs text-muted-foreground">{t.events.date}</dt>
-                        <dd className="font-semibold text-foreground">{formatDate(event.date, locale === "bn" ? "bn-BD" : "en-GB")}</dd>
+                        <dd className="font-semibold text-foreground">{formatEventDateRange(event.date, event.end_date, locale === "bn" ? "bn-BD" : "en-GB")}</dd>
                       </div>
                     </div>
                   )}

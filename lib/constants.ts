@@ -301,6 +301,65 @@ export function formatDate(
   });
 }
 
+/**
+ * Formats a single date or a date range for an event.
+ * Examples:
+ * - Single date: "15 Sep 2026" (or "১৫ সেপ্টেম্বর ২০২৬")
+ * - Multi-day range: "12 Sep 2026 – 15 Sep 2026" (or "১২ সেপ্টেম্বর ২০২৬ – ১৫ সেপ্টেম্বর ২০২৬")
+ */
+export function formatEventDateRange(
+  startDate: string | null | undefined,
+  endDate?: string | null | undefined,
+  locale = "en-GB"
+): string {
+  if (!startDate) return "—";
+  const startClean = startDate.slice(0, 10);
+  const endClean = endDate ? endDate.slice(0, 10) : "";
+
+  const startFormatted = formatDate(startDate, locale);
+  if (!endClean || endClean === startClean) {
+    return startFormatted;
+  }
+  const endFormatted = formatDate(endDate, locale);
+  return `${startFormatted} – ${endFormatted}`;
+}
+
+/**
+ * Dynamically resolves the true status of an event based on Bangladesh local time (GMT+6).
+ * - CANCELLED / DRAFT: Always preserved as explicitly configured.
+ * - Otherwise:
+ *   - today < start_date: UPCOMING (আসন্ন)
+ *   - start_date <= today <= end_date: ONGOING (চলমান)
+ *   - today > end_date: COMPLETED (সম্পন্ন)
+ */
+export function resolveEventStatus(event: {
+  status: string;
+  date: string | null;
+  end_date?: string | null;
+}): "UPCOMING" | "ONGOING" | "COMPLETED" | "CANCELLED" | "DRAFT" {
+  if (event.status === "CANCELLED" || event.status === "DRAFT") {
+    return event.status as any;
+  }
+  if (!event.date) {
+    return (event.status as any) || "UPCOMING";
+  }
+
+  const now = new Date();
+  const dhakaTime = new Date(now.getTime() + (6 * 60 + now.getTimezoneOffset()) * 60000);
+  const today = dhakaTime.toISOString().slice(0, 10);
+
+  const start = event.date.slice(0, 10);
+  const end = event.end_date ? event.end_date.slice(0, 10) : start;
+
+  if (today < start) {
+    return "UPCOMING";
+  }
+  if (today >= start && today <= end) {
+    return "ONGOING";
+  }
+  return "COMPLETED";
+}
+
 export function formatDateTime(
   date: string | Date | null | undefined,
   locale = "en-GB"

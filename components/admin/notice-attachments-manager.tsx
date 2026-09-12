@@ -67,7 +67,7 @@ export function NoticeAttachmentsManager({
     );
     const skipped = files.length - valid.length;
     if (skipped > 0) {
-      toast.error(`${skipped} file(s) skipped — must be ${ACCEPTED_IMAGE_LABEL}, max 5 MB each.`);
+      toast.error(`${skipped} file(s) skipped — must be ${ACCEPTED_IMAGE_LABEL}, max 10 MB each.`);
     }
     if (valid.length === 0) return;
 
@@ -80,25 +80,27 @@ export function NoticeAttachmentsManager({
       setUploadProgress({ current: i + 1, total: valid.length });
       try {
         const file = valid[i];
+        const isFilePdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
         const url = await uploadImageToStorage(file, "notices");
         if (url) {
-          // Clean default title from original file name without extension
-          const originalName = file.name.replace(/\.[^/.]+$/, "") || `Photo ${items.length + i + 1}`;
+          const originalName =
+            file.name.replace(/\.[^/.]+$/, "") ||
+            (isFilePdf ? `Document ${items.length + i + 1}` : `Photo ${items.length + i + 1}`);
           newItems.push({
             name: originalName,
             url,
-            type: "image",
+            type: isFilePdf ? "link" : "image",
           });
         }
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to upload image");
+        toast.error(err instanceof Error ? err.message : "Failed to upload file");
       }
     }
 
     setUploading(false);
     if (newItems.length > 0) {
       setItems((prev) => [...prev, ...newItems]);
-      toast.success(`${newItems.length} photo(s) added successfully!`);
+      toast.success(`${newItems.length} file(s) added successfully!`);
     }
   }
 
@@ -157,11 +159,11 @@ export function NoticeAttachmentsManager({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Multi-photo upload button */}
+          {/* Multi-photo/PDF upload button */}
           <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-brand/30 bg-brand-soft/50 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand-soft transition-colors">
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,.pdf,application/pdf"
               multiple
               className="sr-only"
               onChange={handleImageUpload}
@@ -175,7 +177,7 @@ export function NoticeAttachmentsManager({
             ) : (
               <>
                 <UploadCloud className="h-3.5 w-3.5" />
-                <span>+ ছবি আপলোড করুন</span>
+                <span>+ ছবি / PDF আপলোড করুন</span>
               </>
             )}
           </label>

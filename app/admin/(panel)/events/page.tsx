@@ -13,7 +13,7 @@ import {
 } from "@/components/admin/responsive-table";
 import { adminGetEvents, adminGetEventRegistrations } from "@/lib/queries";
 import { saveEvent, deleteEvent } from "@/lib/admin-actions";
-import { EVENT_CATEGORIES, EVENT_STATUS_LABELS, formatDate } from "@/lib/constants";
+import { EVENT_CATEGORIES, EVENT_STATUS_LABELS, formatDate, formatEventDateRange } from "@/lib/constants";
 import { Input, Label, Textarea, Checkbox } from "@/components/ui";
 
 export default async function AdminEventsPage() {
@@ -41,7 +41,7 @@ export default async function AdminEventsPage() {
       header: "Date",
       render: (event) => (
         <span className="text-xs text-muted-foreground">
-          {formatDate(event.date)}
+          {formatEventDateRange(event.date, event.end_date)}
         </span>
       ),
     },
@@ -156,6 +156,7 @@ function EventFields({
     cover_image: string | null;
     description: string | null;
     date: string | null;
+    end_date?: string | null;
     time: string | null;
     location: string | null;
     category: string | null;
@@ -191,10 +192,14 @@ function EventFields({
           </select>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div>
-          <Label htmlFor="ev-date">Date</Label>
+          <Label htmlFor="ev-date">Start Date (শুরু)</Label>
           <Input id="ev-date" name="date" type="date" defaultValue={event?.date ?? ""} className="mt-1.5" />
+        </div>
+        <div>
+          <Label htmlFor="ev-end-date">End Date (সমাপ্তি - ঐচ্ছিক)</Label>
+          <Input id="ev-end-date" name="endDate" type="date" defaultValue={event?.end_date ?? ""} className="mt-1.5" />
         </div>
         <div>
           <Label htmlFor="ev-time">Time</Label>

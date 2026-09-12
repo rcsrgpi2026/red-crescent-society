@@ -3,11 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  Droplets,
   Search,
   PhoneCall,
   Siren,
-  HeartHandshake,
   HelpCircle,
   X,
   Sparkles,
@@ -20,13 +18,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const STORAGE_KEY = "rcy_blood_guide_seen_v2";
+const STORAGE_KEY = "rcy_blood_guide_seen_v3";
 
 export function BloodGuideModal() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    // Show on first visit after a brief pause so page settles
     try {
       const hasSeen = localStorage.getItem(STORAGE_KEY);
       if (!hasSeen) {
@@ -36,7 +33,7 @@ export function BloodGuideModal() {
         return () => clearTimeout(timer);
       }
     } catch {
-      // localStorage may be disabled in private mode
+      // ignore storage errors
     }
   }, []);
 
@@ -55,129 +52,126 @@ export function BloodGuideModal() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-full border border-crescent/30 bg-crescent-soft/70 px-4 py-2 text-xs font-semibold text-crescent shadow-sm transition-all hover:bg-crescent hover:text-white"
+        className="inline-flex items-center gap-1.5 rounded-full border border-crescent/30 bg-crescent-soft/70 px-3.5 py-1.5 text-xs font-semibold text-crescent shadow-xs transition-all hover:bg-crescent hover:text-white"
         aria-label="How it works guide"
       >
         <HelpCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        <span>How it works?</span>
+        <span>কীভাবে কাজ করে?</span>
       </button>
 
-      {/* Tutorial Dialog */}
-      <Dialog open={open} onOpenChange={(isOpen) => {
-        if (!isOpen) handleClose();
-        else setOpen(true);
-      }}>
+      {/* Tutorial Dialog - Compact Mobile-Friendly Popup */}
+      <Dialog
+        open={open}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) handleClose();
+          else setOpen(true);
+        }}
+      >
         <DialogContent
           showCloseButton={false}
-          className="max-w-lg overflow-hidden rounded-3xl border border-line bg-white p-0 shadow-2xl sm:max-w-xl"
+          className="w-[92vw] max-w-[390px] sm:max-w-md max-h-[85vh] overflow-hidden flex flex-col rounded-2xl sm:rounded-3xl border border-line bg-white p-0 shadow-2xl"
         >
-          {/* Header Banner */}
-          <div className="relative bg-gradient-to-br from-crescent via-crescent to-brand-dark px-6 py-6 text-white">
+          {/* Header Banner - Compact & Clean */}
+          <div className="relative bg-gradient-to-r from-crescent via-crescent to-brand-dark px-4 py-3.5 sm:px-5 sm:py-4 text-white shrink-0">
             <button
               type="button"
               onClick={handleClose}
-              className="absolute right-4 top-4 rounded-full bg-black/20 p-1.5 text-white/80 transition-colors hover:bg-black/40 hover:text-white"
+              className="absolute right-3 top-3 rounded-full bg-black/20 p-1.5 text-white/90 transition-colors hover:bg-black/40 hover:text-white"
               aria-label="Close tutorial"
             >
               <X className="h-4 w-4" />
             </button>
 
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur-xs">
-              <Sparkles className="h-3.5 w-3.5 text-amber-300" aria-hidden />
-              <span>জরুরি রক্ত সহায়তা টিউটোরিয়াল</span>
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-medium backdrop-blur-xs">
+              <Sparkles className="h-3 w-3 text-amber-300" aria-hidden />
+              <span>রক্ত সহায়তা গাইড</span>
             </div>
 
-            <DialogHeader className="mt-3 text-left">
-              <DialogTitle className="text-xl font-bold tracking-tight text-white sm:text-2xl">
-                সহজে রক্তদাতা খুঁজুন ও রক্ত সংগ্রহ করুন
+            <DialogHeader className="mt-2 text-left">
+              <DialogTitle className="text-base font-bold tracking-tight text-white sm:text-lg">
+                রক্তদাতা খোঁজার সহজ ৩টি ধাপ
               </DialogTitle>
-              <p className="mt-1 text-xs leading-relaxed text-white/90 sm:text-sm">
-                জরুরি মুহূর্তে প্রয়োজনীয় রক্ত পাওয়ার সহজ ৩টি ধাপ জেনে নিন:
-              </p>
             </DialogHeader>
           </div>
 
-          {/* Body Steps */}
-          <div className="space-y-3.5 p-5 sm:p-6">
+          {/* Body Steps - Compact & Readable */}
+          <div className="overflow-y-auto p-3.5 sm:p-4 space-y-2 text-xs">
             {/* Step 1 */}
-            <div className="flex items-start gap-3.5 rounded-2xl border border-line/70 bg-mist/30 p-3.5 transition-colors hover:border-crescent/30 hover:bg-crescent-soft/20">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-crescent font-bold text-white shadow-sm shadow-crescent/20">
+            <div className="flex items-start gap-2.5 rounded-xl border border-line/70 bg-mist/40 p-2.5 transition-colors hover:border-crescent/30 hover:bg-crescent-soft/20">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-crescent text-xs font-bold text-white shadow-xs">
                 ১
               </span>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <Search className="h-4 w-4 text-crescent" />
-                  <h4 className="text-sm font-bold text-foreground">রক্তদাতা খুঁজুন</h4>
+                <div className="flex items-center gap-1">
+                  <Search className="h-3.5 w-3.5 text-crescent shrink-0" />
+                  <h4 className="font-bold text-foreground text-xs">গ্রুপ ও এলাকা দিয়ে খুঁজুন</h4>
                 </div>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  তালিকা থেকে আপনার প্রয়োজনীয় <strong>রক্তের গ্রুপ</strong> ও <strong>এলাকা</strong> সিলেক্ট করে সার্চ করুন। উপলব্ধ ডোনারদের কার্ড দেখতে পাবেন।
+                <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                  তালিকা থেকে প্রয়োজনীয় রক্তের গ্রুপ ও এলাকা সিলেক্ট করে সার্চ করুন।
                 </p>
               </div>
             </div>
 
             {/* Step 2 */}
-            <div className="flex items-start gap-3.5 rounded-2xl border border-line/70 bg-mist/30 p-3.5 transition-colors hover:border-crescent/30 hover:bg-crescent-soft/20">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-crescent font-bold text-white shadow-sm shadow-crescent/20">
+            <div className="flex items-start gap-2.5 rounded-xl border border-line/70 bg-mist/40 p-2.5 transition-colors hover:border-crescent/30 hover:bg-crescent-soft/20">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-crescent text-xs font-bold text-white shadow-xs">
                 ২
               </span>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <PhoneCall className="h-4 w-4 text-crescent" />
-                  <h4 className="text-sm font-bold text-foreground">যোগাযোগের অনুরোধ পাঠান</h4>
+                <div className="flex items-center gap-1">
+                  <PhoneCall className="h-3.5 w-3.5 text-crescent shrink-0" />
+                  <h4 className="font-bold text-foreground text-xs">যোগাযোগের অনুরোধ পাঠান</h4>
                 </div>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  পছন্দের ডোনারের কার্ডে <strong>&ldquo;যোগাযোগের অনুরোধ&rdquo;</strong> বাটনে ক্লিক করে তথ্য দিন। পাসকোড দিয়ে যেকোনো সময় ভেরিফাইড নম্বরটি সংগ্রহ করতে পারবেন।
+                <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                  ডোনার কার্ডে অনুরোধ পাঠিয়ে পাসকোড দিয়ে নম্বর সংগ্রহ করুন।
                 </p>
               </div>
             </div>
 
             {/* Step 3 */}
-            <div className="flex items-start gap-3.5 rounded-2xl border border-line/70 bg-mist/30 p-3.5 transition-colors hover:border-crescent/30 hover:bg-crescent-soft/20">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-crescent font-bold text-white shadow-sm shadow-crescent/20">
+            <div className="flex items-start gap-2.5 rounded-xl border border-line/70 bg-mist/40 p-2.5 transition-colors hover:border-crescent/30 hover:bg-crescent-soft/20">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-crescent text-xs font-bold text-white shadow-xs">
                 ৩
               </span>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <Siren className="h-4 w-4 text-crescent" />
-                  <h4 className="text-sm font-bold text-foreground">ডোনার না পেলে সরাসরি আবেদন করুন</h4>
+                <div className="flex items-center gap-1">
+                  <Siren className="h-3.5 w-3.5 text-crescent shrink-0" />
+                  <h4 className="font-bold text-foreground text-xs">সরাসরি রক্তের আবেদন</h4>
                 </div>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  তাৎক্ষণিক ডোনার না পেলে <strong>&ldquo;জরুরি রক্তের আবেদন&rdquo;</strong> করুন। আমাদের রেড ক্রিসেন্ট যুব সদস্যরা তাৎক্ষণিক ডোনার ম্যানেজ করার চেষ্টা করবে।
+                <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                  ডোনার না পেলে জরুরি রিকোয়েস্ট দিন, ভলান্টিয়াররা যোগাযোগ করবে।
                 </p>
               </div>
             </div>
 
             {/* Hotline Call Banner */}
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-xs text-amber-950">
-              <div className="flex items-center gap-2">
-                <HeartHandshake className="h-4 w-4 shrink-0 text-amber-700" />
-                <span>তাৎক্ষণিক জরুরি প্রয়োজনে হটলাইনে কল করুন:</span>
-              </div>
+            <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2 text-[11px] text-amber-950">
+              <span className="font-medium">জরুরি প্রয়োজনে হটলাইন:</span>
               <a
                 href="tel:01614424259"
-                className="inline-flex items-center gap-1.5 rounded-full bg-crescent px-3.5 py-1 text-xs font-bold text-white shadow-xs transition-colors hover:bg-crescent-dark"
+                className="inline-flex items-center gap-1 rounded-full bg-crescent px-2.5 py-0.5 font-bold text-white shadow-xs hover:bg-crescent-dark"
               >
-                <Phone className="h-3 w-3" />
+                <Phone className="h-2.5 w-2.5" />
                 ০১৬১৪-৪২৪২৫৯
               </a>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col gap-2.5 pt-2 sm:flex-row">
+            <div className="flex items-center gap-2 pt-1">
               <Link
                 href="/blood-support/request"
                 onClick={handleClose}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-crescent px-4 py-2.5 text-center text-xs font-bold text-white shadow-sm transition-all hover:bg-crescent-dark"
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-crescent px-3 py-2 text-center text-xs font-bold text-white shadow-xs transition-all hover:bg-crescent-dark"
               >
-                <Siren className="h-4 w-4 shrink-0" />
-                জরুরি রক্তের আবেদন করুন
+                <Siren className="h-3.5 w-3.5 shrink-0" />
+                জরুরি আবেদন
               </Link>
               <button
                 type="button"
                 onClick={handleClose}
-                className="inline-flex flex-1 items-center justify-center rounded-xl border border-line bg-mist/50 px-4 py-2.5 text-center text-xs font-semibold text-foreground transition-colors hover:bg-mist hover:text-foreground"
+                className="inline-flex flex-1 items-center justify-center rounded-xl border border-line bg-mist/60 px-3 py-2 text-center text-xs font-semibold text-foreground transition-colors hover:bg-mist"
               >
-                বুঝেছি, রক্তদাতা খুঁজব
+                বুঝেছি
               </button>
             </div>
           </div>

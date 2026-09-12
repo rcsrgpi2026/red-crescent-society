@@ -262,6 +262,7 @@ export interface Event {
   cover_image: string | null;
   description: string | null;
   date: string | null;
+  end_date?: string | null;
   time: string | null;
   location: string | null;
   category: string | null;

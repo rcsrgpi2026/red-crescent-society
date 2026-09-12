@@ -17,7 +17,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { getPublicNoticeBySlug, getNoticeAttachments } from "@/lib/queries";
-import { formatDate, EVENT_STATUS_LABELS } from "@/lib/constants";
+import { formatDate, formatEventDateRange, resolveEventStatus, EVENT_STATUS_LABELS } from "@/lib/constants";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 
@@ -136,8 +136,8 @@ export default async function NoticeDetailPage({
                 )}
               </div>
               <StatusBadge
-                label={EVENT_STATUS_LABELS[notice.events.status] ?? notice.events.status}
-                tone={statusTone(notice.events.status)}
+                label={EVENT_STATUS_LABELS[resolveEventStatus(notice.events)] ?? notice.events.status}
+                tone={statusTone(resolveEventStatus(notice.events))}
               />
             </div>
 
@@ -150,7 +150,7 @@ export default async function NoticeDetailPage({
                 {notice.events.date && (
                   <span className="flex items-center gap-1.5 font-medium text-foreground">
                     <CalendarDays className="h-4 w-4 text-brand" />
-                    {formatDate(notice.events.date, locale === "bn" ? "bn-BD" : "en-GB")}
+                    {formatEventDateRange(notice.events.date, (notice.events as any).end_date, locale === "bn" ? "bn-BD" : "en-GB")}
                   </span>
                 )}
                 {notice.events.time && (

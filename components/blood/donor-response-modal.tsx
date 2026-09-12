@@ -95,7 +95,7 @@ export function DonorResponseModal({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-md rounded-2xl p-6">
+      <DialogContent className="w-[92vw] max-w-[420px] sm:max-w-md max-h-[88vh] overflow-y-auto rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-line bg-white">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
             <HeartHandshake className="h-5 w-5 text-crescent" />

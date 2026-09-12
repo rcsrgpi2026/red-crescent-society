@@ -28,7 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatDate } from "@/lib/constants";
+import { formatDate, formatEventDateRange } from "@/lib/constants";
 import type {
   Notice,
   Event,
@@ -425,7 +425,7 @@ export function SiteAnnouncementModal({
                             {e.date && (
                               <span className="flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
-                                {formatDate(e.date)} {e.time ? `· ${e.time}` : ""}
+                                {formatEventDateRange(e.date, e.end_date)} {e.time ? `· ${e.time}` : ""}
                               </span>
                             )}
                             {e.location && (

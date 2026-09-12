@@ -875,12 +875,15 @@ export async function saveEvent(formData: FormData): Promise<ActionResult> {
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { success: false, message: "Title is required." };
 
-  const payload = {
+  const endDate = String(formData.get("endDate") ?? "").trim() || null;
+
+  const payload: Record<string, any> = {
     title,
     slug: String(formData.get("slug") ?? "") ? String(formData.get("slug")) : slugify(title),
     cover_image: String(formData.get("coverImage") ?? "") || null,
     description: String(formData.get("description") ?? "") || null,
     date: String(formData.get("date") ?? "") || null,
+    end_date: endDate,
     time: String(formData.get("time") ?? "") || null,
     location: String(formData.get("location") ?? "") || null,
     category: String(formData.get("category") ?? "") || null,
@@ -895,13 +898,30 @@ export async function saveEvent(formData: FormData): Promise<ActionResult> {
   };
 
   const supabase = await createClient();
+  let insertOrUpdateErr = null;
+
   if (id) {
-    const { error } = await supabase.from("events").update(payload).eq("id", id);
-    if (error) return { success: false, message: "Could not update the event." };
+    const res = await supabase.from("events").update(payload).eq("id", id);
+    if (res.error && res.error.message?.includes("end_date")) {
+      // Fallback if migration 0050 has not yet been executed in Supabase
+      delete payload.end_date;
+      const retry = await supabase.from("events").update(payload).eq("id", id);
+      insertOrUpdateErr = retry.error;
+    } else {
+      insertOrUpdateErr = res.error;
+    }
+    if (insertOrUpdateErr) return { success: false, message: "Could not update the event." };
     await logAudit("event_updated", "event", id);
   } else {
-    const { error } = await supabase.from("events").insert(payload);
-    if (error) return { success: false, message: "Could not create the event." };
+    const res = await supabase.from("events").insert(payload);
+    if (res.error && res.error.message?.includes("end_date")) {
+      delete payload.end_date;
+      const retry = await supabase.from("events").insert(payload);
+      insertOrUpdateErr = retry.error;
+    } else {
+      insertOrUpdateErr = res.error;
+    }
+    if (insertOrUpdateErr) return { success: false, message: "Could not create the event." };
     await logAudit("event_created", "event", payload.title);
 
     // Trigger event announcement notification for new upcoming events

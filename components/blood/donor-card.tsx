@@ -80,9 +80,9 @@ export function DonorCard({ donor }: { donor: PublicBloodDonor }) {
             {donor.phone ? "View contact" : "Request Contact"}
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[92vw] max-w-[420px] sm:max-w-md max-h-[88vh] overflow-y-auto rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-line bg-white">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base sm:text-lg font-bold">
               {donor.phone ? `Contact ${donor.name}` : `Request contact with ${donor.name}`}
             </DialogTitle>
           </DialogHeader>

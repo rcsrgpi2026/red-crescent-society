@@ -1,7 +1,8 @@
 // Service Worker for Red Crescent Youth PWA
-const CACHE_NAME = "rcs-rgpi-pwa-v4";
+const CACHE_NAME = "rcs-rgpi-pwa-v5";
 const OFFLINE_URLS = [
   "/",
+  "/offline.html",
   "/manifest.webmanifest",
   "/favicon.ico",
   "/icon-192.png",
@@ -34,6 +35,12 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   // Only handle GET requests
   if (event.request.method !== "GET") return;
@@ -44,24 +51,58 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // For HTML page navigation requests
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(async () => {
+          // 1. Try cached page first
+          const cachedPage = await caches.match(event.request);
+          if (cachedPage) return cachedPage;
+
+          // 2. Return dedicated offline emergency page
+          const offlinePage = await caches.match("/offline.html");
+          if (offlinePage) return offlinePage;
+
+          // 3. Fallback to cached root
+          return caches.match("/") || new Response("Offline", { status: 503, statusText: "Offline" });
+        })
+    );
+    return;
+  }
+
+  // Static assets & images
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Cache successful GET responses for assets / pages
-        if (response && response.status === 200 && response.type === "basic") {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return response;
-      })
-      .catch(() => {
-        // Fallback to cache if offline
-        return caches.match(event.request).then((cached) => {
-          return cached || caches.match("/");
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) return cachedResponse;
+
+      return fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200 && response.type === "basic") {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // If offline and request is an image, provide fallback
+          if (event.request.destination === "image") {
+            return caches.match("/icon-192.png");
+          }
+          return new Response("", { status: 408, statusText: "Request Timeout" });
         });
-      })
+    })
   );
 });
 

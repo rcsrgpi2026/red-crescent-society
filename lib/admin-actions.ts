@@ -9,7 +9,9 @@ import { logAudit, requireAdmin } from "@/lib/auth";
 import { slugify, TEAM_POSITIONS, RCY_DEPARTMENTS, NON_DEPARTMENT_POSITIONS, getCommunityMappingForPosition } from "@/lib/constants";
 import { ID_CARD_SETTINGS_KEY } from "@/lib/id-card/constants";
 import { createAndDispatchNotification } from "@/lib/notifications/notification-service";
+import { sendVolunteerApprovalEmail } from "@/lib/email/mailer";
 import type { ActionResult } from "@/lib/actions";
+import type { CustomPopupConfig } from "@/types/database";
 
 function guardConfig() {
   if (!isSupabaseConfigured) {
@@ -87,7 +89,7 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
     try {
       const { data: member } = await supabase
         .from("team_members")
-        .select("name, user_id")
+        .select("name, email, user_id, department, position")
         .eq("id", id)
         .maybeSingle();
 
@@ -104,6 +106,21 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
             specificUserIds: [member.user_id],
           }
         );
+      }
+
+      // Dispatch official membership approval email
+      if (member?.email) {
+        try {
+          void sendVolunteerApprovalEmail({
+            name: member.name,
+            email: member.email,
+            memberId: String(patch.member_id),
+            department: member.department,
+            position: member.position,
+          });
+        } catch (emailErr) {
+          console.warn("Could not dispatch volunteer approval email:", emailErr);
+        }
       }
     } catch (notifErr) {
       console.warn("Could not dispatch volunteer approval notification:", notifErr);
@@ -655,11 +672,19 @@ export async function updateBloodRequestStatus(formData: FormData): Promise<Acti
 
   const { data: request } = await supabase
     .from("blood_requests")
-    .select("patient_name, blood_group, units, hospital, location")
+    .select("patient_name, blood_group, units, hospital, location, units_donated, donation_confirmed")
     .eq("id", id)
     .maybeSingle();
 
-  const { error } = await supabase.from("blood_requests").update({ status }).eq("id", id);
+  const patch: Record<string, unknown> = { status };
+  if (status === "COMPLETED") {
+    patch.donation_confirmed = true;
+    patch.units_donated = request?.units_donated ?? request?.units ?? 1;
+  } else if (status === "CANCELLED" || status === "PENDING" || status === "CONTACTING_DONOR") {
+    patch.donation_confirmed = false;
+  }
+
+  const { error } = await supabase.from("blood_requests").update(patch).eq("id", id);
   if (error) return { success: false, message: "Could not update the request." };
 
   if (request && (status === "DONOR_FOUND" || status === "CONTACTING_DONOR" || status === "COMPLETED")) {
@@ -683,10 +708,13 @@ export async function updateBloodRequestStatus(formData: FormData): Promise<Acti
     }
   }
 
-  await logAudit("blood_request_status", "blood_request", id, { status });
+  await logAudit("blood_request_status", "blood_request", id, { status, ...patch });
   revalidatePath("/admin/blood-requests");
   revalidatePath("/blood-support");
+  revalidatePath("/");
   updateTag("blood");
+  updateTag("stats");
+  updateTag("blood-requests");
   return { success: true, message: "Request status updated." };
 }
 
@@ -745,7 +773,10 @@ export async function confirmBloodDonation(formData: FormData): Promise<ActionRe
   await logAudit("blood_donation_confirmed", "blood_request", id, { units_donated: unitsDonated });
   revalidatePath("/admin/blood-requests");
   revalidatePath("/blood-support");
+  revalidatePath("/");
   updateTag("blood");
+  updateTag("stats");
+  updateTag("blood-requests");
   return {
     success: true,
     message: `Donation confirmed — ${unitsDonated} unit${unitsDonated === 1 ? "" : "s"} now count${unitsDonated === 1 ? "s" : ""} toward Blood Units Donated.`,
@@ -769,7 +800,10 @@ export async function unconfirmBloodDonation(formData: FormData): Promise<Action
   await logAudit("blood_donation_unconfirmed", "blood_request", id);
   revalidatePath("/admin/blood-requests");
   revalidatePath("/blood-support");
+  revalidatePath("/");
   updateTag("blood");
+  updateTag("stats");
+  updateTag("blood-requests");
   return { success: true, message: "Donation confirmation removed." };
 }
 
@@ -941,7 +975,9 @@ export async function saveEvent(formData: FormData): Promise<ActionResult> {
   }
   revalidatePath("/admin/events");
   revalidatePath("/events");
+  revalidatePath("/");
   updateTag("events");
+  updateTag("stats");
   return { success: true, message: "Event saved." };
 }
 
@@ -953,7 +989,9 @@ export async function deleteEvent(id: string): Promise<ActionResult> {
   await logAudit("event_deleted", "event", id);
   revalidatePath("/admin/events");
   revalidatePath("/events");
+  revalidatePath("/");
   updateTag("events");
+  updateTag("stats");
   return { success: true, message: "Event deleted." };
 }
 
@@ -1580,30 +1618,6 @@ export async function deleteCertificate(id: string): Promise<ActionResult> {
   return { success: true, message: "Certificate deleted." };
 }
 
-// ---------------------------------------------------------------------------
-// Attendance
-// ---------------------------------------------------------------------------
-
-export async function toggleAttendance(formData: FormData): Promise<ActionResult> {
-  await guard();
-  const eventId = String(formData.get("eventId"));
-  const teamMemberId = String(formData.get("teamMemberId"));
-  const mark = String(formData.get("mark")); // PRESENT or ABSENT
-
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("attendance")
-    .upsert(
-      { event_id: eventId, volunteer_id: teamMemberId, status: mark, scanned_at: new Date().toISOString() },
-      { onConflict: "event_id,volunteer_id" }
-    )
-    .eq("event_id", eventId)
-    .eq("volunteer_id", teamMemberId);
-  if (error) return { success: false, message: "Could not update attendance." };
-  await logAudit("attendance_marked", "attendance", teamMemberId, { eventId, mark });
-  revalidatePath("/admin/attendance");
-  return { success: true, message: `Marked ${mark.toLowerCase()}.` };
-}
 
 // ---------------------------------------------------------------------------
 // Messages
@@ -1884,4 +1898,43 @@ export async function resetFormConfigsAction(formKey: string): Promise<ActionRes
   try { refresh(); } catch {}
 
   return { success: true, message: "Form reset to default settings." };
+}
+
+/**
+ * Saves the custom promotional/notice popup configuration (image, button, scheduling).
+ */
+export async function saveCustomPopupConfig(
+  config: CustomPopupConfig
+): Promise<ActionResult> {
+  await guard();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("website_settings")
+    .upsert(
+      {
+        key: "custom_popup",
+        value: {
+          ...config,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+      { onConflict: "key" }
+    );
+
+  if (error) {
+    console.error("Could not save custom popup settings:", error);
+    return { success: false, message: "Could not save custom popup settings." };
+  }
+
+  await logAudit("custom_popup_updated", "website_settings", "custom_popup");
+  revalidatePath("/", "layout");
+  revalidatePath("/admin/popup");
+  revalidatePath("/admin/settings");
+  updateTag("settings");
+  try {
+    refresh();
+  } catch {}
+
+  return { success: true, message: "Custom popup settings saved successfully!" };
 }

@@ -162,27 +162,34 @@ export function ForgotPasswordForm() {
       )}
 
       <div>
-        <Label htmlFor="reset-email" className="text-xs sm:text-sm">
+        <Label htmlFor="reset-email" className="font-medium text-foreground text-xs sm:text-sm">
           Email address
         </Label>
-        <Input
-          id="reset-email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter the email linked to your account"
-          className="mt-1 h-9 text-sm sm:mt-1.5 sm:h-10"
-          required
-          autoFocus
-        />
+        <div className="relative mt-1.5">
+          <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+          <Input
+            id="reset-email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter the email linked to your account"
+            className="pl-10"
+            required
+            autoFocus
+          />
+        </div>
         <p className="mt-1.5 text-[11px] text-muted-foreground sm:text-xs">
           We will send you a secure link to reset your password.
         </p>
       </div>
 
-      <Button type="submit" disabled={busy || !email.trim()} className="h-9 w-full text-sm sm:h-10">
+      <Button
+        type="submit"
+        disabled={busy || !email.trim()}
+        className="h-11 w-full rounded-full bg-crescent hover:bg-crescent-dark text-white font-bold shadow-md shadow-crescent/20 active:scale-[0.98] transition-all text-sm"
+      >
         {busy ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
         ) : (

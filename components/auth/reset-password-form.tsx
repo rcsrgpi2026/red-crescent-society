@@ -16,6 +16,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { updatePassword } from "@/lib/auth-actions";
 import { Label, Input, Button } from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 function getPasswordStrength(pwd: string): { score: number; label: string; color: string } {
   if (!pwd) return { score: 0, label: "", color: "bg-slate-200" };
@@ -172,7 +173,7 @@ export function ResetPasswordForm() {
               router.push(successDestination);
               router.refresh();
             }}
-            className="w-full h-9 text-xs sm:h-10 sm:text-sm"
+            className="h-11 w-full rounded-full bg-crescent hover:bg-crescent-dark text-white font-bold shadow-md shadow-crescent/20 active:scale-[0.98] transition-all text-sm"
           >
             Continue to Portal <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
@@ -208,14 +209,14 @@ export function ResetPasswordForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="At least 8 characters"
-            className="h-9 pr-10 text-sm sm:h-10"
+            className="pr-10"
             required
             autoFocus
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 transition-colors"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 transition-colors"
             tabIndex={-1}
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
@@ -229,14 +230,15 @@ export function ResetPasswordForm() {
 
         {/* Strength Indicator */}
         {password.length > 0 && (
-          <div className="mt-2 space-y-1">
-            <div className="flex h-1.5 w-full gap-1 overflow-hidden rounded-full bg-slate-100">
-              {[1, 2, 3, 4].map((step) => (
+          <div className="mt-2 space-y-1.5">
+            <div className="flex gap-1">
+              {[1, 2, 3, 4].map((i) => (
                 <div
-                  key={step}
-                  className={`h-full flex-1 rounded-full transition-all duration-300 ${
-                    strength.score >= step ? strength.color : "bg-slate-200"
-                  }`}
+                  key={i}
+                  className={cn(
+                    "h-1.5 flex-1 rounded-full transition-colors",
+                    i <= strength.score ? strength.color : "bg-muted"
+                  )}
                 />
               ))}
             </div>
@@ -260,13 +262,13 @@ export function ResetPasswordForm() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Re-enter your new password"
-            className="h-9 pr-10 text-sm sm:h-10"
+            className="pr-10"
             required
           />
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 transition-colors"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 transition-colors"
             tabIndex={-1}
             aria-label={showConfirmPassword ? "Hide password" : "Show password"}
           >
@@ -282,7 +284,7 @@ export function ResetPasswordForm() {
       <Button
         type="submit"
         disabled={busy || password.length < 8 || !confirmPassword}
-        className="h-9 w-full text-sm sm:h-10"
+        className="h-11 w-full rounded-full bg-crescent hover:bg-crescent-dark text-white font-bold shadow-md shadow-crescent/20 active:scale-[0.98] transition-all text-sm"
       >
         {busy ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />

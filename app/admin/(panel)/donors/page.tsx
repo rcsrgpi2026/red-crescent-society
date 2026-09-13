@@ -67,19 +67,30 @@ export default async function AdminDonorsPage() {
       ),
     },
     {
-      header: "Phone",
+      header: "Contact",
       render: (d) => (
-        <div className="text-xs text-muted-foreground">
+        <div className="text-xs text-muted-foreground space-y-0.5">
           <p>{d.phone ?? "—"}</p>
-          <span
-            className={`mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
-              d.phone_public
-                ? "bg-emerald-100 text-emerald-800"
-                : "bg-mist text-muted-foreground"
-            }`}
-          >
-            {d.phone_public ? "Public" : "Private"}
-          </span>
+          {d.email && (
+            <a
+              href={`mailto:${d.email}`}
+              className="text-[11px] text-crescent hover:underline block truncate max-w-[150px]"
+              title={d.email}
+            >
+              {d.email}
+            </a>
+          )}
+          <div>
+            <span
+              className={`mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                d.phone_public
+                  ? "bg-emerald-100 text-emerald-800"
+                  : "bg-mist text-muted-foreground"
+              }`}
+            >
+              {d.phone_public ? "Public" : "Private"}
+            </span>
+          </div>
         </div>
       ),
     },

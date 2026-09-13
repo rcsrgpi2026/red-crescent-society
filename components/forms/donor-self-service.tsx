@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Ban,
   UserX,
+  User,
   ShieldCheck,
   KeyRound,
   Eye,
@@ -140,47 +141,56 @@ export function DonorSelfService() {
         <div>
           <form onSubmit={handleFind} className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
             <div>
-              <Label htmlFor="ds-name">Full name</Label>
-              <Input
-                id="ds-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Name used at registration"
-                className="mt-1.5"
-                required
-              />
+              <Label htmlFor="ds-name" className="font-medium text-foreground text-sm">Full name</Label>
+              <div className="relative mt-1.5">
+                <User className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                <Input
+                  id="ds-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Name used at registration"
+                  className="h-11 rounded-full pl-10 pr-4 bg-slate-50/60 border-slate-200 focus:bg-white focus:border-crescent focus:ring-4 focus:ring-crescent/15 transition-all text-sm"
+                  required
+                />
+              </div>
             </div>
             <div>
-              <Label htmlFor="ds-phone">Mobile number</Label>
-              <Input
-                id="ds-phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="017XXXXXXXX"
-                className="mt-1.5"
-                required
-              />
+              <Label htmlFor="ds-phone" className="font-medium text-foreground text-sm">Mobile number</Label>
+              <div className="relative mt-1.5">
+                <Phone className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                <Input
+                  id="ds-phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="017XXXXXXXX"
+                  className="h-11 rounded-full pl-10 pr-4 bg-slate-50/60 border-slate-200 focus:bg-white focus:border-crescent focus:ring-4 focus:ring-crescent/15 transition-all text-sm"
+                  required
+                />
+              </div>
             </div>
             <div>
-              <Label htmlFor="ds-passcode">Passcode</Label>
-              <Input
-                id="ds-passcode"
-                type="password"
-                inputMode="numeric"
-                value={passcode}
-                onChange={(e) => setPasscode(e.target.value)}
-                placeholder="Your 4–6 digit code"
-                className="mt-1.5"
-              />
+              <Label htmlFor="ds-passcode" className="font-medium text-foreground text-sm">Passcode</Label>
+              <div className="relative mt-1.5">
+                <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                <Input
+                  id="ds-passcode"
+                  type="password"
+                  inputMode="numeric"
+                  value={passcode}
+                  onChange={(e) => setPasscode(e.target.value)}
+                  placeholder="Your 4–6 digit code"
+                  className="h-11 rounded-full pl-10 pr-4 bg-slate-50/60 border-slate-200 focus:bg-white focus:border-crescent focus:ring-4 focus:ring-crescent/15 transition-all text-sm tracking-widest"
+                />
+              </div>
             </div>
             <button
               type="submit"
               disabled={busy}
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-crescent px-4 text-sm font-semibold text-white transition-colors hover:bg-crescent-dark disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-crescent px-6 text-sm font-semibold text-white transition-all shadow-md shadow-crescent/20 hover:bg-crescent-dark active:scale-[0.98] disabled:opacity-50"
             >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Search className="h-4 w-4" aria-hidden />}
-              Find my listing
+              Find listing
             </button>
           </form>
 
@@ -229,23 +239,26 @@ export function DonorSelfService() {
           </p>
           <form onSubmit={handleSetPasscode} className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
             <div>
-              <Label htmlFor="ds-new-passcode">New passcode (4–6 digits)</Label>
-              <Input
-                id="ds-new-passcode"
-                type="password"
-                inputMode="numeric"
-                pattern="[0-9]{4,6}"
-                value={newPasscode}
-                onChange={(e) => setNewPasscode(e.target.value)}
-                placeholder="••••"
-                className="mt-1.5"
-                required
-              />
+              <Label htmlFor="ds-new-passcode" className="font-medium text-foreground text-sm">New passcode (4–6 digits)</Label>
+              <div className="relative mt-1.5">
+                <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                <Input
+                  id="ds-new-passcode"
+                  type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]{4,6}"
+                  value={newPasscode}
+                  onChange={(e) => setNewPasscode(e.target.value)}
+                  placeholder="••••"
+                  className="h-11 rounded-full pl-10 pr-4 bg-white border-amber-200 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/15 transition-all text-sm tracking-widest"
+                  required
+                />
+              </div>
             </div>
             <button
               type="submit"
               disabled={busy}
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-crescent px-4 text-sm font-semibold text-white transition-colors hover:bg-crescent-dark disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-crescent px-6 text-sm font-semibold text-white transition-all shadow-md shadow-crescent/20 hover:bg-crescent-dark active:scale-[0.98] disabled:opacity-50"
             >
               {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
               Set passcode

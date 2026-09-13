@@ -29,7 +29,7 @@ export function ContactForm({ fields }: { fields?: FormFieldConfig[] }) {
                         rows={field.name === "message" ? 5 : 3}
                         placeholder={field.placeholder}
                         required={field.required}
-                        className="mt-1.5 text-xs"
+                        className="mt-1.5"
                       />
                       <FieldError errors={errors} name={field.name} />
                     </div>
@@ -43,7 +43,7 @@ export function ContactForm({ fields }: { fields?: FormFieldConfig[] }) {
                         {field.label} {field.required && <span className="text-crescent">*</span>}
                       </Label>
                       <Select name={field.name} required={field.required}>
-                        <SelectTrigger id={`cf-${field.id}`} className="mt-1.5 text-xs">
+                        <SelectTrigger id={`cf-${field.id}`} className="mt-1.5">
                           <SelectValue placeholder={field.placeholder || "Select option"} />
                         </SelectTrigger>
                         <SelectContent>
@@ -84,7 +84,7 @@ export function ContactForm({ fields }: { fields?: FormFieldConfig[] }) {
                       type={field.type}
                       placeholder={field.placeholder}
                       required={field.required}
-                      className="mt-1.5 h-9 text-xs"
+                      className="mt-1.5"
                     />
                     <FieldError errors={errors} name={field.name} />
                   </div>

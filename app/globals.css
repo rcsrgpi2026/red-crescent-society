@@ -11,6 +11,8 @@
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-poppins);
   --font-bengali: var(--font-noto-bengali);
+  --font-jakarta: var(--font-jakarta);
+  --font-inter: var(--font-inter);
 
   /* BDRCS brand palette */
   --color-brand: var(--brand);

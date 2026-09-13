@@ -57,7 +57,7 @@ export default async function LegacyMembersPage({
         </div>
       </PageHero>
 
-      <section className="bg-gradient-to-b from-amber-50/20 via-white to-white">
+      <section className="bg-white">
         <div className="container-site py-12 lg:py-16">
           <LegacyFilters
             departments={DEPARTMENTS}

@@ -5,12 +5,21 @@ import { ProfilePhoto } from "@/components/shared/profile-photo";
 import { resolvePhotoUrl } from "@/lib/photo-url";
 import { Reveal } from "@/components/shared/reveal";
 import { EmptyState } from "@/components/shared/empty-state";
+import { cn } from "@/lib/utils";
 import type { Messages } from "@/lib/i18n";
 import type { PublicTeamMember } from "@/types/database";
 
-export function TeamSection({ t, team }: { t: Messages; team: PublicTeamMember[] }) {
+export function TeamSection({
+  t,
+  team,
+  className,
+}: {
+  t: Messages;
+  team: PublicTeamMember[];
+  className?: string;
+}) {
   return (
-    <section id="team" className="border-b border-line bg-mist/50 scroll-mt-24">
+    <section id="team" className={cn("border-b border-line bg-mist/50 scroll-mt-24", className)}>
       <div className="container-site py-16 lg:py-24">
         <Reveal>
           <SectionHeader

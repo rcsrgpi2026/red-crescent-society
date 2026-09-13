@@ -126,7 +126,7 @@ export default async function HomePage() {
         activities={activities}
         recruitmentCampaign={activeCampaign}
         liveBloodRequest={liveRequest}
-        storageKey="rcy_site_announcement_seen"
+        storageKey="rcy_site_announcement_v2"
         showTrigger={false}
       />
 
@@ -182,11 +182,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Polite notification opt-in prompt */}
-      <section className="container-site pt-6 pb-2">
-        <NotificationPermissionCard />
-      </section>
-
       {/* Serve — impact in numbers */}
       <section className="border-b border-line bg-white">
         <div className="container-site py-16 lg:py-24">
@@ -203,43 +198,6 @@ export default async function HomePage() {
 
       {/* Who we are — introduction, mission, history, founders */}
       <AboutSection t={t} founders={founders} />
-
-      {/* Gallery — photo albums */}
-      <section className="border-b border-line bg-white">
-        <div className="container-site py-16 lg:py-24">
-          <Reveal>
-            <SectionHeader
-              eyebrow={t.home.galleryEyebrow}
-              title={t.home.galleryTitle}
-              description={t.home.galleryDescription}
-            />
-          </Reveal>
-          {albums.length > 0 ? (
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {albums.slice(0, 6).map((album, i) => (
-                <Reveal key={album.id} delay={(i % 3) * 0.06}>
-                  <AlbumCard album={album} />
-                </Reveal>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-10">
-              <EmptyState
-                title={t.home.galleryEmptyTitle}
-                description={t.home.galleryEmptyText}
-              />
-            </div>
-          )}
-          <Reveal className="mt-8 text-center">
-            <Button asChild variant="outline">
-              <Link href="/gallery">
-                {t.home.openGallery}
-                <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
-              </Link>
-            </Button>
-          </Reveal>
-        </div>
-      </section>
 
       {/* Field Activities — on-the-ground volunteer campaigns & stories */}
       <section className="border-b border-line bg-mist/50">
@@ -315,9 +273,49 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Notices + Join CTA */}
+      {/* Serve — training programs */}
       <section className="border-b border-line bg-mist/50">
         <div className="container-site py-16 lg:py-24">
+          <Reveal>
+            <SectionHeader
+              eyebrow={t.home.trainingEyebrow}
+              title={t.home.trainingTitle}
+              description={t.home.trainingDescription}
+            />
+          </Reveal>
+          {trainings.length > 0 ? (
+            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {trainings.slice(0, 6).map((training, i) => (
+                <Reveal key={training.id} delay={(i % 3) * 0.06}>
+                  <TrainingCard training={training} locale={locale} />
+                </Reveal>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-10">
+              <EmptyState
+                title={t.home.trainingEmptyTitle}
+                description={t.home.trainingEmptyText}
+              />
+            </div>
+          )}
+          <Reveal className="mt-8 text-center">
+            <Button asChild variant="outline">
+              <Link href="/training">
+                {t.home.exploreTraining}
+                <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
+              </Link>
+            </Button>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Notices + Official Updates (with contextual notification permission prompt) */}
+      <section className="border-b border-line bg-white">
+        <div className="container-site py-16 lg:py-24">
+          <div className="mb-8 empty:hidden">
+            <NotificationPermissionCard />
+          </div>
           <div className="grid gap-10 lg:grid-cols-[1fr_1.2fr] min-w-0 max-w-full">
             <Reveal className="min-w-0 max-w-full">
               <div className="flex h-full flex-col">
@@ -358,41 +356,41 @@ export default async function HomePage() {
       </section>
 
       {/* Community — leadership tree */}
-      <CommunitySection t={t} members={members} />
+      <CommunitySection t={t} members={members} className="bg-mist/50" />
 
       {/* Team — visible only to admin roles */}
-      {isAdmin && <TeamSection t={t} team={team} />}
+      {isAdmin && <TeamSection t={t} team={team} className="bg-white" />}
 
-      {/* Serve — training programs */}
-      <section className="border-b border-line bg-mist/50">
+      {/* Gallery — photo albums */}
+      <section className="border-b border-line bg-white">
         <div className="container-site py-16 lg:py-24">
           <Reveal>
             <SectionHeader
-              eyebrow={t.home.trainingEyebrow}
-              title={t.home.trainingTitle}
-              description={t.home.trainingDescription}
+              eyebrow={t.home.galleryEyebrow}
+              title={t.home.galleryTitle}
+              description={t.home.galleryDescription}
             />
           </Reveal>
-          {trainings.length > 0 ? (
-            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {trainings.slice(0, 6).map((training, i) => (
-                <Reveal key={training.id} delay={(i % 3) * 0.06}>
-                  <TrainingCard training={training} locale={locale} />
+          {albums.length > 0 ? (
+            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {albums.slice(0, 6).map((album, i) => (
+                <Reveal key={album.id} delay={(i % 3) * 0.06}>
+                  <AlbumCard album={album} />
                 </Reveal>
               ))}
             </div>
           ) : (
             <div className="mt-10">
               <EmptyState
-                title={t.home.trainingEmptyTitle}
-                description={t.home.trainingEmptyText}
+                title={t.home.galleryEmptyTitle}
+                description={t.home.galleryEmptyText}
               />
             </div>
           )}
           <Reveal className="mt-8 text-center">
             <Button asChild variant="outline">
-              <Link href="/training">
-                {t.home.exploreTraining}
+              <Link href="/gallery">
+                {t.home.openGallery}
                 <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
               </Link>
             </Button>

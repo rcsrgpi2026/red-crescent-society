@@ -38,6 +38,7 @@ export function BloodRequestForm({ fields }: { fields?: FormFieldConfig[] }) {
     requiredTime: "",
     requesterName: "",
     contact: "",
+    email: "",
     emergencyLevel: "NORMAL",
     additionalInfo: "",
   });
@@ -47,6 +48,12 @@ export function BloodRequestForm({ fields }: { fields?: FormFieldConfig[] }) {
   };
 
   async function handleAction(prev: ActionResult, fd: FormData): Promise<ActionResult> {
+    if (formData.bloodGroup && !fd.get("bloodGroup")) {
+      fd.set("bloodGroup", formData.bloodGroup);
+    }
+    if (formData.emergencyLevel && !fd.get("emergencyLevel")) {
+      fd.set("emergencyLevel", formData.emergencyLevel);
+    }
     const result = await submitBloodRequest(prev, fd);
     if (result.success && result.data?.id) {
       router.push(`/blood-support/request/${result.data.id}`);
@@ -203,7 +210,7 @@ export function BloodRequestForm({ fields }: { fields?: FormFieldConfig[] }) {
 
           <div className="grid gap-5 sm:grid-cols-2">
             {isEnabled("requesterName") && (
-              <div>
+              <div className="sm:col-span-2">
                 <Label htmlFor="requesterName">
                   {getLabel("requesterName", "Requester name")}{" "}
                   {isRequired("requesterName", true) && <span className="text-crescent">*</span>}
@@ -239,6 +246,25 @@ export function BloodRequestForm({ fields }: { fields?: FormFieldConfig[] }) {
                 <FieldError errors={errors} name="contact" />
               </div>
             )}
+            {isEnabled("email") && (
+              <div>
+                <Label htmlFor="email">
+                  {getLabel("email", "Your email address / ইমেইল ঠিকানা")}{" "}
+                  {isRequired("email", true) && <span className="text-crescent">*</span>}
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleChange("email", e.target.value)}
+                  placeholder={getPlaceholder("email", "your.email@example.com")}
+                  className="mt-1.5"
+                  required={isRequired("email", true)}
+                />
+                <FieldError errors={errors} name="email" />
+              </div>
+            )}
           </div>
 
           {isEnabled("emergencyLevel") && (
@@ -263,6 +289,7 @@ export function BloodRequestForm({ fields }: { fields?: FormFieldConfig[] }) {
                   </div>
                 ))}
               </RadioGroup>
+              <FieldError errors={errors} name="emergencyLevel" />
             </div>
           )}
 

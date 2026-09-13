@@ -22,6 +22,7 @@ export default function PortalRootLayout({
     <html
       lang="en"
       className={`${fontVariables} h-full antialiased`}
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-white text-foreground antialiased">

@@ -25,26 +25,34 @@ export function GalleryGrid({ images, albumTitle }: { images: GalleryImage[]; al
   return (
     <>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {images.map((image, i) => (
-          <button
-            key={image.id}
-            onClick={() => setActive(i)}
-            className={cn(
-              "group relative aspect-square overflow-hidden rounded-2xl border border-line bg-mist transition-all hover:border-brand/50",
-              i === 0 && "col-span-2 row-span-2 aspect-square sm:aspect-[4/3]"
-            )}
-            aria-label={`Open photo ${i + 1}: ${image.caption ?? `Photo from ${albumTitle}`}`}
-          >
-            <Image
-              src={image.url}
-              alt={image.caption ?? `Photo from ${albumTitle}`}
-              fill
-              sizes="(max-width: 640px) 50vw, 25vw"
-              className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-              loading="lazy"
-            />
-          </button>
-        ))}
+        {images.map((image, i) => {
+          const isCover = i === 0;
+          return (
+            <button
+              key={image.id}
+              onClick={() => setActive(i)}
+              className={cn(
+                "group relative aspect-square overflow-hidden rounded-2xl border border-line bg-mist transition-all hover:border-brand/50",
+                isCover && "col-span-2 row-span-2 aspect-square sm:aspect-[4/3]"
+              )}
+              aria-label={`Open photo ${i + 1}: ${image.caption ?? `Photo from ${albumTitle}`}`}
+            >
+              <Image
+                src={image.url}
+                alt={image.caption ?? `Photo from ${albumTitle}`}
+                fill
+                sizes={
+                  isCover
+                    ? "(max-width: 640px) 100vw, (max-width: 1024px) 67vw, 50vw"
+                    : "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                }
+                priority={isCover}
+                className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                loading={isCover ? "eager" : "lazy"}
+              />
+            </button>
+          );
+        })}
       </div>
 
       {/* Lightbox */}

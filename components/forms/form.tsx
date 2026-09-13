@@ -87,7 +87,15 @@ export function SubmitButton({
 }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant={variant} disabled={pending} className={className}>
+    <Button
+      type="submit"
+      variant={variant}
+      disabled={pending}
+      className={cn(
+        "h-11 px-8 rounded-full bg-crescent hover:bg-crescent-dark text-white font-bold shadow-md shadow-crescent/20 active:scale-[0.98] transition-all",
+        className
+      )}
+    >
       {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />}
       {pending ? "Submitting…" : children}
     </Button>

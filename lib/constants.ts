@@ -406,3 +406,37 @@ export function getCommunityMappingForPosition(position: string, rcyDepartment?:
   }
   return { level: 4, position: (position || "MEMBER").toUpperCase(), subRole: rcyDepartment || null };
 }
+
+/**
+ * Resolves the fully qualified base URL for the application.
+ * In production, it ensures localhost URLs are NEVER sent in emails or tracking links,
+ * automatically falling back to the live domain or Vercel URL.
+ */
+export function getAppUrl(): string {
+  // If running in browser client, always use active origin
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin.replace(/\/+$/, "");
+  }
+
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+
+  // If running in production mode, never send localhost links
+  if (process.env.NODE_ENV === "production") {
+    if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+      return envUrl.replace(/\/+$/, "");
+    }
+    if (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL) {
+      return `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL.replace(/\/+$/, "")}`;
+    }
+    if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+      return `https://${process.env.NEXT_PUBLIC_VERCEL_URL.replace(/\/+$/, "")}`;
+    }
+    if (process.env.VERCEL_URL) {
+      return `https://${process.env.VERCEL_URL.replace(/\/+$/, "")}`;
+    }
+    return "https://rgpircy.vercel.app";
+  }
+
+  // In local development, use env or default to localhost
+  return (envUrl || "http://localhost:3000").replace(/\/+$/, "");
+}

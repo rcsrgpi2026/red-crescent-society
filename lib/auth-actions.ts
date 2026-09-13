@@ -9,6 +9,7 @@ import { z } from "zod";
 import { studentSignupSchema, teamMemberSignupSchema } from "@/lib/validation";
 import { sendPasswordResetEmail } from "@/lib/email/resend";
 import { createAndDispatchNotification } from "@/lib/notifications/notification-service";
+import { getAppUrl } from "@/lib/constants";
 import type { ActionResult } from "@/lib/actions";
 
 export interface LoginResult extends ActionResult {
@@ -305,7 +306,7 @@ export async function requestPasswordReset(email: string): Promise<ActionResult>
     };
   }
 
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const appUrl = getAppUrl();
   const redirectTo = `${appUrl}/auth/callback?next=/reset-password`;
 
   // 1. Direct email delivery via Gmail SMTP or Resend using admin generateLink

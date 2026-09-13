@@ -100,7 +100,18 @@ export default async function AdminBloodRequestsPage({
     {
       header: "Contact (private)",
       render: (r) => (
-        <span className="text-xs text-muted-foreground">{r.contact}</span>
+        <div className="text-xs text-muted-foreground space-y-0.5">
+          <p>{r.contact}</p>
+          {r.email && (
+            <a
+              href={`mailto:${r.email}`}
+              className="text-[11px] text-crescent hover:underline block truncate max-w-[150px]"
+              title={r.email}
+            >
+              {r.email}
+            </a>
+          )}
+        </div>
       ),
     },
     {

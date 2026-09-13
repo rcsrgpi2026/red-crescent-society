@@ -428,9 +428,8 @@ export function VolunteerApplicationForm({
           </p>
           <Button
             type="submit"
-            size="lg"
             disabled={submitting}
-            className="w-full sm:w-auto gap-2 bg-brand hover:bg-brand-dark text-white font-semibold"
+            className="w-full sm:w-auto gap-2 rounded-full h-11 px-8 bg-crescent hover:bg-crescent-dark text-white font-bold shadow-md shadow-crescent/20 active:scale-[0.98] transition-all"
           >
             {submitting ? (
               <Loader2 className="h-4 w-4 animate-spin" />

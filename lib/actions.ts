@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
   teamMemberSchema,
@@ -12,6 +13,15 @@ import {
   donorContactSchema,
 } from "@/lib/validation";
 import { createAndDispatchNotification } from "@/lib/notifications/notification-service";
+import {
+  sendBloodRequestEmails,
+  sendDonorRegistrationEmail,
+  sendExistingBloodRequestAlertToNewDonor,
+  type MatchingActiveRequestSummary,
+  sendVolunteerApplicationEmails,
+  sendContactFormEmails,
+  sendDonorContactRequestEmails,
+} from "@/lib/email/mailer";
 
 /**
  * Team members request to join a training. The request starts PENDING and
@@ -256,6 +266,22 @@ export async function joinTeamMember(
     console.warn("Could not dispatch volunteer application admin notification:", err);
   }
 
+  // Trigger anti-spam compliant transactional emails
+  if (v.email) {
+    try {
+      void sendVolunteerApplicationEmails({
+        name: v.name,
+        email: v.email,
+        phone: v.phone,
+        studentId: v.studentId,
+        department: v.department,
+        bloodGroup: v.bloodGroup,
+      });
+    } catch (emailErr) {
+      console.warn("Could not dispatch volunteer application email:", emailErr);
+    }
+  }
+
   return {
     success: true,
     message:
@@ -285,12 +311,17 @@ export async function submitBloodRequest(
     requiredTime: formData.get("requiredTime"),
     requesterName: formData.get("requesterName"),
     contact: formData.get("contact"),
+    email: formData.get("email"),
     emergencyLevel: formData.get("emergencyLevel"),
     additionalInfo: formData.get("additionalInfo"),
   });
 
   if (!parsed.success) {
-    return { success: false, errors: zodErrors(parsed.error) };
+    return {
+      success: false,
+      message: "Please fill in all required fields / অনুগ্রহ করে প্রয়োজনীয় সকল তথ্য সঠিকভাবে পূরণ করুন।",
+      errors: zodErrors(parsed.error),
+    };
   }
 
   if (!isSupabaseConfigured) {
@@ -304,12 +335,9 @@ export async function submitBloodRequest(
   const v = parsed.data;
   const supabase = await createClient();
 
-  // Insert via a security-definer RPC: the row is written by the
-  // function (bypassing RLS) and only the id is returned. A plain
-  // insert + select("id") would ask PostgREST to re-read the row,
-  // which needs a SELECT policy the table intentionally does not
-  // have (requester contact info is private).
-  const { data: id, error } = await supabase.rpc("submit_blood_request", {
+  // Insert via security-definer RPC: primary attempt with p_email
+  let id: string | null = null;
+  const rpcRes = await supabase.rpc("submit_blood_request", {
     p_patient_name: v.patientName,
     p_blood_group: v.bloodGroup,
     p_units: v.units,
@@ -321,14 +349,40 @@ export async function submitBloodRequest(
     p_contact: v.contact,
     p_emergency_level: v.emergencyLevel,
     p_additional_info: v.additionalInfo || null,
+    p_email: v.email,
   });
 
-  if (error || !id) {
-    console.error("submitBloodRequest error:", error);
-    return {
-      success: false,
-      message: "Something went wrong while submitting. Please try again.",
-    };
+  if (!rpcRes.error && rpcRes.data) {
+    id = String(rpcRes.data);
+  } else {
+    // Fallback if 0052 migration is pending in the active database
+    const fallbackRes = await supabase.rpc("submit_blood_request", {
+      p_patient_name: v.patientName,
+      p_blood_group: v.bloodGroup,
+      p_units: v.units,
+      p_hospital: v.hospital || null,
+      p_location: v.location,
+      p_required_date: v.requiredDate || null,
+      p_required_time: v.requiredTime || null,
+      p_requester_name: v.requesterName,
+      p_contact: v.contact,
+      p_emergency_level: v.emergencyLevel,
+      p_additional_info: v.additionalInfo || null,
+    });
+    if (fallbackRes.error || !fallbackRes.data) {
+      console.error("submitBloodRequest error:", rpcRes.error || fallbackRes.error);
+      return {
+        success: false,
+        message: "Something went wrong while submitting. Please try again.",
+      };
+    }
+    id = String(fallbackRes.data);
+    try {
+      const admin = createAdminClient();
+      await admin.from("blood_requests").update({ email: v.email }).eq("id", id);
+    } catch {
+      // Best effort update
+    }
   }
 
   // Trigger instant notification: "Urgent Blood Needed: [BloodGroup] in [Location]"
@@ -351,6 +405,28 @@ export async function submitBloodRequest(
     );
   } catch (notifErr) {
     console.warn("Could not dispatch blood request notification:", notifErr);
+  }
+
+  // Trigger anti-spam compliant emails to requester, admin, and matching donors
+  if (id) {
+    try {
+      void sendBloodRequestEmails({
+        requestId: id,
+        requesterName: v.requesterName,
+        requesterEmail: v.email || null,
+        requesterContact: v.contact,
+        patientName: v.patientName,
+        bloodGroup: v.bloodGroup,
+        units: v.units,
+        hospital: v.hospital,
+        location: v.location,
+        requiredDate: v.requiredDate,
+        emergencyLevel: v.emergencyLevel,
+        additionalInfo: v.additionalInfo,
+      });
+    } catch (emailErr) {
+      console.warn("Could not dispatch blood request emails:", emailErr);
+    }
   }
 
   return {
@@ -378,6 +454,7 @@ export async function registerDonor(
     bloodGroup: formData.get("bloodGroup"),
     area: formData.get("area"),
     phone: formData.get("phone"),
+    email: formData.get("email"),
     lastDonationDate: formData.get("lastDonationDate"),
     passcode: formData.get("passcode"),
     phonePublic: formData.get("phonePublic") === "on",
@@ -414,7 +491,8 @@ export async function registerDonor(
 
   // Registered via a security-definer RPC so the passcode can be
   // bcrypt-hashed in the database before it is ever stored.
-  const { error } = await supabase.rpc("register_donor", {
+  let donorId: string | null = null;
+  const rpcRes = await supabase.rpc("register_donor", {
     p_name: v.name,
     p_blood_group: v.bloodGroup,
     p_area: v.area,
@@ -424,14 +502,121 @@ export async function registerDonor(
     p_volunteer_id: volunteerId,
     p_student_id: studentId,
     p_phone_public: v.phonePublic,
+    p_email: v.email,
   });
 
-  if (error) {
-    console.error("registerDonor error:", error);
-    return {
-      success: false,
-      message: "Something went wrong while registering. Please try again.",
-    };
+  if (!rpcRes.error) {
+    donorId = rpcRes.data ? String(rpcRes.data) : null;
+  } else {
+    // Fallback if 0052 migration is pending in the active database
+    const fallbackRes = await supabase.rpc("register_donor", {
+      p_name: v.name,
+      p_blood_group: v.bloodGroup,
+      p_area: v.area,
+      p_phone: v.phone,
+      p_last_donation_date: v.lastDonationDate || null,
+      p_passcode: v.passcode,
+      p_volunteer_id: volunteerId,
+      p_student_id: studentId,
+      p_phone_public: v.phonePublic,
+    });
+    if (fallbackRes.error) {
+      console.error("registerDonor error:", rpcRes.error || fallbackRes.error);
+      return {
+        success: false,
+        message: "Something went wrong while registering. Please try again.",
+      };
+    }
+    donorId = fallbackRes.data ? String(fallbackRes.data) : null;
+    if (donorId) {
+      try {
+        const admin = createAdminClient();
+        await admin.from("blood_donors").update({ email: v.email }).eq("id", donorId);
+      } catch {
+        // Best effort update
+      }
+    }
+  }
+
+  // Trigger anti-spam compliant welcome, passcode, and existing blood requests notification
+  if (v.email) {
+    try {
+      // Check for active existing blood requests for the donor's blood group
+      let matchingRequests: MatchingActiveRequestSummary[] = [];
+      try {
+        const admin = createAdminClient();
+        const { data: activeReqs, error: reqErr } = await admin
+          .from("blood_requests")
+          .select(
+            "id, patient_name, blood_group, units, hospital, location, required_date, emergency_level, contact, requester_name, additional_info, email, status"
+          )
+          .eq("blood_group", v.bloodGroup)
+          .not("status", "in", '("COMPLETED","CANCELLED")')
+          .order("created_at", { ascending: false })
+          .limit(3);
+
+        if (!reqErr && activeReqs && activeReqs.length > 0) {
+          const donorCleanEmail = v.email.trim().toLowerCase();
+          matchingRequests = activeReqs
+            .filter((r) => {
+              const reqEmail = r.email ? String(r.email).trim().toLowerCase() : "";
+              return reqEmail !== donorCleanEmail;
+            })
+            .map((r) => ({
+              id: String(r.id),
+              patientName: r.patient_name || "রোগী",
+              bloodGroup: r.blood_group,
+              units: r.units || 1,
+              hospital: r.hospital,
+              location: r.location,
+              requiredDate: r.required_date,
+              emergencyLevel: r.emergency_level || "ROUTINE",
+              contact: r.contact,
+              requesterName: r.requester_name || "স্বজন",
+              additionalInfo: r.additional_info,
+            }));
+        }
+      } catch (reqLookupErr) {
+        console.warn("Could not look up active blood requests for new donor:", reqLookupErr);
+      }
+
+      console.log(`[Donor Registration] Preparing emails for ${v.email}...`);
+      const emailTasks: Promise<any>[] = [
+        sendDonorRegistrationEmail({
+          name: v.name,
+          email: v.email,
+          phone: v.phone,
+          bloodGroup: v.bloodGroup,
+          area: v.area,
+          passcode: v.passcode,
+          phonePublic: v.phonePublic,
+          existingRequests: matchingRequests,
+        }),
+      ];
+
+      // If active matching requests exist, dispatch an immediate donor alert for the top priority request
+      if (matchingRequests.length > 0) {
+        const primaryReq =
+          matchingRequests.find((r) => r.emergencyLevel === "EMERGENCY") ||
+          matchingRequests.find((r) => r.emergencyLevel === "URGENT") ||
+          matchingRequests[0];
+
+        console.log(`[Donor Registration] Preparing matching request alert to ${v.email} for patient ${primaryReq.patientName}...`);
+        emailTasks.push(
+          sendExistingBloodRequestAlertToNewDonor({
+            donorName: v.name,
+            donorEmail: v.email,
+            donorBloodGroup: v.bloodGroup,
+            request: primaryReq,
+          })
+        );
+      }
+
+      await Promise.allSettled(emailTasks);
+      console.log(`[Donor Registration] Email dispatch completed for ${v.email}`);
+    } catch (emailErr) {
+      console.error("Could not dispatch donor welcome/alert emails:", emailErr);
+    }
   }
 
   return {
@@ -954,6 +1139,19 @@ export async function submitContact(
     console.warn("Could not dispatch contact message admin notification:", err);
   }
 
+  // Trigger anti-spam compliant email dispatch (forward to admin + auto-reply)
+  try {
+    void sendContactFormEmails({
+      name: v.name,
+      email: v.email,
+      phone: v.phone,
+      subject: v.subject,
+      message: v.message,
+    });
+  } catch (emailErr) {
+    console.warn("Could not dispatch contact emails:", emailErr);
+  }
+
   return {
     success: true,
     message: "Message sent! The society leadership will get back to you.",
@@ -1125,6 +1323,34 @@ export async function requestDonorContact(
     );
   } catch (err) {
     console.warn("Could not dispatch donor contact request admin notification:", err);
+  }
+
+  // Send admin alert email (and requester confirmation email if provided)
+  try {
+    const admin = createAdminClient();
+    const { data: donor } = await admin
+      .from("blood_donors")
+      .select("id, name, blood_group, phone, email, area")
+      .eq("id", v.donorId)
+      .maybeSingle();
+
+    await sendDonorContactRequestEmails({
+      requestId: String(id),
+      donorId: v.donorId,
+      donorName: donor?.name || null,
+      donorBloodGroup: donor?.blood_group || null,
+      donorPhone: donor?.phone || null,
+      donorArea: donor?.area || null,
+      patientName: v.patientName,
+      bloodGroupNeeded: v.bloodGroupNeeded,
+      hospital: v.hospital || null,
+      requesterName: v.requesterName,
+      requesterContact: v.requesterContact,
+      requesterEmail: v.email || null,
+      message: v.message || null,
+    });
+  } catch (emailErr) {
+    console.error("Could not send donor contact request emails:", emailErr);
   }
 
   return {

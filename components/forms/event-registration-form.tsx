@@ -106,7 +106,7 @@ export function EventRegistrationForm({ eventId, fields }: EventRegistrationForm
                       type={field.type}
                       placeholder={field.placeholder}
                       required={field.required}
-                      className="mt-1.5 h-9 text-xs"
+                      className="mt-1.5"
                     />
                     <FieldError errors={errors} name={field.name} />
                   </div>
@@ -115,26 +115,26 @@ export function EventRegistrationForm({ eventId, fields }: EventRegistrationForm
             </div>
           ) : (
             // Default static layout fallback
-            <div className="space-y-3.5">
+            <div className="space-y-4">
               <div>
                 <Label htmlFor="er-name" className="text-xs font-semibold">Full name *</Label>
-                <Input id="er-name" name="name" placeholder="Your name" className="mt-1.5 h-9 text-xs" required />
+                <Input id="er-name" name="name" placeholder="Your name" className="mt-1.5" required />
                 <FieldError errors={errors} name="name" />
               </div>
               <div>
                 <Label htmlFor="er-phone" className="text-xs font-semibold">Mobile number *</Label>
-                <Input id="er-phone" name="phone" type="tel" placeholder="017XXXXXXXX" className="mt-1.5 h-9 text-xs" required />
+                <Input id="er-phone" name="phone" type="tel" placeholder="017XXXXXXXX" className="mt-1.5" required />
                 <FieldError errors={errors} name="phone" />
               </div>
               <div>
                 <Label htmlFor="er-department" className="text-xs font-semibold">Department (optional)</Label>
                 <Select name="department">
-                  <SelectTrigger id="er-department" className="mt-1.5 text-xs">
+                  <SelectTrigger id="er-department" className="mt-1.5">
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
                     {DEPARTMENTS.map((d) => (
-                      <SelectItem key={d} value={d} className="text-xs">
+                      <SelectItem key={d} value={d}>
                         {d}
                       </SelectItem>
                     ))}
@@ -144,18 +144,18 @@ export function EventRegistrationForm({ eventId, fields }: EventRegistrationForm
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="er-roll" className="text-xs font-semibold">Roll / Student ID (optional)</Label>
-                  <Input id="er-roll" name="roll" placeholder="e.g. 201942" className="mt-1.5 h-9 text-xs" />
+                  <Input id="er-roll" name="roll" placeholder="e.g. 201942" className="mt-1.5" />
                   <FieldError errors={errors} name="roll" />
                 </div>
                 <div>
                   <Label htmlFor="er-email" className="text-xs font-semibold">Email (optional)</Label>
-                  <Input id="er-email" name="email" type="email" placeholder="you@example.com" className="mt-1.5 h-9 text-xs" />
+                  <Input id="er-email" name="email" type="email" placeholder="you@example.com" className="mt-1.5" />
                   <FieldError errors={errors} name="email" />
                 </div>
               </div>
               <div>
                 <Label htmlFor="er-note" className="text-xs font-semibold">Notes / TrxID / Comments (optional)</Label>
-                <Input id="er-note" name="note" placeholder="অতিরিক্ত তথ্য, ট্রানজেকশন নম্বর বা মন্তব্য" className="mt-1.5 h-9 text-xs" />
+                <Input id="er-note" name="note" placeholder="অতিরিক্ত তথ্য, ট্রানজেকশন নম্বর বা মন্তব্য" className="mt-1.5" />
                 <FieldError errors={errors} name="note" />
               </div>
             </div>

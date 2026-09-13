@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { Loader2, Search, X } from "lucide-react";
+import { Loader2, Search, X, GraduationCap, Calendar } from "lucide-react";
 import {
   Input,
   Button,
@@ -34,7 +34,7 @@ export function LegacyFilters({ departments, sessions, current }: LegacyFiltersP
   const hasFilters = Boolean(current.search || current.department || current.session);
 
   return (
-    <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/40 via-white to-amber-50/40 p-4 shadow-xs">
+    <div className="rounded-2xl border border-line bg-white p-4 sm:p-5 shadow-xs">
       <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-[1fr_auto_auto_auto]">
         <form
           onSubmit={(e) => {
@@ -45,64 +45,75 @@ export function LegacyFilters({ departments, sessions, current }: LegacyFiltersP
           className="relative"
         >
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-700/60"
+            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60"
             aria-hidden
           />
           <Input
             name="search"
             placeholder="Search legacy members by name…"
             defaultValue={current.search}
-            className="border-amber-200/80 bg-white pl-9 text-xs focus-visible:ring-amber-500/30"
+            className="h-11 rounded-full border-slate-200 bg-slate-50/60 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:bg-white focus:border-crescent focus:ring-4 focus:ring-crescent/15 transition-all"
             aria-label="Search legacy members by name"
           />
         </form>
 
-        <Select
-          value={current.department || "__all"}
-          onValueChange={(v) =>
-            apply({ ...current, department: v === "__all" ? undefined : v })
-          }
-        >
-          <SelectTrigger className="border-amber-200/80 bg-white text-xs sm:w-48" aria-label="Filter by department">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all">All Departments</SelectItem>
-            {departments.map((d) => (
-              <SelectItem key={d} value={d}>
-                {d}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="relative">
+          <GraduationCap className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 z-10" />
+          <Select
+            value={current.department || "__all"}
+            onValueChange={(v) =>
+              apply({ ...current, department: v === "__all" ? undefined : v })
+            }
+          >
+            <SelectTrigger
+              className="h-11 rounded-full border-slate-200 bg-slate-50/60 pl-10 pr-4 text-sm text-foreground focus:bg-white focus-visible:border-crescent focus-visible:ring-4 focus-visible:ring-crescent/15 transition-all sm:w-52"
+              aria-label="Filter by department"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All Departments</SelectItem>
+              {departments.map((d) => (
+                <SelectItem key={d} value={d}>
+                  {d}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        <Select
-          value={current.session || "__all"}
-          onValueChange={(v) =>
-            apply({ ...current, session: v === "__all" ? undefined : v })
-          }
-        >
-          <SelectTrigger className="border-amber-200/80 bg-white text-xs sm:w-36" aria-label="Filter by session">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all">All Sessions</SelectItem>
-            {sessions.map((s) => (
-              <SelectItem key={s} value={s}>
-                Session {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="relative">
+          <Calendar className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 z-10" />
+          <Select
+            value={current.session || "__all"}
+            onValueChange={(v) =>
+              apply({ ...current, session: v === "__all" ? undefined : v })
+            }
+          >
+            <SelectTrigger
+              className="h-11 rounded-full border-slate-200 bg-slate-50/60 pl-10 pr-4 text-sm text-foreground focus:bg-white focus-visible:border-crescent focus-visible:ring-4 focus-visible:ring-crescent/15 transition-all sm:w-40"
+              aria-label="Filter by session"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All Sessions</SelectItem>
+              {sessions.map((s) => (
+                <SelectItem key={s} value={s}>
+                  Session {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {hasFilters && (
           <Button
             type="button"
             variant="ghost"
-            size="sm"
             onClick={() => apply({})}
             disabled={pending}
-            className="text-xs text-amber-900 hover:bg-amber-100 hover:text-amber-950"
+            className="h-11 rounded-full border border-slate-200 bg-slate-100/70 px-5 text-xs font-semibold text-muted-foreground hover:bg-slate-200 hover:text-foreground transition-all"
           >
             {pending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />

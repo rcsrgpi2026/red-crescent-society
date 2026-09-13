@@ -21,6 +21,7 @@ import {
   Siren,
   Building2,
   HeartPulse,
+  BellRing,
 } from "lucide-react";
 import {
   Dialog,
@@ -29,6 +30,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatDate, formatEventDateRange } from "@/lib/constants";
+import {
+  isPushSupported,
+  getNotificationPermissionState,
+  subscribeUserToPush,
+} from "@/lib/notifications/client";
 import type {
   Notice,
   Event,
@@ -37,6 +43,79 @@ import type {
   Activity,
   PublicBloodRequest,
 } from "@/types/database";
+
+/** Inline sub-component: shows a small banner prompting users to enable browser notifications */
+function NotificationPromptBanner() {
+  const [permState, setPermState] = useState<NotificationPermission | "unsupported">("granted");
+  const [loading, setLoading] = useState(false);
+  const [resultMsg, setResultMsg] = useState("");
+
+  useEffect(() => {
+    if (!isPushSupported()) {
+      setPermState("unsupported");
+      return;
+    }
+    setPermState(getNotificationPermissionState());
+  }, []);
+
+  // Don't render if already granted or not supported
+  if (permState === "granted" || permState === "unsupported") return null;
+
+  async function handleEnable() {
+    setLoading(true);
+    setResultMsg("");
+    try {
+      const res = await subscribeUserToPush();
+      if (res.success) {
+        setPermState("granted");
+        setResultMsg("✅ নোটিফিকেশন চালু হয়েছে!");
+      } else {
+        setResultMsg(res.message || "নোটিফিকেশন চালু করা যায়নি।");
+        setPermState(getNotificationPermissionState());
+      }
+    } catch {
+      setResultMsg("কিছু সমস্যা হয়েছে।");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-3 sm:p-3.5">
+      <div className="flex items-start gap-2.5 sm:gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 sm:h-10 sm:w-10">
+          <BellRing className="h-4 w-4 sm:h-5 sm:w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-bold text-blue-900 sm:text-sm">
+            🔔 নোটিফিকেশন চালু করুন
+          </p>
+          <p className="mt-0.5 text-[10px] leading-relaxed text-blue-800/80 sm:text-[11px]">
+            {permState === "denied"
+              ? "নোটিফিকেশন ব্রাউজার সেটিংস থেকে ব্লক করা আছে। সাইট সেটিংসে গিয়ে Allow করুন।"
+              : "নতুন নোটিশ, ইভেন্ট ও রক্তের আবেদনের তাৎক্ষণিক আপডেট পেতে নোটিফিকেশন চালু করুন।"}
+          </p>
+          {permState !== "denied" && (
+            <button
+              type="button"
+              onClick={handleEnable}
+              disabled={loading}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white shadow-xs transition-all hover:bg-blue-700 active:scale-[0.98] disabled:opacity-60 sm:text-xs"
+            >
+              <BellRing className="h-3 w-3" />
+              {loading ? "চালু হচ্ছে..." : "নোটিফিকেশন চালু করুন"}
+            </button>
+          )}
+          {resultMsg && (
+            <p className="mt-1.5 text-[10px] font-medium text-blue-700 sm:text-[11px]">
+              {resultMsg}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface SiteAnnouncementModalProps {
   notices?: Notice[];
@@ -101,10 +180,12 @@ export function SiteAnnouncementModal({
     if (!hasAnyContent) return;
 
     try {
-      const storedFingerprint = localStorage.getItem(storageKey);
+      const storedFingerprint = sessionStorage.getItem(storageKey);
       if (storedFingerprint !== fingerprint) {
         setHasNewAnnouncements(true);
         const timer = setTimeout(() => {
+          // Mark session when popup actually opens so page transitions don't re-trigger
+          sessionStorage.setItem(storageKey, fingerprint);
           setOpen(true);
         }, 700);
         return () => clearTimeout(timer);
@@ -117,8 +198,11 @@ export function SiteAnnouncementModal({
   function handleClose() {
     setOpen(false);
     try {
-      localStorage.setItem(storageKey, fingerprint);
+      sessionStorage.setItem(storageKey, fingerprint);
       setHasNewAnnouncements(false);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("rcy_announcement_closed"));
+      }
     } catch {
       // ignore
     }
@@ -553,6 +637,9 @@ export function SiteAnnouncementModal({
                   </div>
                 </div>
               )}
+
+              {/* Notification Permission Prompt */}
+              <NotificationPromptBanner />
 
               {/* Bottom Action Row */}
               <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-between">

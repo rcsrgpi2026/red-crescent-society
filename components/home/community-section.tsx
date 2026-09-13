@@ -12,9 +12,11 @@ import type { CommunityMember } from "@/types/database";
 export function CommunitySection({
   t,
   members,
+  className,
 }: {
   t: Messages;
   members: CommunityMember[];
+  className?: string;
 }) {
   // Group into the five rows of the tree (levels 1-5), preserving display order.
   const levels: CommunityMember[][] = [];
@@ -23,7 +25,7 @@ export function CommunitySection({
   }
 
   return (
-    <section id="community" className="border-b border-line bg-white scroll-mt-24">
+    <section id="community" className={cn("border-b border-line bg-white scroll-mt-24", className)}>
       <div className="container-site py-16 lg:py-24">
         <Reveal>
           <SectionHeader

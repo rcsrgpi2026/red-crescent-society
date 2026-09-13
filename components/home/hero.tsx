@@ -74,7 +74,7 @@ export function Hero({
     <section className="relative overflow-hidden border-b border-line bg-brand-dark">
       {/* Rotating background photos */}
       {images.length > 0 && (
-        <div className="absolute inset-0" aria-hidden={images.length > 1}>
+        <div className="absolute inset-0 pointer-events-none" aria-hidden={images.length > 1}>
           {images.map((src, i) => (
             <Image
               key={src}
@@ -85,7 +85,6 @@ export function Hero({
               // photos at high priority on first paint wastes mobile bandwidth.
               priority={i === 0}
               loading={i === 0 ? "eager" : "lazy"}
-              quality={75}
               sizes="100vw"
               className={cn(
                 "object-cover",
@@ -95,11 +94,11 @@ export function Hero({
             />
           ))}
           <div
-            className="absolute inset-0 bg-gradient-to-r from-brand-dark via-brand-dark/85 to-brand-dark/40"
+            className="absolute inset-0 pointer-events-none bg-gradient-to-r from-brand-dark via-brand-dark/85 to-brand-dark/40"
             aria-hidden
           />
           <div
-            className="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-brand-dark/60"
+            className="absolute inset-0 pointer-events-none bg-gradient-to-t from-brand-dark via-transparent to-brand-dark/60"
             aria-hidden
           />
 

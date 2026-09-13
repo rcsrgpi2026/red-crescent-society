@@ -12,6 +12,36 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#006f45",
     orientation: "portrait",
     categories: ["medical", "education", "social", "lifestyle"],
+    shortcuts: [
+      {
+        name: "রক্তের অনুরোধ (Blood Support)",
+        short_name: "Blood",
+        description: "Emergency blood request and donor directory",
+        url: "/blood-support",
+        icons: [{ src: "/icon-192.png", sizes: "192x192" }],
+      },
+      {
+        name: "জরুরি সেবা (Emergency Helpline)",
+        short_name: "Emergency",
+        description: "Direct emergency contacts and helplines",
+        url: "/emergency",
+        icons: [{ src: "/icon-192.png", sizes: "192x192" }],
+      },
+      {
+        name: "নোটিশ বোর্ড (Notices)",
+        short_name: "Notices",
+        description: "Latest official circulars and notices",
+        url: "/notices",
+        icons: [{ src: "/icon-192.png", sizes: "192x192" }],
+      },
+      {
+        name: "ইভেন্টসমূহ (Events)",
+        short_name: "Events",
+        description: "Upcoming campaigns and activities",
+        url: "/events",
+        icons: [{ src: "/icon-192.png", sizes: "192x192" }],
+      },
+    ],
     icons: [
       {
         src: "/icon-192.png",

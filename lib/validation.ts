@@ -32,6 +32,11 @@ export const bloodRequestSchema = z.object({
   contact: z
     .string()
     .regex(phoneRegex, "Enter a valid Bangladeshi mobile number (e.g. 017XXXXXXXX)"),
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required / ইমেইল ঠিকানা প্রয়োজন")
+    .regex(emailRegex, "Enter a valid email address / সঠিক ইমেইল ঠিকানা দিন"),
   emergencyLevel: z.enum(["EMERGENCY", "URGENT", "NORMAL"]),
   additionalInfo: z.string().max(2000).optional().or(z.literal("")),
 });
@@ -45,6 +50,11 @@ export const bloodDonorSchema = z.object({
   bloodGroup: z.string().min(1, "Select your blood group"),
   area: z.string().min(2, "Your area is required").max(200),
   phone: z.string().regex(phoneRegex, "Enter a valid Bangladeshi mobile number"),
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required / ইমেইল ঠিকানা প্রয়োজন")
+    .regex(emailRegex, "Enter a valid email address / সঠিক ইমেইল ঠিকানা দিন"),
   lastDonationDate: z.string().optional().or(z.literal("")),
   passcode: z
     .string()
@@ -86,9 +96,9 @@ export const donorContactSchema = z.object({
   hospital: z.string().max(200).optional().or(z.literal("")),
   email: z
     .string()
-    .regex(emailRegex, "Enter a valid email address")
-    .optional()
-    .or(z.literal("")),
+    .trim()
+    .min(1, "Email is required / ইমেইল ঠিকানা প্রয়োজন")
+    .regex(emailRegex, "Enter a valid email address / সঠিক ইমেইল ঠিকানা দিন"),
   message: z.string().max(1000).optional().or(z.literal("")),
   passcode: z
     .string()

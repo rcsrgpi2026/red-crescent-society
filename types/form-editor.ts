@@ -131,8 +131,9 @@ export const DEFAULT_FORM_CONFIGS: Record<FormKey, FormConfig> = {
       { id: "requiredTime", name: "requiredTime", label: "Needed Time (সময়)", placeholder: "e.g. 11:30 AM", type: "text", required: false, enabled: true, isCore: true, order: 7 },
       { id: "requesterName", name: "requesterName", label: "Contact Person (স্বজনের নাম)", placeholder: "যোগাযোগকারীর নাম", type: "text", required: true, enabled: true, isCore: true, order: 8 },
       { id: "contact", name: "contact", label: "Phone Number (যোগাযোগের ফোন নম্বর)", placeholder: "01XXXXXXXXX", type: "tel", required: true, enabled: true, isCore: true, order: 9 },
-      { id: "emergencyLevel", name: "emergencyLevel", label: "Urgency Level (জরুরি মাত্রা)", placeholder: "Urgency", type: "select", required: true, enabled: true, isCore: true, options: ["EMERGENCY", "URGENT", "ROUTINE"], order: 10 },
-      { id: "additionalInfo", name: "additionalInfo", label: "Additional Details (অতিরিক্ত বিবরণ)", placeholder: "রোগীর অবস্থা বা হিমোগ্লোবিন সংক্রান্ত বিবরণ...", type: "textarea", required: false, enabled: true, isCore: true, order: 11 },
+      { id: "email", name: "email", label: "Email Address (ইমেইল ঠিকানা)", placeholder: "your.email@example.com", type: "email", required: true, enabled: true, isCore: true, order: 10 },
+      { id: "emergencyLevel", name: "emergencyLevel", label: "Urgency Level (জরুরি মাত্রা)", placeholder: "Urgency", type: "select", required: true, enabled: true, isCore: true, options: ["EMERGENCY", "URGENT", "ROUTINE"], order: 11 },
+      { id: "additionalInfo", name: "additionalInfo", label: "Additional Details (অতিরিক্ত বিবরণ)", placeholder: "রোগীর অবস্থা বা হিমোগ্লোবিন সংক্রান্ত বিবরণ...", type: "textarea", required: false, enabled: true, isCore: true, order: 12 },
     ],
   },
   contact: {

@@ -168,6 +168,7 @@ export interface BloodDonor {
   availability: Availability;
   last_donation_date: string | null;
   phone: string | null;
+  email: string | null;
   is_active: boolean;
   phone_public: boolean;
   created_at: string;
@@ -199,6 +200,7 @@ export interface BloodRequest {
   required_time: string | null;
   requester_name: string;
   contact: string;
+  email: string | null;
   emergency_level: EmergencyLevel;
   additional_info: string | null;
   status: BloodRequestStatus;
@@ -418,14 +420,6 @@ export interface Certificate {
   created_at: string;
 }
 
-export interface Attendance {
-  id: string;
-  event_id: string;
-  volunteer_id: string;
-  status: "PRESENT" | "ABSENT";
-  scanned_at: string;
-  created_at: string;
-}
 
 export interface TeamMemberPoint {
   id: string;
@@ -519,5 +513,54 @@ export interface VolunteerApplication {
     id: string;
     title: string;
   } | null;
+}
+
+export interface CustomPopupConfig {
+  enabled: boolean;
+  imageUrl: string;
+  imageAlt?: string;
+  imageFit?: "contain" | "cover";
+  title?: string;
+  description?: string;
+  buttonText?: string;
+  buttonUrl?: string;
+  buttonOpenInNewTab?: boolean;
+  startDate?: string | null;
+  endDate?: string | null;
+  showScope?: "home_only" | "all_pages";
+  frequency?: "once_per_session" | "always" | "once_per_day";
+  updatedAt?: string;
+}
+
+export type CampaignCategory =
+  | "notice"
+  | "training"
+  | "event"
+  | "blood_appeal"
+  | "announcement";
+
+export type CampaignAudience =
+  | "students"
+  | "volunteers"
+  | "donors"
+  | "blood_requesters"
+  | "event_registrants";
+
+export interface EmailCampaign {
+  id: string;
+  subject: string;
+  category: CampaignCategory;
+  badge?: string | null;
+  heading: string;
+  body: string;
+  button_text?: string | null;
+  button_url?: string | null;
+  target_audiences: CampaignAudience[];
+  total_recipients: number;
+  sent_count: number;
+  failed_count: number;
+  status: "COMPLETED" | "SENDING" | "FAILED";
+  created_by?: string | null;
+  created_at: string;
 }
 

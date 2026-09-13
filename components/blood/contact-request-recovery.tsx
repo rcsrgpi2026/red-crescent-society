@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   Phone,
   HeartPulse,
+  User,
+  KeyRound,
 } from "lucide-react";
 import {
   findMyContactRequests,
@@ -79,45 +81,54 @@ export function ContactRequestRecovery({ strings }: { strings: ContactRecoverySt
     <div>
       <form onSubmit={handleFind} className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
         <div>
-          <Label htmlFor="cr-name">{strings.nameLabel}</Label>
-          <Input
-            id="cr-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={strings.namePlaceholder}
-            className="mt-1.5"
-            required
-          />
+          <Label htmlFor="cr-name" className="font-medium text-foreground text-sm">{strings.nameLabel}</Label>
+          <div className="relative mt-1.5">
+            <User className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+            <Input
+              id="cr-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={strings.namePlaceholder}
+              className="pl-10"
+              required
+            />
+          </div>
         </div>
         <div>
-          <Label htmlFor="cr-phone">{strings.phoneLabel}</Label>
-          <Input
-            id="cr-phone"
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder={strings.phonePlaceholder}
-            className="mt-1.5"
-            required
-          />
+          <Label htmlFor="cr-phone" className="font-medium text-foreground text-sm">{strings.phoneLabel}</Label>
+          <div className="relative mt-1.5">
+            <Phone className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+            <Input
+              id="cr-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder={strings.phonePlaceholder}
+              className="pl-10"
+              required
+            />
+          </div>
         </div>
         <div>
-          <Label htmlFor="cr-passcode">{strings.passcodeLabel}</Label>
-          <Input
-            id="cr-passcode"
-            type="password"
-            inputMode="numeric"
-            value={passcode}
-            onChange={(e) => setPasscode(e.target.value)}
-            placeholder={strings.passcodePlaceholder}
-            className="mt-1.5"
-            required
-          />
+          <Label htmlFor="cr-passcode" className="font-medium text-foreground text-sm">{strings.passcodeLabel}</Label>
+          <div className="relative mt-1.5">
+            <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+            <Input
+              id="cr-passcode"
+              type="password"
+              inputMode="numeric"
+              value={passcode}
+              onChange={(e) => setPasscode(e.target.value)}
+              placeholder={strings.passcodePlaceholder}
+              className="pl-10 tracking-widest"
+              required
+            />
+          </div>
         </div>
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-crescent px-4 text-sm font-semibold text-white transition-colors hover:bg-crescent-dark disabled:opacity-50"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-crescent px-6 text-sm font-semibold text-white transition-all shadow-md shadow-crescent/20 hover:bg-crescent-dark active:scale-[0.98] disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Search className="h-4 w-4" aria-hidden />}
           {strings.find}

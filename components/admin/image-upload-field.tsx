@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { Loader2, UploadCloud, Image as ImageIcon, X } from "lucide-react";
@@ -20,6 +20,8 @@ interface ImageUploadFieldProps {
   name: string;
   label: string;
   defaultValue?: string | null;
+  value?: string;
+  onChange?: (url: string) => void;
   /** Folder inside the "images" bucket, e.g. "founders". */
   folder?: string;
   description?: string;
@@ -33,14 +35,27 @@ export function ImageUploadField({
   name,
   label,
   defaultValue,
+  value,
+  onChange,
   folder = "uploads",
   description,
   crop = true,
   aspectRatio = 1,
 }: ImageUploadFieldProps) {
-  const [url, setUrl] = useState(defaultValue ?? "");
+  const [url, setUrl] = useState(value ?? defaultValue ?? "");
   const [uploading, setUploading] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (value !== undefined) {
+      setUrl(value);
+    }
+  }, [value]);
+
+  function updateUrl(newUrl: string) {
+    setUrl(newUrl);
+    onChange?.(newUrl);
+  }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -71,7 +86,7 @@ export function ImageUploadField({
     setUploading(true);
     try {
       const publicUrl = await uploadImageToStorage(file, folder);
-      setUrl(publicUrl);
+      updateUrl(publicUrl);
       toast.success("Image uploaded.");
     } catch (err) {
       const message =
@@ -103,7 +118,7 @@ export function ImageUploadField({
               <Image src={url} alt="" fill sizes="64px" className="object-cover" />
               <button
                 type="button"
-                onClick={() => setUrl("")}
+                onClick={() => updateUrl("")}
                 className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white transition-colors hover:bg-black/80"
                 aria-label="Remove image"
               >
@@ -120,7 +135,7 @@ export function ImageUploadField({
           <Input
             id={`${name}-url`}
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={(e) => updateUrl(e.target.value)}
             placeholder="Paste an image URL, or upload one below"
             className="h-9"
           />

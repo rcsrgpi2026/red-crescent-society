@@ -1,4 +1,4 @@
-import { Poppins, Noto_Sans_Bengali } from "next/font/google";
+import { Poppins, Noto_Sans_Bengali, Plus_Jakarta_Sans, Inter } from "next/font/google";
 
 export const poppins = Poppins({
   variable: "--font-poppins",
@@ -8,10 +8,24 @@ export const poppins = Poppins({
   display: "swap",
 });
 
+export const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+  display: "swap",
+});
+
+export const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+});
+
 export const notoBengali = Noto_Sans_Bengali({
   variable: "--font-noto-bengali",
   subsets: ["bengali"],
   display: "swap",
 });
 
-export const fontVariables = `${poppins.variable} ${notoBengali.variable}`;
+export const fontVariables = `${poppins.variable} ${jakarta.variable} ${inter.variable} ${notoBengali.variable}`;

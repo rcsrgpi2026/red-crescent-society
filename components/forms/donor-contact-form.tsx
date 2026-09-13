@@ -38,7 +38,7 @@ export function DonorContactForm({ donorId, donorName }: { donorId: string; dono
 
           <div>
             <Label htmlFor="dc-patient" className="text-xs font-semibold">রোগীর নাম (Patient name)</Label>
-            <Input id="dc-patient" name="patientName" placeholder="রোগীর নাম লিখুন" className="mt-1 h-9 text-xs" />
+            <Input id="dc-patient" name="patientName" placeholder="রোগীর নাম লিখুন" className="mt-1" />
             <FieldError errors={errors} name="patientName" />
           </div>
 
@@ -46,7 +46,7 @@ export function DonorContactForm({ donorId, donorName }: { donorId: string; dono
             <div>
               <Label htmlFor="dc-blood" className="text-xs font-semibold">প্রয়োজনীয় রক্তের গ্রুপ</Label>
               <Select name="bloodGroupNeeded">
-                <SelectTrigger id="dc-blood" className="mt-1 h-9 text-xs">
+                <SelectTrigger id="dc-blood" className="mt-1">
                   <SelectValue placeholder="গ্রুপ বেছে নিন" />
                 </SelectTrigger>
                 <SelectContent>
@@ -61,7 +61,7 @@ export function DonorContactForm({ donorId, donorName }: { donorId: string; dono
             </div>
             <div>
               <Label htmlFor="dc-hospital" className="text-xs font-semibold">হাসপাতাল / স্থান (ঐচ্ছিক)</Label>
-              <Input id="dc-hospital" name="hospital" placeholder="যেমন: রামেক হাসপাতাল" className="mt-1 h-9 text-xs" />
+              <Input id="dc-hospital" name="hospital" placeholder="যেমন: রামেক হাসপাতাল" className="mt-1" />
               <FieldError errors={errors} name="hospital" />
             </div>
           </div>
@@ -69,25 +69,27 @@ export function DonorContactForm({ donorId, donorName }: { donorId: string; dono
           <div className="grid gap-2.5 sm:grid-cols-2">
             <div>
               <Label htmlFor="dc-name" className="text-xs font-semibold">আপনার নাম (Your name)</Label>
-              <Input id="dc-name" name="requesterName" placeholder="আপনার নাম" className="mt-1 h-9 text-xs" />
+              <Input id="dc-name" name="requesterName" placeholder="আপনার নাম" className="mt-1" />
               <FieldError errors={errors} name="requesterName" />
             </div>
             <div>
               <Label htmlFor="dc-contact" className="text-xs font-semibold">আপনার মোবাইল নম্বর</Label>
-              <Input id="dc-contact" name="requesterContact" type="tel" placeholder="017XXXXXXXX" className="mt-1 h-9 text-xs" />
+              <Input id="dc-contact" name="requesterContact" type="tel" placeholder="017XXXXXXXX" className="mt-1" />
               <FieldError errors={errors} name="requesterContact" />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="dc-email" className="text-xs font-semibold">ইমেইল (ঐচ্ছিক)</Label>
-            <Input id="dc-email" name="email" type="email" placeholder="you@example.com" className="mt-1 h-9 text-xs" />
+            <Label htmlFor="dc-email" className="text-xs font-semibold">
+              আপনার ইমেইল (Your email) <span className="text-crescent">*</span>
+            </Label>
+            <Input id="dc-email" name="email" type="email" placeholder="you@example.com" className="mt-1" required />
             <FieldError errors={errors} name="email" />
           </div>
 
           <div>
             <Label htmlFor="dc-message" className="text-xs font-semibold">বার্তা বা বিস্তারিত (ঐচ্ছিক)</Label>
-            <Textarea id="dc-message" name="message" rows={2} placeholder="রোগীর অবস্থা বা অতিরিক্ত তথ্য..." className="mt-1 text-xs" />
+            <Textarea id="dc-message" name="message" rows={2} placeholder="রোগীর অবস্থা বা অতিরিক্ত তথ্য..." className="mt-1" />
           </div>
 
           <div>
@@ -100,7 +102,7 @@ export function DonorContactForm({ donorId, donorName }: { donorId: string; dono
               pattern="[0-9]{4,6}"
               autoComplete="new-password"
               placeholder="••••"
-              className="mt-1 h-9 text-xs font-mono tracking-widest"
+              className="mt-1 tracking-widest"
             />
             <FieldError errors={errors} name="passcode" />
             <p className="mt-1 text-[11px] leading-tight text-muted-foreground">
@@ -109,7 +111,7 @@ export function DonorContactForm({ donorId, donorName }: { donorId: string; dono
           </div>
 
           <div className="pt-1">
-            <SubmitButton className="w-full rounded-xl bg-crescent py-2.5 text-xs font-bold text-white shadow-sm hover:bg-crescent-dark">
+            <SubmitButton className="w-full">
               যোগাযোগের অনুরোধ পাঠান
             </SubmitButton>
           </div>

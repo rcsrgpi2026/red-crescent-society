@@ -7,8 +7,10 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { LocaleProvider } from "@/components/providers/locale-provider";
 import { LogoProvider } from "@/components/providers/logo-provider";
 import { PwaRegister } from "@/components/providers/pwa-register";
+import { PwaInstallPrompt } from "@/components/pwa/pwa-install-prompt";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
-import { getSettings } from "@/lib/queries";
+import { getSettings, getCustomPopupConfig } from "@/lib/queries";
+import { CustomSitePopup } from "@/components/shared/custom-site-popup";
 import { fontVariables } from "@/lib/fonts";
 import "../globals.css";
 
@@ -70,10 +72,11 @@ export default async function PublicRootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [locale, t, settings] = await Promise.all([
+  const [locale, t, settings, customPopup] = await Promise.all([
     getServerLocale(),
     getServerMessages(),
     getSettings(),
+    getCustomPopupConfig(),
   ]);
   const society = settings.society ?? {};
   const asString = (v: unknown) =>
@@ -89,6 +92,7 @@ export default async function PublicRootLayout({
     <html
       lang={locale}
       className={`${fontVariables} h-full antialiased`}
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <head>
@@ -118,8 +122,10 @@ export default async function PublicRootLayout({
             </LogoProvider>
           </LocaleProvider>
           <Toaster position="top-center" richColors closeButton />
+          <CustomSitePopup config={customPopup} />
         </TooltipProvider>
         <PwaRegister />
+        <PwaInstallPrompt />
         <Analytics />
       </body>
     </html>

@@ -8,7 +8,6 @@ import { DEFAULT_COMMUNITY_MEMBERS, resolveEventStatus } from "@/lib/constants";
 import type {
   Achievement,
   Activity,
-  Attendance,
   BloodContactRequest,
   BloodDonor,
   BloodRequest,
@@ -35,6 +34,7 @@ import type {
   TeamMemberPoint,
   Training,
   VolunteerApplication,
+  CustomPopupConfig,
 } from "@/types/database";
 import { DEFAULT_FORM_CONFIGS, type FormConfig, type FormKey } from "@/types/form-editor";
 
@@ -69,6 +69,36 @@ export const getSettings = unstable_cache(
   ["settings"],
   { tags: ["settings"], revalidate: 60 }
 );
+
+export const DEFAULT_CUSTOM_POPUP_CONFIG: CustomPopupConfig = {
+  enabled: false,
+  imageUrl: "",
+  imageAlt: "Notice & Announcement",
+  title: "",
+  description: "",
+  buttonText: "Learn More",
+  buttonUrl: "",
+  buttonOpenInNewTab: false,
+  startDate: null,
+  endDate: null,
+  showScope: "home_only",
+  frequency: "once_per_session",
+};
+
+export async function getCustomPopupConfig(): Promise<CustomPopupConfig> {
+  const supabase = getPublicClient();
+  if (!supabase) return DEFAULT_CUSTOM_POPUP_CONFIG;
+  const { data } = await supabase
+    .from("website_settings")
+    .select("value")
+    .eq("key", "custom_popup")
+    .maybeSingle();
+
+  if (!data?.value || typeof data.value !== "object") {
+    return DEFAULT_CUSTOM_POPUP_CONFIG;
+  }
+  return { ...DEFAULT_CUSTOM_POPUP_CONFIG, ...(data.value as Partial<CustomPopupConfig>) };
+}
 
 export async function getFormConfigs(): Promise<Record<FormKey, FormConfig>> {
   const supabase = getPublicClient();
@@ -156,14 +186,16 @@ export const getHomeStats = unstable_cache(
       // units for requests confirmed before that field existed.
       supabase
         .from("public_blood_requests")
-        .select("units, units_donated")
-        .eq("status", "COMPLETED")
-        .eq("donation_confirmed", true),
+        .select("units, units_donated, donation_confirmed")
+        .eq("status", "COMPLETED"),
       supabase.from("activities").select("participants"),
     ]);
 
     const bloodUnits = (requests.data ?? []).reduce(
-      (sum, r) => sum + (r.units_donated ?? r.units ?? 0),
+      (sum, r) => {
+        if (r.donation_confirmed === false) return sum;
+        return sum + (r.units_donated ?? r.units ?? 0);
+      },
       0
     );
     const reached = (activities.data ?? []).reduce((sum, a) => sum + (a.participants ?? 0), 0);
@@ -178,7 +210,7 @@ export const getHomeStats = unstable_cache(
     };
   },
   ["home-stats"],
-  { tags: ["stats", "donors", "blood-requests"], revalidate: 60 }
+  { tags: ["stats", "donors", "blood-requests", "blood", "events", "training", "volunteers", "activities"], revalidate: 60 }
 );
 
 export const getFounders = unstable_cache(
@@ -986,15 +1018,6 @@ export async function getMyTrainingEnrollments(
   return (data ?? []) as unknown as MyTrainingEnrollment[];
 }
 
-export async function adminGetAttendanceForEvent(eventId: string): Promise<Attendance[]> {
-  const supabase = await db();
-  if (!supabase) return [];
-  const { data } = await supabase
-    .from("attendance")
-    .select("*")
-    .eq("event_id", eventId);
-  return data ?? [];
-}
 
 export async function adminGetPoints(teamMemberId: string): Promise<TeamMemberPoint[]> {
   const supabase = await db();

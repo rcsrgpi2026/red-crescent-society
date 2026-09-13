@@ -16,7 +16,6 @@ import {
   Images,
   GraduationCap,
   Award,
-  ClipboardCheck,
   CreditCard,
   MessageSquare,
   Settings,
@@ -28,8 +27,10 @@ import {
   X,
   UserPlus,
   SlidersHorizontal,
+  Sparkles,
+  Mail,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -39,6 +40,7 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 
 const NAV = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { label: "Email Campaigns", href: "/admin/campaigns", icon: Mail },
   { label: "Notifications", href: "/admin/notifications", icon: Bell },
   { label: "Recruitment", href: "/admin/recruitment", icon: UserPlus },
   { label: "Team Members", href: "/admin/team", icon: Users },
@@ -55,9 +57,9 @@ const NAV = [
   { label: "Training", href: "/admin/training", icon: GraduationCap },
   { label: "Certificates", href: "/admin/certificates", icon: Award },
   { label: "ID Card", href: "/admin/id-card", icon: CreditCard },
-  { label: "Attendance", href: "/admin/attendance", icon: ClipboardCheck },
   { label: "Participants", href: "/admin/participants", icon: UserCheck },
   { label: "Messages", href: "/admin/messages", icon: MessageSquare },
+  { label: "Custom Popup", href: "/admin/popup", icon: Sparkles },
   { label: "Form Editor", href: "/admin/form-editor", icon: SlidersHorizontal },
   { label: "Settings", href: "/admin/settings", icon: Settings },
   { label: "Audit Log", href: "/admin/audit", icon: ScrollText },
@@ -81,6 +83,11 @@ export function AdminSidebar({
   unreadMessages?: number;
 }) {
   const pathname = usePathname();
+
+  // Defer active-link highlighting until after hydration to avoid a mismatch
+  // between the server-rendered pathname and the client-side router state.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   return (
     <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-gradient-to-b from-brand-dark to-[#043c28] text-white">
@@ -121,9 +128,10 @@ export function AdminSidebar({
       >
         {NAV.map((item) => {
           const active =
-            item.href === "/admin"
+            mounted &&
+            (item.href === "/admin"
               ? pathname === "/admin"
-              : pathname.startsWith(item.href);
+              : pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}

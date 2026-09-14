@@ -302,40 +302,52 @@ export interface BuildCampaignHtmlParams {
   body: string;
   badge?: string | null;
   recipientName?: string | null;
+  recipientEmail?: string | null;
   buttonText?: string | null;
   buttonUrl?: string | null;
   secondaryInfo?: string | null;
 }
 
 /**
- * Builds a responsive, branded HTML email template for RCY email campaigns.
+ * Builds a responsive, branded HTML email template for RCY email campaigns,
+ * strictly optimized for spam filters (CAN-SPAM compliant, table layout, preheader, RFC unsubscribe).
  */
 export function buildCampaignHtml({
   heading,
   body,
   badge = "Announcement",
   recipientName,
+  recipientEmail,
   buttonText,
   buttonUrl,
   secondaryInfo,
 }: BuildCampaignHtmlParams): string {
   const greeting = recipientName ? `Hello ${recipientName},` : "Dear RCY Member,";
   const safeButtonUrl = sanitizeCampaignUrl(buttonUrl);
+  const appUrl = getAppUrl();
+  const config = getSmtpConfig();
+  const supportEmail = config.user || "redcrescentyouthrgpi@gmail.com";
+  const cleanEmail = recipientEmail ? recipientEmail.trim().toLowerCase() : "";
+
+  // Extract clean preheader snippet (first ~100 characters of body)
+  const preheader = body.replace(/[\r\n\t]+/g, " ").trim().slice(0, 110);
 
   // Convert raw line breaks into clean paragraph tags
   const formattedBody = body
     .split(/\n\s*\n/)
     .map((paragraph) => {
       const clean = paragraph.trim().replace(/\n/g, "<br>");
-      return clean ? `<p class="text" style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.7; color: #334155;">${clean}</p>` : "";
+      return clean
+        ? `<p class="paragraph-text" style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.7; color: #334155;">${clean}</p>`
+        : "";
     })
     .join("");
 
   const ctaSection =
     buttonText && safeButtonUrl
       ? `
-      <div class="cta-box" style="text-align: center; margin: 32px 0 24px 0;">
-        <a href="${safeButtonUrl}" target="_blank" rel="noopener noreferrer" class="btn" style="display: inline-block; background-color: #dc2626; color: #ffffff !important; text-decoration: none; font-weight: 700; font-size: 15px; padding: 14px 36px; border-radius: 10px; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35); text-align: center;">
+      <div class="cta-box" style="text-align: center; margin: 28px 0 14px 0;">
+        <a href="${safeButtonUrl}" target="_blank" rel="noopener noreferrer" class="btn" style="display: inline-block; background-color: #dc2626; color: #ffffff !important; text-decoration: none; font-weight: 700; font-size: 14.5px; padding: 13px 34px; border-radius: 10px; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); text-align: center;">
           ${buttonText}
         </a>
       </div>
@@ -344,122 +356,185 @@ export function buildCampaignHtml({
 
   const secondarySection = secondaryInfo
     ? `
-      <div class="note-box" style="background-color: #f8fafc; border-left: 4px solid #dc2626; border-radius: 8px; padding: 14px 18px; margin: 24px 0; font-size: 13.5px; color: #475569; line-height: 1.6;">
+      <div class="note-box" style="background-color: #f8fafc; border-left: 4px solid #dc2626; border-radius: 8px; padding: 14px 18px; margin: 22px 0; font-size: 13.5px; color: #475569; line-height: 1.6;">
         ${secondaryInfo.replace(/\n/g, "<br>")}
       </div>
     `
       : "";
 
-  return `
-<!DOCTYPE html>
-<html lang="en">
+  return `<!DOCTYPE html>
+<html lang="bn" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>${heading}</title>
   <style>
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f8fafc;
+      margin: 0 !important;
+      padding: 0 !important;
+      background-color: #f1f5f9;
       color: #334155;
-      -webkit-font-smoothing: antialiased;
+      width: 100% !important;
     }
-    .container {
+    .wrapper { width: 100%; table-layout: fixed; background-color: #f1f5f9; padding: 24px 0; }
+    .main-table {
       max-width: 580px;
-      margin: 32px auto;
-      background: #ffffff;
-      border-radius: 12px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 14px;
       overflow: hidden;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
       border: 1px solid #e2e8f0;
-      border-top: 4px solid #dc2626;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
     }
     .header {
-      padding: 28px 32px 20px 32px;
-      border-bottom: 1px solid #f1f5f9;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      padding: 28px 24px;
+      text-align: center;
+      border-bottom: 3px solid #dc2626;
     }
-    .header-badge {
+    .badge {
       display: inline-block;
-      color: #dc2626;
+      background-color: rgba(220, 38, 38, 0.22);
+      color: #fca5a5;
       font-size: 11px;
       font-weight: 700;
-      letter-spacing: 0.1em;
       text-transform: uppercase;
-      margin-bottom: 6px;
+      letter-spacing: 0.08em;
+      padding: 5px 14px;
+      border-radius: 9999px;
+      border: 1px solid rgba(220, 38, 38, 0.35);
+      margin-bottom: 10px;
     }
-    .header h1 {
-      color: #0f172a;
-      font-size: 20px;
-      font-weight: 700;
+    .heading-title {
       margin: 0 0 6px 0;
+      color: #ffffff;
+      font-size: 21px;
+      font-weight: 800;
       line-height: 1.35;
+      letter-spacing: -0.02em;
     }
-    .header p {
-      color: #64748b;
-      font-size: 12px;
+    .org-sub {
       margin: 0;
+      color: #94a3b8;
+      font-size: 12.5px;
+      font-weight: 500;
     }
-    .content {
-      padding: 28px 32px 32px 32px;
-    }
+    .content-body { padding: 30px 26px; }
     .greeting {
       font-size: 15px;
       font-weight: 600;
       color: #0f172a;
       margin: 0 0 16px 0;
     }
-    .footer {
+    .paragraph-text {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #334155;
+      margin: 0 0 16px 0;
+    }
+    .note-box {
       background-color: #f8fafc;
-      border-top: 1px solid #f1f5f9;
-      padding: 20px 32px;
-      text-align: center;
-      font-size: 12px;
-      color: #94a3b8;
+      border-left: 4px solid #dc2626;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 22px 0;
+      font-size: 13.5px;
+      color: #475569;
       line-height: 1.6;
     }
-    .footer a {
-      color: #dc2626;
+    .cta-box { text-align: center; margin: 28px 0 12px 0; }
+    .btn {
+      display: inline-block;
+      background-color: #dc2626;
+      color: #ffffff !important;
       text-decoration: none;
-      font-weight: 500;
+      font-weight: 700;
+      font-size: 14.5px;
+      padding: 13px 34px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
     }
-    .footer a:hover {
-      text-decoration: underline;
+    .footer {
+      background-color: #f8fafc;
+      padding: 24px;
+      text-align: center;
+      border-top: 1px solid #e2e8f0;
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    .footer a { color: #dc2626; text-decoration: none; font-weight: 600; }
+    @media only screen and (max-width: 600px) {
+      .content-body { padding: 22px 18px !important; }
+      .header { padding: 22px 16px !important; }
+      .heading-title { font-size: 18px !important; }
+      .btn { width: 100% !important; box-sizing: border-box; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="header-badge">${badge || "Official Circular"}</div>
-      <h1>${heading}</h1>
-      <p>Red Crescent Youth &bull; Rajshahi Govt. Polytechnic Institute</p>
-    </div>
-    <div class="content">
-      <p class="greeting">${greeting}</p>
-      ${formattedBody}
-      ${secondarySection}
-      ${ctaSection}
-    </div>
-    <div class="footer">
-      <div style="margin: 0 0 16px 0;">
-        <a href="https://facebook.com/rcsrgpi" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 0 5px; padding: 6px 14px; background-color: #1877f2; color: #ffffff !important; text-decoration: none; border-radius: 20px; font-size: 11.5px; font-weight: 600;">
-          Facebook
-        </a>
-        <a href="https://instagram.com/rcy_rgpi" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 0 5px; padding: 6px 14px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #ffffff !important; text-decoration: none; border-radius: 20px; font-size: 11.5px; font-weight: 600;">
-          Instagram
-        </a>
-      </div>
-      &copy; ${new Date().getFullYear()} Red Crescent Youth, Rajshahi Govt. Polytechnic Institute.<br>
-      Official administrative notification issued to registered members and volunteers.<br>
-      <a href="${getAppUrl()}" target="_blank" rel="noopener noreferrer">RCY Portal</a> &bull;
-      <a href="mailto:redcrescentyouthrgpi@gmail.com">Help & Support</a>
-    </div>
+  <!-- Hidden preheader text to prevent snippet parsing issues in mail clients -->
+  <div style="display: none; font-size: 1px; color: #f1f5f9; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all;">
+    ${preheader}
   </div>
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="wrapper">
+    <tr>
+      <td align="center">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="main-table">
+          <tr>
+            <td class="header">
+              <span class="badge">${badge || "Official Circular"}</span>
+              <h1 class="heading-title">${heading}</h1>
+              <p class="org-sub">Red Crescent Youth · Rajshahi Govt. Polytechnic Institute</p>
+            </td>
+          </tr>
+          <tr>
+            <td class="content-body">
+              <p class="greeting">${greeting}</p>
+              ${formattedBody}
+              ${secondarySection}
+              ${ctaSection}
+            </td>
+          </tr>
+          <tr>
+            <td class="footer">
+              <p style="margin: 0 0 6px 0; font-weight: 600; color: #334155;">
+                বাংলাদেশ রেড ক্রিসেন্ট সোসাইটি · যুব রেড ক্রিসেন্ট দল<br>
+                রাজশাহী পলিটেকনিক ইনস্টিটিউট শাখা
+              </p>
+              <p style="margin: 0 0 10px 0; color: #94a3b8; font-size: 11px;">
+                Rajshahi Government Polytechnic Institute, Kazla, Rajshahi-6203, Bangladesh
+              </p>
+              <div style="margin: 12px 0 12px 0;">
+                <a href="https://facebook.com/rcsrgpi" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 0 4px; padding: 5px 12px; background-color: #1877f2; color: #ffffff !important; text-decoration: none; border-radius: 16px; font-size: 11px; font-weight: 600;">
+                  Facebook
+                </a>
+                <a href="https://instagram.com/rcy_rgpi" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 0 4px; padding: 5px 12px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #ffffff !important; text-decoration: none; border-radius: 16px; font-size: 11px; font-weight: 600;">
+                  Instagram
+                </a>
+              </div>
+              <p style="margin: 0 0 8px 0; font-size: 11.5px;">
+                <a href="${appUrl}" target="_blank" rel="noopener noreferrer">Portal</a> · 
+                <a href="mailto:${supportEmail}">Help & Support</a>
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: 10px;">
+                You received this official circular as a registered member or volunteer of RCY RGPI.<br>
+                To opt out of broadcasts: <a href="mailto:${supportEmail}?subject=Unsubscribe%20Request%20(${encodeURIComponent(cleanEmail)})" style="color: #64748b; text-decoration: underline;">click here to request unsubscribe</a>.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
-</html>
-  `.trim();
+</html>`.trim();
 }
 
 export interface SendCampaignBatchParams {
@@ -482,8 +557,10 @@ export interface BatchSendResult {
 }
 
 /**
- * Sends a batch of campaign emails to a list of recipients (typically 10-15 per batch)
- * using Gmail SMTP (or Resend fallback).
+ * Sends a batch of campaign emails to a list of recipients with strict anti-spam compliance:
+ * - Omits custom forged messageId so Gmail SMTP automatically assigns authentic cryptographic Google Message-IDs.
+ * - Standard RFC List-Unsubscribe, List-Unsubscribe-Post, and Auto-Submitted headers.
+ * - Controlled sequential dispatch with gentle delay to avoid Gmail outbound burst spam detection.
  */
 export async function sendCampaignEmailBatch({
   recipients,
@@ -504,111 +581,121 @@ export async function sendCampaignEmailBatch({
   const resendClient = config.resendApiKey ? new Resend(config.resendApiKey) : null;
 
   try {
-    const CHUNK_SIZE = 3;
-    for (let c = 0; c < recipients.length; c += CHUNK_SIZE) {
-      const chunk = recipients.slice(c, c + CHUNK_SIZE);
-      await Promise.all(
-        chunk.map(async (recipient) => {
-          const cleanEmail = recipient.email.trim();
-          if (!cleanEmail || !cleanEmail.includes("@")) {
-            result.failedCount++;
-            result.errors.push({ email: cleanEmail, error: "Invalid email address" });
-            return;
-          }
+    for (let i = 0; i < recipients.length; i++) {
+      const recipient = recipients[i];
+      const cleanEmail = recipient.email.trim();
+      if (!cleanEmail || !cleanEmail.includes("@")) {
+        result.failedCount++;
+        result.errors.push({ email: cleanEmail, error: "Invalid email address" });
+        continue;
+      }
 
-          const html = buildCampaignHtml({
+      const html = buildCampaignHtml({
+        subject: campaign.subject,
+        heading: campaign.heading,
+        body: campaign.body,
+        badge: campaign.badge,
+        recipientName: recipient.name,
+        recipientEmail: cleanEmail,
+        buttonText: campaign.buttonText,
+        buttonUrl: campaign.buttonUrl,
+        secondaryInfo: campaign.secondaryInfo,
+      });
+
+      const safeBtnUrl = sanitizeCampaignUrl(campaign.buttonUrl);
+      const textVersion = [
+        recipient.name ? `Hello ${recipient.name},` : "Hello,",
+        "",
+        campaign.heading,
+        "",
+        campaign.body,
+        "",
+        campaign.secondaryInfo ? `Important Details:\n${campaign.secondaryInfo}` : "",
+        campaign.buttonText && safeBtnUrl ? `${campaign.buttonText}: ${safeBtnUrl}` : "",
+        "",
+        "---",
+        "Red Crescent Youth, Rajshahi Govt. Polytechnic Institute",
+        "Kazla, Rajshahi-6203, Bangladesh",
+        `To unsubscribe: mailto:${config.user}?subject=Unsubscribe%20Request`,
+      ]
+        .filter((line) => line !== undefined && line !== null)
+        .join("\n");
+
+      // RFC-compliant Anti-Spam & Unsubscribe headers
+      const headers = {
+        "X-Mailer": "Red Crescent Youth Notification Engine",
+        "X-Priority": "3",
+        "Auto-Submitted": "auto-generated",
+        "List-Unsubscribe": `<mailto:${config.user}?subject=Unsubscribe%20${encodeURIComponent(cleanEmail)}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        "Precedence": "bulk",
+      };
+
+      let sent = false;
+      let lastError = "";
+
+      // 1. Try Gmail SMTP (Primary)
+      if (transporter && config.pass) {
+        try {
+          // NOTE: Do NOT pass a custom messageId here. Let Gmail assign its authentic Message-ID!
+          await transporter.sendMail({
+            from: config.defaultFrom,
+            to: recipient.name ? `"${recipient.name}" <${cleanEmail}>` : cleanEmail,
+            replyTo: config.user,
             subject: campaign.subject,
-            heading: campaign.heading,
-            body: campaign.body,
-            badge: campaign.badge,
-            recipientName: recipient.name,
-            buttonText: campaign.buttonText,
-            buttonUrl: campaign.buttonUrl,
-            secondaryInfo: campaign.secondaryInfo,
+            text: textVersion,
+            html,
+            headers,
           });
+          sent = true;
+          result.successCount++;
+          console.log(`[Batch Send SMTP Success]: ${cleanEmail}`);
+        } catch (smtpErr: unknown) {
+          lastError = smtpErr instanceof Error ? smtpErr.message : "SMTP send failed";
+          console.error(`[Batch Send SMTP Error] ${cleanEmail}:`, lastError);
+        }
+      } else {
+        lastError = "SMTP credentials not configured";
+      }
 
-          let sent = false;
-          let lastError = "";
-
-          const safeBtnUrl = sanitizeCampaignUrl(campaign.buttonUrl);
-          const textVersion = [
-            recipient.name ? `Hello ${recipient.name},` : "Hello,",
-            "",
-            campaign.heading,
-            "",
-            campaign.body,
-            "",
-            campaign.secondaryInfo ? `Important Details:\n${campaign.secondaryInfo}` : "",
-            campaign.buttonText && safeBtnUrl
-              ? `${campaign.buttonText}: ${safeBtnUrl}`
-              : "",
-            "",
-            "---",
-            "Red Crescent Youth, Rajshahi Govt. Polytechnic Institute",
-            "Serving humanity with dignity and impartiality.",
-          ]
-            .filter((line) => line !== undefined && line !== null)
-            .join("\n");
-
-          const messageId = `<rcy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@gmail.com>`;
-
-          // 1. Try Gmail SMTP (pooled)
-          if (transporter && config.pass) {
-            try {
-              await transporter.sendMail({
-                from: config.defaultFrom,
-                to: recipient.name ? `"${recipient.name}" <${cleanEmail}>` : cleanEmail,
-                replyTo: config.user,
-                subject: campaign.subject,
-                text: textVersion,
-                html,
-                messageId,
-                headers: {
-                  "X-Mailer": "RCY Portal Mailer",
-                  "X-Priority": "3",
-                },
-              });
-              sent = true;
-              result.successCount++;
-              console.log(`[Batch Send SMTP Success]: ${cleanEmail}`);
-            } catch (smtpErr: unknown) {
-              lastError = smtpErr instanceof Error ? smtpErr.message : "SMTP send failed";
-              console.error(`[Batch Send SMTP Error] ${cleanEmail}:`, lastError);
-            }
+      // 2. Try Resend fallback if SMTP wasn't configured or failed and Resend is available
+      if (!sent && resendClient) {
+        try {
+          const { error } = await resendClient.emails.send({
+            from: config.resendFrom,
+            to: [cleanEmail],
+            replyTo: config.user,
+            subject: campaign.subject,
+            text: textVersion,
+            html,
+            headers: {
+              "List-Unsubscribe": `<mailto:${config.user}?subject=Unsubscribe%20${encodeURIComponent(cleanEmail)}>`,
+            },
+          });
+          if (error) {
+            lastError = error.message;
           } else {
-            lastError = "SMTP credentials not configured";
+            sent = true;
+            result.successCount++;
+            console.log(`[Batch Send Resend Success]: ${cleanEmail}`);
           }
+        } catch (resendErr: unknown) {
+          lastError = resendErr instanceof Error ? resendErr.message : "Resend send failed";
+        }
+      }
 
-          // 2. Try Resend fallback if SMTP wasn't configured or failed and Resend is available
-          if (!sent && resendClient) {
-            try {
-              const { error } = await resendClient.emails.send({
-                from: config.resendFrom,
-                to: [cleanEmail],
-                subject: campaign.subject,
-                html,
-              });
-              if (error) {
-                lastError = error.message;
-              } else {
-                sent = true;
-                result.successCount++;
-                console.log(`[Batch Send Resend Success]: ${cleanEmail}`);
-              }
-            } catch (resendErr: unknown) {
-              lastError = resendErr instanceof Error ? resendErr.message : "Resend send failed";
-            }
-          }
+      if (!sent) {
+        result.failedCount++;
+        result.errors.push({
+          email: cleanEmail,
+          error: lastError || "Failed to deliver email through configured providers.",
+        });
+      }
 
-          if (!sent) {
-            result.failedCount++;
-            result.errors.push({
-              email: cleanEmail,
-              error: lastError || "Failed to deliver email through configured providers.",
-            });
-          }
-        })
-      );
+      // Polite 200ms inter-mail interval inside batch to prevent Gmail SMTP burst flags
+      if (i < recipients.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
     }
   } finally {
     if (transporter) {

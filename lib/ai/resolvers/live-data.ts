@@ -36,6 +36,13 @@ async function getCached<T>(key: string, fetcher: () => Promise<T>, ttlMs = CACH
 }
 
 /**
+ * Invalidates cached leadership summary when an admin updates committee members.
+ */
+export function invalidateLeadershipCache(): void {
+  memCache.delete("team_leadership_v4");
+}
+
+/**
  * Resolves real-time active blood requests summary from Supabase.
  */
 export async function getActiveBloodRequestsSummary(): Promise<SanitizedBloodSummary> {

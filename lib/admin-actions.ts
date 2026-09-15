@@ -12,6 +12,8 @@ import { createAndDispatchNotification } from "@/lib/notifications/notification-
 import { sendVolunteerApprovalEmail } from "@/lib/email/mailer";
 import type { ActionResult } from "@/lib/actions";
 import type { CustomPopupConfig } from "@/types/database";
+import { invalidateLeadershipCache } from "@/lib/ai/resolvers/live-data";
+import { clearResponseCache } from "@/lib/ai/cache";
 
 function guardConfig() {
   if (!isSupabaseConfigured) {
@@ -502,6 +504,8 @@ export async function saveCommunityMember(formData: FormData): Promise<ActionRes
   revalidatePath("/admin/community");
   revalidatePath("/");
   updateTag("community");
+  invalidateLeadershipCache();
+  clearResponseCache();
   return { success: true, message: "Community member saved." };
 }
 
@@ -514,6 +518,8 @@ export async function deleteCommunityMember(id: string): Promise<ActionResult> {
   revalidatePath("/admin/community");
   revalidatePath("/");
   updateTag("community");
+  invalidateLeadershipCache();
+  clearResponseCache();
   return { success: true, message: "Community member deleted." };
 }
 
@@ -582,6 +588,8 @@ export async function addTeamMemberToCommunity(formData: FormData): Promise<Acti
   revalidatePath("/community");
   revalidatePath("/");
   updateTag("community");
+  invalidateLeadershipCache();
+  clearResponseCache();
 
   return { success: true, message: `${member.name} has been placed in Level ${level} (${position}) of the Community tree.` };
 }
@@ -609,6 +617,8 @@ export async function removeTeamMemberFromCommunity(formData: FormData): Promise
   revalidatePath("/community");
   revalidatePath("/");
   updateTag("community");
+  invalidateLeadershipCache();
+  clearResponseCache();
 
   return { success: true, message: "Removed from Community leadership tree." };
 }

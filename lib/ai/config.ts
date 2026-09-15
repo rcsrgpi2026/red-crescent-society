@@ -2,22 +2,56 @@
  * Centralized Configuration for RCY AI Website Assistant
  */
 
+const rawGeminiKeys = (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || "")
+  .split(",")
+  .map((k) => k.trim())
+  .filter(Boolean);
+
+const rawGroqKeys = (process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY || "")
+  .split(",")
+  .map((k) => k.trim())
+  .filter(Boolean);
+
 export const AI_CONFIG = {
   // Provider API Keys (Server-side only — never expose to client!)
-  geminiApiKey: process.env.GEMINI_API_KEY || "",
-  groqApiKey: process.env.GROQ_API_KEY || "",
+  geminiApiKey: rawGeminiKeys[0] || "",
+  geminiApiKeys: rawGeminiKeys,
+  groqApiKey: rawGroqKeys[0] || "",
+  groqApiKeys: rawGroqKeys,
 
   // Models
   geminiModel: process.env.GEMINI_MODEL || "gemini-3.5-flash",
   groqModel: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
 
+  // Model Cascading Fallback Chains
+  geminiCandidateModels: [
+    process.env.GEMINI_MODEL || "gemini-3.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-3.5-flash-lite",
+  ],
+  groqCandidateModels: [
+    process.env.GROQ_MODEL || "openai/gpt-oss-120b",
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant", // 14,400 RPD ultra-capacity fallback
+    "openai/gpt-oss-20b",
+  ],
+
   // Request limits
   maxMessageLength: 2500, // Reject prompts exceeding ~2500 characters
   maxHistoryTurns: 6, // Keep recent 6 conversation turns for context
 
-  // Timeouts (Milliseconds)
-  providerTimeoutMs: 15000, // 15 seconds max per LLM attempt (provides network resilience)
-  totalRequestTimeoutMs: 30000,
+  // Timeouts (Milliseconds) — Reduced to 7s for ultra-fast failovers
+  providerTimeoutMs: 7000,
+  totalRequestTimeoutMs: 20000,
+
+  // Response Caching (Multiplies effective RPD by 3x-5x)
+  cache: {
+    enabled: process.env.AI_CACHE_ENABLED !== "false",
+    ttlMs: 2 * 60 * 60 * 1000, // 2 hours
+    maxEntries: 500,
+  },
 
   // Rate Limiting
   rateLimits: {

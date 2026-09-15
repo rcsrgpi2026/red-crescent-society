@@ -11,6 +11,7 @@ import { isBloodRequestWizardQuery, executeBloodRequestWizard } from "./resolver
 import { callGeminiProvider } from "./providers/gemini";
 import { callGroqProvider } from "./providers/groq";
 import { logRetrievalMiss } from "./logger";
+import { getCachedResponse, setCachedResponse } from "./cache";
 
 export interface ProcessMessageParams {
   message: string;
@@ -183,6 +184,15 @@ export async function processAssistantMessage({
     return wizardResponse;
   }
 
+  // 4.8. High-Speed In-Memory Cache (Sub-millisecond latency & zero LLM quota consumption)
+  if (history.length === 0) {
+    const cachedResponse = getCachedResponse(cleanInput);
+    if (cachedResponse) {
+      cachedResponse.actions = sanitizeActions(cachedResponse.actions);
+      return cachedResponse;
+    }
+  }
+
   // 5. Compile Grounding Context from Live Supabase & Knowledge Base
   const [liveContext, helplineData] = await Promise.all([
     buildTrustedLiveContext(intent, cleanInput),
@@ -199,7 +209,7 @@ export async function processAssistantMessage({
 
   const systemPrompt = buildAssistantSystemPrompt(helplineData.bloodHelpline);
 
-  // 6. Execute Primary Provider (Gemini)
+  // 6. Execute Primary Provider (Gemini with candidate models & keys cascade)
   let providerRes = await callGeminiProvider({
     systemPrompt,
     userMessage: cleanInput,
@@ -207,8 +217,8 @@ export async function processAssistantMessage({
     history,
   });
 
-  // 7. Execute Fallback Provider (Groq) if Gemini failed and Groq is configured
-  if (!providerRes.success && AI_CONFIG.groqApiKey) {
+  // 7. Execute Fallback Provider (Groq with candidate models cascade) if Gemini failed
+  if (!providerRes.success && (AI_CONFIG.groqApiKey || AI_CONFIG.groqApiKeys.length > 0)) {
     console.warn(`[AI Engine] Gemini failed (${providerRes.error}). Falling back to Groq...`);
     providerRes = await callGroqProvider({
       systemPrompt,
@@ -218,24 +228,58 @@ export async function processAssistantMessage({
     });
   }
 
-  // 8. Graceful Degradation if all providers failed
+  // 8. Graceful Zero-Degradation Degradation if all providers failed
   if (!providerRes.success || !providerRes.data) {
     console.error("[AI Engine] Both Gemini and Groq providers were unable to respond:", providerRes.error);
 
-    // If query was emergency or live data, return raw live DB summary
-    if (intent === "EMERGENCY" || intent === "LIVE_DATA") {
+    // If query was emergency or blood support, immediately return emergency blood hotline fallback
+    if (intent === "EMERGENCY" || intent === "BLOOD_SUPPORT" || intent === "LIVE_DATA") {
       return buildEmergencyFallback();
     }
 
-    // Default friendly fallback
+    // Zero-Degradation Factual Fallback: If liveContext retrieved organizational knowledge,
+    // present the facts directly without failing or showing an error to the user!
+    if (liveContext.includes("[ORGANIZATIONAL KNOWLEDGE]")) {
+      const cleanedKnowledge = liveContext
+        .replace(/\[ORGANIZATIONAL KNOWLEDGE\][^\n]*/, "")
+        .replace(/\[LIVE DATABASE SUMMARY\][^\n]*/, "")
+        .trim();
+
+      if (cleanedKnowledge.length > 20) {
+        return {
+          message: `${cleanedKnowledge}\n\n(আমাদের অফিসিয়াল তথ্যভাণ্ডার থেকে সংগৃহীত)`,
+          actions: [
+            {
+              type: "navigate",
+              label: "আমাদের সম্পর্কে পেজ",
+              target: "/about",
+            },
+            {
+              type: "navigate",
+              label: "যোগাযোগ পেজ",
+              target: "/contact",
+            },
+          ],
+          sourceType: "database",
+          intent,
+        };
+      }
+    }
+
+    // Default friendly fallback with helpful navigation
     return {
       message:
-        "এই মুহূর্তে AI সহকারী সাময়িকভাবে উত্তর দিতে পারছে না। আপনি ওয়েবসাইট মেনু বা নোটিশ বোর্ড থেকে তথ্য দেখতে পারেন অথবা আমাদের সাথে সরাসরি যোগাযোগ করতে পারেন।",
+        "এই মুহূর্তে এআই সার্ভার সাময়িকভাবে ব্যস্ত রয়েছে। আপনার প্রয়োজনীয় তথ্য জানতে নিচের পেজগুলোতে প্রবেশ করতে পারেন অথবা সরাসরি আমাদের সাথে যোগাযোগ করতে পারেন।",
       actions: [
         {
           type: "navigate",
-          label: "মূল পাতা",
-          target: "/",
+          label: "জরুরি রক্ত সহায়তা",
+          target: "/blood-support",
+        },
+        {
+          type: "navigate",
+          label: "নোটিশ বোর্ড",
+          target: "/notices",
         },
         {
           type: "navigate",
@@ -248,10 +292,15 @@ export async function processAssistantMessage({
     };
   }
 
-  // 9. Sanitize Output Actions
+  // 9. Sanitize Output Actions & Cache Response
   const output = providerRes.data;
   output.actions = sanitizeActions(output.actions);
   output.intent = intent;
+
+  // Cache single-turn query responses to multiply RPD capacity
+  if (history.length === 0) {
+    setCachedResponse(cleanInput, output);
+  }
 
   return output;
 }

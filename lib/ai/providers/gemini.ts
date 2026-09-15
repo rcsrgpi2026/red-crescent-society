@@ -30,7 +30,14 @@ export async function callGeminiProvider({
 }: ProviderCallParams): Promise<ProviderResult> {
   const providerName = "gemini";
 
-  if (!AI_CONFIG.geminiApiKey) {
+  const apiKeys =
+    AI_CONFIG.geminiApiKeys && AI_CONFIG.geminiApiKeys.length > 0
+      ? AI_CONFIG.geminiApiKeys
+      : AI_CONFIG.geminiApiKey
+      ? [AI_CONFIG.geminiApiKey]
+      : [];
+
+  if (apiKeys.length === 0) {
     return {
       success: false,
       error: "GEMINI_API_KEY is not configured.",
@@ -65,113 +72,127 @@ export async function callGeminiProvider({
     parts: [{ text: currentTurnText }],
   });
 
-  const candidateModels = [
-    AI_CONFIG.geminiModel,
-    "gemini-3.5-flash-lite",
-    "gemini-3.5-flash",
-    "gemini-3.6-flash",
-  ].filter((m, i, arr) => arr.indexOf(m) === i);
+  const candidateModels = (
+    AI_CONFIG.geminiCandidateModels && AI_CONFIG.geminiCandidateModels.length > 0
+      ? AI_CONFIG.geminiCandidateModels
+      : [AI_CONFIG.geminiModel, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite"]
+  ).filter((m, i, arr) => arr.indexOf(m) === i);
 
   let lastError = "";
 
+  // Cascade across candidate models
   for (const currentModel of candidateModels) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${AI_CONFIG.geminiApiKey}`;
+    // Rotate across available API keys for each model
+    for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
+      const currentApiKey = apiKeys[keyIdx];
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${currentApiKey}`;
 
-    // Base generation config
-    const generationConfig: Record<string, any> = {
-      temperature: 0.2, // Low temperature for high factual accuracy
-      topP: 0.9,
-      maxOutputTokens: 2500,
-      responseMimeType: "application/json",
-    };
-
-    // For models with thinking capability (such as gemini-3.5-flash), disable thinking tokens
-    // to reduce latency from ~10s down to ~1.5s and prevent timeouts
-    if (currentModel.includes("3.5-flash")) {
-      generationConfig.thinkingConfig = {
-        thinkingBudget: 0,
+      // Base generation config
+      const generationConfig: Record<string, any> = {
+        temperature: 0.2, // Low temperature for high factual accuracy
+        topP: 0.9,
+        maxOutputTokens: 2500,
+        responseMimeType: "application/json",
       };
-    }
 
-    const requestBody: {
-      systemInstruction: { parts: Array<{ text: string }> };
-      contents: typeof contents;
-      generationConfig: Record<string, any>;
-    } = {
-      systemInstruction: {
-        parts: [{ text: systemPrompt }],
-      },
-      contents,
-      generationConfig,
-    };
+      // For models with thinking capability (such as gemini-3.5-flash), disable thinking tokens
+      // to reduce latency from ~10s down to ~1.2s and prevent timeouts
+      if (currentModel.includes("3.5-flash")) {
+        generationConfig.thinkingConfig = {
+          thinkingBudget: 0,
+        };
+      }
 
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), AI_CONFIG.providerTimeoutMs);
+      const requestBody: {
+        systemInstruction: { parts: Array<{ text: string }> };
+        contents: typeof contents;
+        generationConfig: Record<string, any>;
+      } = {
+        systemInstruction: {
+          parts: [{ text: systemPrompt }],
+        },
+        contents,
+        generationConfig,
+      };
 
-      try {
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-          signal: controller.signal,
-        });
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), AI_CONFIG.providerTimeoutMs);
 
-        clearTimeout(timeoutId);
+        try {
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestBody),
+            signal: controller.signal,
+          });
 
-        if (!response.ok) {
-          const errorText = await response.text().catch(() => "");
-          lastError = `Gemini API [${currentModel}] HTTP ${response.status}: ${errorText.slice(0, 180)}`;
+          clearTimeout(timeoutId);
 
-          // If thinkingConfig is not supported on this model, strip it and retry immediately
-          if (response.status === 400 && requestBody.generationConfig?.thinkingConfig) {
-            delete requestBody.generationConfig.thinkingConfig;
-            continue;
-          }
+          if (!response.ok) {
+            const errorText = await response.text().catch(() => "");
+            lastError = `Gemini [${currentModel} | key #${keyIdx + 1}] HTTP ${response.status}: ${errorText.slice(0, 180)}`;
 
-          // If quota exhausted (429) or temporary server spike (503), break to try next model
-          if (response.status === 429 || response.status === 503) {
+            // If thinkingConfig is not supported on this model, strip it and retry immediately
+            if (response.status === 400 && requestBody.generationConfig?.thinkingConfig) {
+              delete requestBody.generationConfig.thinkingConfig;
+              continue;
+            }
+
+            // Quota exhausted (429): rotate immediately to next API key
+            if (response.status === 429) {
+              console.warn(`[Gemini] Key #${keyIdx + 1} hit 429 on ${currentModel}. Rotating key/model...`);
+              break; // breaks out of attempt loop to try next key or next model
+            }
+
+            // Server overload (503): retry once or rotate
+            if (response.status === 503) {
+              if (attempt < 2) {
+                await new Promise((r) => setTimeout(r, 200));
+                continue;
+              }
+              break;
+            }
+
+            if (attempt < 2) {
+              await new Promise((r) => setTimeout(r, 200));
+              continue;
+            }
             break;
           }
 
-          if (attempt < 2) {
-            await new Promise((r) => setTimeout(r, 250));
-            continue;
+          const json = await response.json();
+          const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+          if (!rawText) {
+            lastError = `Empty response returned from Gemini (${currentModel}).`;
+            break;
           }
-          break;
+
+          // Parse and validate structured output
+          const parsed = parseStructuredOutput(rawText);
+          recordProviderSuccess(providerName);
+          return {
+            success: true,
+            data: parsed,
+          };
+        } catch (err: any) {
+          clearTimeout(timeoutId);
+          const isAbort = err.name === "AbortError";
+          lastError = isAbort
+            ? `Gemini [${currentModel}] timed out after ${AI_CONFIG.providerTimeoutMs}ms`
+            : err.message || "Unknown network error";
+
+          if (isAbort) break;
         }
-
-        const json = await response.json();
-        const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (!rawText) {
-          lastError = `Empty response returned from Gemini (${currentModel}).`;
-          break;
-        }
-
-        // Parse and validate structured output
-        const parsed = parseStructuredOutput(rawText);
-        recordProviderSuccess(providerName);
-        return {
-          success: true,
-          data: parsed,
-        };
-      } catch (err: any) {
-        clearTimeout(timeoutId);
-        const isAbort = err.name === "AbortError";
-        lastError = isAbort
-          ? `Gemini request timed out after ${AI_CONFIG.providerTimeoutMs}ms`
-          : err.message || "Unknown network error";
-
-        if (isAbort) break;
       }
     }
   }
 
   recordProviderFailure(providerName, lastError);
-  return { success: false, error: lastError || "Failed all candidate models." };
+  return { success: false, error: lastError || "Failed all candidate models and keys." };
 }
 
 

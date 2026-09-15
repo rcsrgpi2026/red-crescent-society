@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "ai:embed": "node scripts/generate-kb-embeddings.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.8.0",

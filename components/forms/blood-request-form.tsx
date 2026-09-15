@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormShell, FieldError, SubmitButton } from "@/components/forms/form";
 import { submitBloodRequest, type ActionResult } from "@/lib/actions";
 import { BLOOD_GROUPS } from "@/lib/constants";
@@ -21,6 +21,7 @@ import type { FormFieldConfig } from "@/types/form-editor";
 
 export function BloodRequestForm({ fields }: { fields?: FormFieldConfig[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const isEnabled = (name: string) => fields?.find((f) => f.name === name)?.enabled ?? true;
   const getLabel = (name: string, fallback: string) => fields?.find((f) => f.name === name)?.label || fallback;
@@ -28,6 +29,7 @@ export function BloodRequestForm({ fields }: { fields?: FormFieldConfig[] }) {
   const isRequired = (name: string, fallback: boolean) => fields?.find((f) => f.name === name)?.required ?? fallback;
   const customFields = fields?.filter((f) => !f.isCore && f.enabled) ?? [];
 
+  const [isAiPreFilled, setIsAiPreFilled] = useState(false);
   const [formData, setFormData] = useState({
     patientName: "",
     bloodGroup: "",
@@ -42,6 +44,42 @@ export function BloodRequestForm({ fields }: { fields?: FormFieldConfig[] }) {
     emergencyLevel: "NORMAL",
     additionalInfo: "",
   });
+
+  // Pre-fill form from URL Search Parameters (e.g. from AI Assistant)
+  useEffect(() => {
+    if (!searchParams) return;
+    const pName = searchParams.get("patientName");
+    const bg = searchParams.get("bloodGroup");
+    const u = searchParams.get("units");
+    const hosp = searchParams.get("hospital");
+    const loc = searchParams.get("location");
+    const rName = searchParams.get("requesterName");
+    const cont = searchParams.get("contact");
+    const em = searchParams.get("emergencyLevel");
+    const rDate = searchParams.get("requiredDate");
+    const rTime = searchParams.get("requiredTime");
+    const mail = searchParams.get("email");
+
+    const hasAny = Boolean(pName || bg || u || hosp || loc || rName || cont || em || rDate || rTime || mail);
+    if (hasAny) {
+      setIsAiPreFilled(true);
+      setFormData((prev) => ({
+        ...prev,
+        ...(pName ? { patientName: pName } : {}),
+        ...(bg ? { bloodGroup: bg } : {}),
+        ...(u ? { units: u } : {}),
+        ...(hosp ? { hospital: hosp } : {}),
+        ...(loc ? { location: loc } : {}),
+        ...(rName ? { requesterName: rName } : {}),
+        ...(cont ? { contact: cont } : {}),
+        ...(em ? { emergencyLevel: em } : {}),
+        ...(rDate ? { requiredDate: rDate } : {}),
+        ...(rTime ? { requiredTime: rTime } : {}),
+        ...(mail ? { email: mail } : {}),
+      }));
+    }
+  }, [searchParams]);
+
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -65,6 +103,15 @@ export function BloodRequestForm({ fields }: { fields?: FormFieldConfig[] }) {
     <FormShell action={handleAction}>
       {(errors) => (
         <>
+          {isAiPreFilled && (
+            <div className="mb-6 rounded-2xl border border-red-200/90 bg-gradient-to-r from-red-50 to-rose-50 p-4 text-xs sm:text-sm text-red-900 flex items-start gap-3 shadow-2xs animate-in fade-in duration-300">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-red-600 text-white font-bold text-xs shadow-xs">✨</span>
+              <div className="leading-relaxed">
+                <p className="font-bold text-red-800">এআই সহকারী দ্বারা স্বয়ংক্রিয়ভাবে পূরণকৃত তথ্য</p>
+                <p className="text-red-700/90 mt-0.5">আপনার দেওয়া তথ্যের ভিত্তিতে ফরমের ফিল্ডগুলো প্রস্তুত করা হয়েছে। অনুগ্রহ করে তথ্যগুলো যাচাই করে নিচে <strong>&apos;Submit Request&apos;</strong> বাটনে চাপুন।</p>
+              </div>
+            </div>
+          )}
           <div className="grid gap-5 sm:grid-cols-2">
             {isEnabled("patientName") && (
               <div>

@@ -1,0 +1,257 @@
+import "server-only";
+
+import { AI_CONFIG } from "./config";
+import type { AssistantAction, AssistantResponse } from "./types";
+import { checkAiRateLimit } from "./rate-limiter";
+import { classifyIntent, tryDeterministicShortcut } from "./intent-router";
+import { isRegisteredRoute } from "./registries/route-registry";
+import { buildTrustedLiveContext, getActiveBloodRequestsSummary, getEmergencyHelpline } from "./resolvers/live-data";
+import { buildAssistantSystemPrompt } from "./system-prompt";
+import { isBloodRequestWizardQuery, executeBloodRequestWizard } from "./resolvers/blood-wizard";
+import { callGeminiProvider } from "./providers/gemini";
+import { callGroqProvider } from "./providers/groq";
+import { logRetrievalMiss } from "./logger";
+
+export interface ProcessMessageParams {
+  message: string;
+  history?: Array<{ role: "user" | "assistant"; content: string }>;
+  userId?: string | null;
+  clientIp?: string;
+  isAuthenticated?: boolean;
+}
+
+// Approved external domains for external_link actions
+const ALLOWED_EXTERNAL_DOMAINS = [
+  "facebook.com/rcsrgpi",
+  "instagram.com/rcy_rgpi",
+  "rcy-rgpi.org",
+  "rgpi.gov.bd",
+];
+
+/**
+ * Validates and filters AI-suggested actions against strict server-side allowlists.
+ * Never trust arbitrary URLs returned by an LLM.
+ */
+export function sanitizeActions(actions?: AssistantAction[]): AssistantAction[] {
+  if (!actions || !Array.isArray(actions)) return [];
+
+  const validActions: AssistantAction[] = [];
+
+  for (const action of actions) {
+    if (!action || typeof action !== "object" || !action.label || !action.target) {
+      continue;
+    }
+
+    const cleanTarget = action.target.trim();
+
+    if (action.type === "navigate") {
+      // Validate target is an approved internal application route
+      if (isRegisteredRoute(cleanTarget)) {
+        validActions.push({
+          type: "navigate",
+          label: action.label.trim(),
+          target: cleanTarget,
+        });
+      } else {
+        console.warn(`[AI Action Filter] Dropped unauthorized navigate target: "${cleanTarget}"`);
+      }
+    } else if (action.type === "external_link") {
+      // Validate target domain is in the approved allowlist
+      const isDomainAllowed = ALLOWED_EXTERNAL_DOMAINS.some((domain) =>
+        cleanTarget.toLowerCase().includes(domain)
+      );
+      if (isDomainAllowed) {
+        validActions.push({
+          type: "external_link",
+          label: action.label.trim(),
+          target: cleanTarget,
+        });
+      } else {
+        console.warn(`[AI Action Filter] Dropped unauthorized external target: "${cleanTarget}"`);
+      }
+    } else if (action.type === "contact") {
+      validActions.push({
+        type: "contact",
+        label: action.label.trim(),
+        target: cleanTarget,
+      });
+    }
+  }
+
+  return validActions;
+}
+
+/**
+ * Generates an emergency-safe fallback response using raw Supabase data when LLMs are unavailable.
+ */
+async function buildEmergencyFallback(): Promise<AssistantResponse> {
+  const [blood, helpline] = await Promise.all([
+    getActiveBloodRequestsSummary(),
+    getEmergencyHelpline(),
+  ]);
+
+  const msg = [
+    "🚨 জরুরি সহায়তা তথ্য:",
+    `- হটলাইন: ${helpline.bloodHelpline}`,
+    `- বর্তমানে সিস্টেমে সক্রিয় রক্তের আবেদন: ${blood.activeCount}টি`,
+    blood.activeCount > 0
+      ? `- জরুরি/আশঙ্কাজনক আবেদন: ${blood.emergencyCount}টি`
+      : "",
+    "তাৎক্ষণিক রক্ত সহায়তার জন্য নিচে দেওয়া বাটনে ক্লিক করুন।",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return {
+    message: msg,
+    actions: [
+      {
+        type: "navigate",
+        label: "জরুরি রক্ত সহায়তা পেজ",
+        target: "/blood-support",
+      },
+      {
+        type: "navigate",
+        label: "রক্তের আবেদন করুন",
+        target: "/blood-support/request",
+      },
+    ],
+    sourceType: "database",
+    intent: "EMERGENCY",
+  };
+}
+
+/**
+ * Master AI Assistant Processing Pipeline.
+ *
+ * 1. Input sanitization & character limits
+ * 2. Server-side rate limiting (burst + daily quotas)
+ * 3. Intent classification
+ * 4. Deterministic shortcut resolution (token & latency savings)
+ * 5. Grounding context compilation from live Supabase
+ * 6. Resilient LLM execution: Gemini (primary) -> Groq (fallback)
+ * 7. Action sanitization & allowlist check
+ */
+export async function processAssistantMessage({
+  message,
+  history = [],
+  userId,
+  clientIp = "127.0.0.1",
+  isAuthenticated = false,
+}: ProcessMessageParams): Promise<AssistantResponse> {
+  const cleanInput = (message || "").trim();
+
+  // 1. Validate Input Length
+  if (!cleanInput) {
+    return {
+      message: "অনুগ্রহ করে আপনার প্রশ্ন বা জানার বিষয়টি লিখুন।",
+      sourceType: "fallback",
+    };
+  }
+
+  if (cleanInput.length > AI_CONFIG.maxMessageLength) {
+    return {
+      message: `আপনার প্রশ্নটি অনেক দীর্ঘ। অনুগ্রহ করে ${AI_CONFIG.maxMessageLength} অক্ষরের মধ্যে সংক্ষেপে লিখুন।`,
+      sourceType: "fallback",
+    };
+  }
+
+  // 2. Server-Side Rate Limiting
+  const clientId = userId ? `user:${userId}` : `ip:${clientIp}`;
+  const rateLimit = await checkAiRateLimit(clientId, isAuthenticated);
+  if (!rateLimit.allowed) {
+    return {
+      message: rateLimit.reason || "অতিরিক্ত রিকোয়েস্টের কারণে সাময়িকভাবে বন্ধ রয়েছে।",
+      sourceType: "fallback",
+    };
+  }
+
+  // 3. Classify Intent
+  const intent = classifyIntent(cleanInput);
+
+  // 4. Evaluate Deterministic Shortcuts (No LLM required)
+  const shortcut = tryDeterministicShortcut(cleanInput);
+  if (shortcut) {
+    shortcut.actions = sanitizeActions(shortcut.actions);
+    return shortcut;
+  }
+
+  // 4.5. Deterministic Step-by-Step Blood Request Wizard (Zero LLM Tokens)
+  if (isBloodRequestWizardQuery(cleanInput, history)) {
+    const wizardResponse = executeBloodRequestWizard(cleanInput, history);
+    wizardResponse.actions = sanitizeActions(wizardResponse.actions);
+    return wizardResponse;
+  }
+
+  // 5. Compile Grounding Context from Live Supabase & Knowledge Base
+  const [liveContext, helplineData] = await Promise.all([
+    buildTrustedLiveContext(intent, cleanInput),
+    getEmergencyHelpline(),
+  ]);
+
+  // Observability (Phase 2): Log queries that proceed to raw LLM without curated grounding
+  if (
+    !liveContext.includes("[ORGANIZATIONAL KNOWLEDGE]") &&
+    (intent === "KNOWLEDGE" || intent === "UNKNOWN" || intent === "BLOOD_SUPPORT")
+  ) {
+    void logRetrievalMiss(cleanInput, intent);
+  }
+
+  const systemPrompt = buildAssistantSystemPrompt(helplineData.bloodHelpline);
+
+  // 6. Execute Primary Provider (Gemini)
+  let providerRes = await callGeminiProvider({
+    systemPrompt,
+    userMessage: cleanInput,
+    contextData: liveContext,
+    history,
+  });
+
+  // 7. Execute Fallback Provider (Groq) if Gemini failed and Groq is configured
+  if (!providerRes.success && AI_CONFIG.groqApiKey) {
+    console.warn(`[AI Engine] Gemini failed (${providerRes.error}). Falling back to Groq...`);
+    providerRes = await callGroqProvider({
+      systemPrompt,
+      userMessage: cleanInput,
+      contextData: liveContext,
+      history,
+    });
+  }
+
+  // 8. Graceful Degradation if all providers failed
+  if (!providerRes.success || !providerRes.data) {
+    console.error("[AI Engine] Both Gemini and Groq providers were unable to respond:", providerRes.error);
+
+    // If query was emergency or live data, return raw live DB summary
+    if (intent === "EMERGENCY" || intent === "LIVE_DATA") {
+      return buildEmergencyFallback();
+    }
+
+    // Default friendly fallback
+    return {
+      message:
+        "এই মুহূর্তে AI সহকারী সাময়িকভাবে উত্তর দিতে পারছে না। আপনি ওয়েবসাইট মেনু বা নোটিশ বোর্ড থেকে তথ্য দেখতে পারেন অথবা আমাদের সাথে সরাসরি যোগাযোগ করতে পারেন।",
+      actions: [
+        {
+          type: "navigate",
+          label: "মূল পাতা",
+          target: "/",
+        },
+        {
+          type: "navigate",
+          label: "যোগাযোগ পেজ",
+          target: "/contact",
+        },
+      ],
+      sourceType: "fallback",
+      intent,
+    };
+  }
+
+  // 9. Sanitize Output Actions
+  const output = providerRes.data;
+  output.actions = sanitizeActions(output.actions);
+  output.intent = intent;
+
+  return output;
+}

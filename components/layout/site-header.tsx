@@ -22,6 +22,7 @@ import {
 import { SiteLogo } from "@/components/layout/site-logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { AssistantTrigger } from "@/components/ai/assistant-trigger";
 import { useLocale } from "@/components/providers/locale-provider";
 import { stripLocalePrefix } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
@@ -211,6 +212,7 @@ export function SiteHeader({
           </nav>
 
           <div className="flex items-center gap-2">
+            <AssistantTrigger />
             <NotificationBell userId={currentUser?.id} />
 
             {currentUser ? (

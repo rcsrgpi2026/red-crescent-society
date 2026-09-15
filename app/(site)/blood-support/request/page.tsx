@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { AlertTriangle, PhoneCall, HeartPulse } from "lucide-react";
 import { PageHero } from "@/components/shared/page-hero";
@@ -73,7 +74,9 @@ export default async function BloodRequestPage() {
           <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-xl font-bold text-foreground">{t.bloodRequest.formTitle}</h2>
             <div className="mt-6">
-              <BloodRequestForm fields={formConfigs.blood_request.fields} />
+              <Suspense fallback={<div className="h-64 flex items-center justify-center text-sm text-muted-foreground">ফরম লোড হচ্ছে...</div>}>
+                <BloodRequestForm fields={formConfigs.blood_request.fields} />
+              </Suspense>
             </div>
           </div>
         </div>

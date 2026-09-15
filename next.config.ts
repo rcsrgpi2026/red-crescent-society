@@ -1,11 +1,9 @@
 import type { NextConfig } from "next";
 import { EventEmitter } from "events";
 
-// Increase defaultMaxListeners to prevent development Gzip drain listener warning
-// caused by concurrent notification polling and Turbopack asset streaming.
-if (process.env.NODE_ENV === "development") {
-  EventEmitter.defaultMaxListeners = 30;
-}
+// Increase defaultMaxListeners to prevent Gzip drain listener warning
+// caused by concurrent notification polling, asset streaming, and gzip compression.
+EventEmitter.defaultMaxListeners = 50;
 
 const isDev = process.env.NODE_ENV === "development";
 

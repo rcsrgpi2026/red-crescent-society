@@ -11,6 +11,8 @@ import { PwaInstallPrompt } from "@/components/pwa/pwa-install-prompt";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 import { getSettings, getCustomPopupConfig } from "@/lib/queries";
 import { CustomSitePopup } from "@/components/shared/custom-site-popup";
+import { AssistantWidget } from "@/components/ai/assistant-widget";
+import { AssistantProvider } from "@/components/ai/assistant-context";
 import { fontVariables } from "@/lib/fonts";
 import "../globals.css";
 
@@ -111,14 +113,17 @@ export default async function PublicRootLayout({
                 rcs: asString(logos.rcs) ?? null,
               }}
             >
-              <SiteHeader
-                societyName={asString(society.shortName)}
-                siteName={asString(society.name)}
-                collegeName={asString(society.collegeName)}
-                tagline={asString(society.tagline)}
-              />
-              <main className="flex-1">{children}</main>
-              <SiteFooter />
+              <AssistantProvider>
+                <SiteHeader
+                  societyName={asString(society.shortName)}
+                  siteName={asString(society.name)}
+                  collegeName={asString(society.collegeName)}
+                  tagline={asString(society.tagline)}
+                />
+                <main className="flex-1">{children}</main>
+                <SiteFooter />
+                <AssistantWidget />
+              </AssistantProvider>
             </LogoProvider>
           </LocaleProvider>
           <Toaster position="top-center" richColors closeButton />

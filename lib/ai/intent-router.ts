@@ -320,10 +320,52 @@ export function classifyIntent(message: string): AssistantIntent {
     q.includes("দায়িত্বপ্রাপ্ত") ||
     q.includes("দায়িত্বে") ||
     q.includes("নূরুল আমিন") ||
-    q.includes("nurul amin") ||
     q.includes("রেজওয়ান") ||
     q.includes("rejwan") ||
-    q.includes("রেজওয়ান")
+    q.includes("রেজওয়ান") ||
+    q.includes("gl") ||
+    q.includes("agl") ||
+    q.includes("গ্রুপ লিডার") ||
+    q.includes("group leader") ||
+    q.includes("সহকারী গ্রুপ লিডার") ||
+    q.includes("asst leader") ||
+    q.includes("ict") ||
+    q.includes("আইসিটি") ||
+    q.includes("media") ||
+    q.includes("মিডিয়া") ||
+    q.includes("communication") ||
+    q.includes("কমিউনিকেশন") ||
+    q.includes("resource mobilization") ||
+    q.includes("সম্পদ সংগ্রহ") ||
+    q.includes("co-curriculum") ||
+    q.includes("সহ-শিক্ষা") ||
+    q.includes("humanitarian response") ||
+    q.includes("pius") ||
+    q.includes("পিয়াস") ||
+    q.includes("sojol") ||
+    q.includes("সজল") ||
+    q.includes("shawon") ||
+    q.includes("শাওন") ||
+    q.includes("jakariya") ||
+    q.includes("জাকারিয়া") ||
+    q.includes("noman") ||
+    q.includes("নোমান") ||
+    q.includes("ihan") ||
+    q.includes("ইহান") ||
+    q.includes("maruf") ||
+    q.includes("মারুফ") ||
+    q.includes("sayem") ||
+    q.includes("সায়েম") ||
+    q.includes("setu") ||
+    q.includes("সেতু") ||
+    q.includes("tamim") ||
+    q.includes("তামিম") ||
+    q.includes("bari") ||
+    q.includes("বারী") ||
+    q.includes("esam") ||
+    q.includes("এসাম") ||
+    q.includes("nusrat") ||
+    q.includes("নুসরাত")
   ) {
     return "TEAM_FOUNDER";
   }

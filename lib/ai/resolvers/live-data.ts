@@ -13,7 +13,7 @@ import type {
   SanitizedActivityItem,
 } from "../types";
 import { findRelevantKnowledge } from "../knowledge/knowledge-base";
-import { resolveEventStatus } from "@/lib/constants";
+import { DEFAULT_COMMUNITY_MEMBERS, resolveEventStatus } from "@/lib/constants";
 
 /**
  * Server-Side Live Supabase Data Resolvers for the RCY AI Assistant.
@@ -352,14 +352,21 @@ export interface SanitizedLeadershipSummary {
   inchargeTeacher: { name: string; position: string; photoUrl?: string | null } | null;
   principal: { name: string; position: string; bio?: string | null } | null;
   founders: Array<{ name: string; position: string }>;
-  keyLeaders: Array<{ name: string; position: string; level: string }>;
+  keyLeaders: Array<{ name: string; position: string; level: string; subRole?: string | null }>;
 }
 
 /**
  * Resolves verified incharge teacher, principal, founders, and key committee leaders.
  */
 export async function getLeadershipSummary(): Promise<SanitizedLeadershipSummary> {
-  return getCached("team_leadership_v3", async () => {
+  return getCached("team_leadership_v4", async () => {
+    const defaultLeaders = DEFAULT_COMMUNITY_MEMBERS.filter((m) => m.level > 1).map((m) => ({
+      name: m.name,
+      position: m.position,
+      level: `Level ${m.level}`,
+      subRole: m.sub_role || null,
+    }));
+
     const defaultData: SanitizedLeadershipSummary = {
       inchargeTeacher: { name: "Md. Nurul Amin", position: "ইনচার্জ শিক্ষক (Incharge Teacher)" },
       principal: { name: "Engr Ajm Masudur Rahman", position: "অধ্যক্ষ ও প্রধান উপদেষ্টা (Principal Sir)" },
@@ -367,11 +374,7 @@ export async function getLeadershipSummary(): Promise<SanitizedLeadershipSummary
         { name: "Engr. Md. Rashidul Amin", position: "উপাধ্যক্ষ ও প্রতিষ্ঠাতা (Vice-Principal & Founder)" },
         { name: "MD Nurul Amin", position: "ইনচার্জ শিক্ষক ও প্রতিষ্ঠাতা (Incharge Teacher)" },
       ],
-      keyLeaders: [
-        { name: "MD. Rejwan", position: "যুব দলনেতা (Team Leader)", level: "Level 2" },
-        { name: "Hossain Mohammad Esam", position: "উপ-দলনেতা ১ (Deputy Leader - 01)", level: "Level 3" },
-        { name: "Most. Nusrat Jahan", position: "উপ-দলনেতা ২ (Deputy Leader - 02)", level: "Level 3" },
-      ],
+      keyLeaders: defaultLeaders,
     };
 
     try {
@@ -381,11 +384,11 @@ export async function getLeadershipSummary(): Promise<SanitizedLeadershipSummary
       const [communityRes, foundersRes, teamRes] = await Promise.all([
         supabase
           .from("community_members")
-          .select("name, position, level, photo_url")
+          .select("name, position, sub_role, level, photo_url, display_order")
           .eq("is_active", true)
           .order("level", { ascending: true })
           .order("display_order", { ascending: true })
-          .limit(12),
+          .limit(30),
         supabase
           .from("founders")
           .select("name, title, category, bio")
@@ -450,11 +453,12 @@ export async function getLeadershipSummary(): Promise<SanitizedLeadershipSummary
       }));
 
       // Extract youth committee leaders
-      const leadersSource = community.length > 0 ? community.filter((c) => c.level > 1) : team;
-      const keyLeaders = leadersSource.slice(0, 8).map((m: any) => ({
+      const leadersSource = community.length > 0 ? community.filter((c) => c.level > 1) : defaultLeaders;
+      const keyLeaders = leadersSource.map((m: any) => ({
         name: m.name,
         position: m.position,
         level: m.level ? `Level ${m.level}` : "Executive",
+        subRole: m.sub_role || null,
       }));
 
       return {
@@ -859,7 +863,10 @@ export async function buildTrustedLiveContext(intent: string, query?: string): P
     }
     if (leadership.keyLeaders && leadership.keyLeaders.length > 0) {
       parts.push(`  * যুব দল ও কার্যনির্বাহী পরিষদ (Youth Leadership & Executive Committee):`);
-      leadership.keyLeaders.forEach((l) => parts.push(`    - ${l.name}: ${l.position} (${l.level})`));
+      leadership.keyLeaders.forEach((l) => {
+        const wingInfo = l.subRole ? ` [উইং/বিভাগ: ${l.subRole}]` : "";
+        parts.push(`    - ${l.position}${wingInfo}: ${l.name} (${l.level})`);
+      });
     }
     parts.push(`- Founders & Advisors Page: /founders | Executive Team Directory: /team`);
 

@@ -216,14 +216,64 @@ export const RCY_KNOWLEDGE_BASE: KnowledgeArticle[] = [
       "রাশিদুল আমিন",
       "প্রধান সমন্বয়কারী",
       "নেতৃত্ব",
+      "gl",
+      "agl",
+      "group leader",
+      "গ্রুপ লিডার",
+      "সহকারী গ্রুপ লিডার",
+      "ict",
+      "media",
+      "communication",
+      "আইসিটি",
+      "মিডিয়া",
+      "মিনহাজুল আবেদীন পিয়াস",
+      "minhajul abadin pius",
+      "pius",
+      "sayem",
+      "সায়েম",
+      "sojol",
+      "সজল",
+      "shawon",
+      "শাওন",
+      "jakariya",
+      "জাকারিয়া",
+      "noman",
+      "নোমান",
+      "ihan",
+      "ইহান",
+      "maruf",
+      "মারুফ",
+      "resource mobilization",
+      "সম্পদ সংগ্রহ",
     ],
-    contentBn: `যুব রেড ক্রিসেন্ট, রাজশাহী পলিটেকনিক ইনস্টিটিউট (RCY RGPI)-এর প্রধান দায়িত্বশীল ও নেতৃবৃন্দ:
-১. ইনচার্জ শিক্ষক (Incharge Teacher): জনাব মো: নূরুল আমিন (Md. Nurul Amin)। তিনি আমাদের ইউনিটের সম্মানিত ইনচার্জ শিক্ষক ও প্রধান সমন্বয়কারী।
+    contentBn: `যুব রেড ক্রিসেন্ট, রাজশাহী পলিটেকনিক ইনস্টিটিউট (RCY RGPI)-এর প্রধান দায়িত্বশীল ও পূর্ণাঙ্গ কার্যনির্বাহী পরিষদ:
+১. ইনচার্জ শিক্ষক (Incharge Teacher): জনাব মো: নূরুল আমিন (Md. Nurul Amin)।
 ২. অধ্যক্ষ ও প্রধান উপদেষ্টা (Principal Sir): ইঞ্জিনিয়ার আজম মাসুদুর রহমান (Engr. Ajm Masudur Rahman)।
 ৩. উপাধ্যক্ষ ও প্রতিষ্ঠাতা: ইঞ্জিনিয়ার মো: রাশিদুল আমিন (Engr. Md. Rashidul Amin)।
 ৪. যুব দলনেতা (Youth Team Leader): মো: রেজওয়ান (MD. Rejwan)।
-৫. উপ-দলনেতা (Deputy Leaders): হোসাইন মোহাম্মদ এসাম ও মোছা: নুসরাত জাহান।
-ইনচার্জ শিক্ষক ও উপদেষ্টাদের বিস্তারিত পরিচিতি জানতে আমাদের 'প্রতিষ্ঠাতা ও পথপ্রদর্শক' (/founders) এবং কমিটি তালিকা দেখতে 'কার্যনির্বাহী কমিটি' (/team) পেজ ভিজিট করুন।`,
+৫. উপ-দলনেতা (Deputy Leaders): হোসাইন মোহাম্মদ এসাম (Hossain Mohammad Esam) ও মোছা: নুসরাত জাহান (Most. Nusrat Jahan)।
+
+বিভাগীয় উইং ও গ্রুপ লিডার (GL) এবং সহকারী গ্রুপ লিডার (AGL) তালিকা:
+• তথ্যপ্রযুক্তি, মিডিয়া ও যোগাযোগ (ICT Media & Communication):
+  - গ্রুপ লিডার (GL): মিনহাজুল আবেদীন পিয়াস (Minhajul Abadin Pius)
+  - সহকারী গ্রুপ লিডার (AGL): মো: সায়েম শাহাদাত (Md. Sayem Shahadat)
+• সম্পদ সংগ্রহ ও ব্যবস্থাপনা (Resource Mobilization):
+  - গ্রুপ লিডার (GL): মো: ইশতিয়াক আহমেদ ইহান (Md. Istiyak Ahmed Ihan)
+  - সহকারী গ্রুপ লিডার (AGL): মো: মারুফ ইসলাম (Md. Maruf Islam)
+• প্রশাসন, সংগঠন ও সদস্য সংগ্রহ (Administration, Organisation & Recruitment):
+  - গ্রুপ লিডার (GL): মো: সজল (MD. Sojol)
+  - সহকারী গ্রুপ লিডার (AGL): নূর মুহাম্মদ আলী (Noor Muhammad Ali)
+• প্রশিক্ষণ ও সহ-শিক্ষা (Training and Co-Curriculum):
+  - গ্রুপ লিডার (GL): অলিউল্লাহ শাওন (Oliullah Shawon)
+  - সহকারী গ্রুপ লিডার (AGL): সুরাইয়া ইয়াসমিন সেতু (Suraiaya Yasmin Setu)
+• দুর্যোগ ও মানবিক সহায়তা (Disaster & Humanitarian Response):
+  - গ্রুপ লিডার (GL): মো: জাকারিয়া (Md. Jakariya)
+  - সহকারী গ্রুপ লিডার (AGL): মো: তামিম হোসেন (Md. Tamim Hossain)
+• স্বাস্থ্য ও সেবা (Health & Services):
+  - গ্রুপ লিডার (GL): সাইফুল্লাহ মনসুর নোমান (Saifullah Mansur Noman)
+  - সহকারী গ্রুপ লিডার (AGL): মো: আব্দুল বারী (Md. Abdul Bari)
+
+কমিটির বিস্তারিত তালিকা দেখতে 'কার্যনির্বাহী কমিটি' (/team) পেজ ভিজিট করুন।`,
   },
   {
     id: "site-statistics-and-impact",

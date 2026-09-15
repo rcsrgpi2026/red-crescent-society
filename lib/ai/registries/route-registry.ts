@@ -1,4 +1,5 @@
 import type { RcyRoute } from "../types";
+import discoveredRoutes from "./discovered-routes.json";
 
 /**
  * Deterministic Route Registry for RCY RGPI Website.
@@ -388,23 +389,40 @@ export function isRegisteredRoute(targetPath: string): boolean {
   if (!targetPath || typeof targetPath !== "string") return false;
   const clean = targetPath.trim().toLowerCase().split("?")[0].split("#")[0];
 
-  // Exact match against public registered routes
+  // Disallow non-paths, external URLs, admin panels, and security paths
+  if (!clean.startsWith("/")) return false;
+  if (clean.startsWith("/admin") || clean.startsWith("/api") || clean.includes("..")) {
+    return false;
+  }
+
+  // 1. Exact match against public registered routes
   if (RCY_ROUTES.some((r) => r.path.toLowerCase() === clean && r.isPublic)) {
     return true;
   }
 
-  // Dynamic public subroutes allowed:
+  // 2. Exact match against auto-discovered public routes (from app/ directory)
+  if (Array.isArray(discoveredRoutes) && discoveredRoutes.includes(clean)) {
+    return true;
+  }
+
+  // 3. Dynamic public subroutes allowed:
   // - /blood-support/request/[id] (tracking)
   // - /blood-support/contact-request/[id] (contacting donor)
   // - /notices/[slug]
   // - /events/[slug]
   // - /activities/[slug]
+  // - /founders/[id]
+  // - /gallery/[slug]
+  // - /verify/certificate/[token]
   if (
     clean.startsWith("/blood-support/request/") ||
     clean.startsWith("/blood-support/contact-request/") ||
     clean.startsWith("/notices/") ||
     clean.startsWith("/events/") ||
-    clean.startsWith("/activities/")
+    clean.startsWith("/activities/") ||
+    clean.startsWith("/founders/") ||
+    clean.startsWith("/gallery/") ||
+    clean.startsWith("/verify/certificate/")
   ) {
     return true;
   }

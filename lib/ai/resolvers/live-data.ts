@@ -781,7 +781,7 @@ export async function buildTrustedLiveContext(intent: string, query?: string): P
     parts.push(`- Current Pending Blood Requests: ${blood.activeCount}টি`);
     parts.push(`- Emergency Helpline: ${helpline.bloodHelpline}`);
     parts.push(`- Blood Directory: /blood-support | Request Blood: /blood-support/request`);
-    parts.push(`- Team Directory: /team | Events: /events | Training: /training`);
+    parts.push(`- Events: /events | Training: /training | Volunteer Application: /apply-volunteer`);
 
   } else if (intent === "EVENT_ACTIVITY") {
     // Focus strictly on events, activities & trainings (~350 tokens)
@@ -875,7 +875,7 @@ export async function buildTrustedLiveContext(intent: string, query?: string): P
         parts.push(`    - ${l.position}${wingInfo}: ${l.name} (${l.level})`);
       });
     }
-    parts.push(`- Founders & Advisors Page: /founders | Executive Team Directory: /team`);
+    parts.push(`- Founders & Advisors Page: /founders | Join & About: /join (Note: /team is private staff-only, never link it)`);
 
   } else if (intent === "NOTICE") {
     // Focus on notices (~120 tokens)

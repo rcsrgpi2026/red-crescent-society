@@ -246,8 +246,8 @@ export const RCY_ROUTES: RcyRoute[] = [
       "সদস্যবৃন্দ",
       "কার্যনির্বাহী",
     ],
-    isPublic: true,
-    requiresAuth: false,
+    isPublic: false,
+    requiresAuth: true,
     category: "organization",
   },
   {
@@ -389,9 +389,15 @@ export function isRegisteredRoute(targetPath: string): boolean {
   if (!targetPath || typeof targetPath !== "string") return false;
   const clean = targetPath.trim().toLowerCase().split("?")[0].split("#")[0];
 
-  // Disallow non-paths, external URLs, admin panels, and security paths
+  // Disallow non-paths, external URLs, admin panels, team directory (admin-only), and security paths
   if (!clean.startsWith("/")) return false;
-  if (clean.startsWith("/admin") || clean.startsWith("/api") || clean.includes("..")) {
+  if (
+    clean.startsWith("/admin") ||
+    clean.startsWith("/api") ||
+    clean === "/team" ||
+    clean.startsWith("/team/") ||
+    clean.includes("..")
+  ) {
     return false;
   }
 
@@ -504,6 +510,7 @@ export function matchRouteByQuery(query: string): RcyRoute | null {
   let maxScore = 0;
 
   for (const route of RCY_ROUTES) {
+    if (!route.isPublic) continue;
     let score = 0;
     for (const kw of route.keywords) {
       if (q.includes(kw.toLowerCase())) {

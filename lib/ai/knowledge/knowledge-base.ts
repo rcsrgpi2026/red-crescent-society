@@ -273,7 +273,7 @@ export const RCY_KNOWLEDGE_BASE: KnowledgeArticle[] = [
   - গ্রুপ লিডার (GL): সাইফুল্লাহ মনসুর নোমান (Saifullah Mansur Noman)
   - সহকারী গ্রুপ লিডার (AGL): মো: আব্দুল বারী (Md. Abdul Bari)
 
-কমিটির বিস্তারিত তালিকা দেখতে 'কার্যনির্বাহী কমিটি' (/team) পেজ ভিজিট করুন।`,
+কমিটির বিস্তারিত তালিকা ও দায়িত্ব সম্পর্কে যেকোনো তথ্য সরাসরি চ্যাটে জানতে পারেন।`,
   },
   {
     id: "site-statistics-and-impact",

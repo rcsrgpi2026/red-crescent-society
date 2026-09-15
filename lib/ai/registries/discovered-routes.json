@@ -21,7 +21,6 @@
   "/reset-password",
   "/student",
   "/student/login",
-  "/team",
   "/training",
   "/verify/certificate/[token]",
   "/volunteer",

@@ -19,8 +19,8 @@ function discoverRoutes(dir, base = "") {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
 
   for (const entry of entries) {
-    // Ignore private admin panels, api endpoints, and system folders
-    if (entry.name === "admin" || entry.name === "api" || entry.name === "_not-found") {
+    // Ignore private admin panels, api endpoints, team directory (admin-only), and system folders
+    if (entry.name === "admin" || entry.name === "api" || entry.name === "_not-found" || entry.name === "team") {
       continue;
     }
 

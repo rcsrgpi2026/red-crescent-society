@@ -20,16 +20,16 @@ export const AI_CONFIG = {
   groqApiKeys: rawGroqKeys,
 
   // Models
-  geminiModel: process.env.GEMINI_MODEL || "gemini-3.5-flash",
+  geminiModel: process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
   groqModel: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
 
   // Model Cascading Fallback Chains
   geminiCandidateModels: [
-    process.env.GEMINI_MODEL || "gemini-3.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
+    process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-2.5-flash-lite",
     "gemini-2.0-flash-lite",
-    "gemini-3.5-flash-lite",
+    "gemini-2.0-flash",
   ],
   groqCandidateModels: [
     process.env.GROQ_MODEL || "openai/gpt-oss-120b",

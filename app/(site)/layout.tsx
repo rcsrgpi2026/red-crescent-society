@@ -48,7 +48,11 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     manifest: "/manifest.webmanifest",
     icons: {
-      icon: "/favicon.ico",
+      icon: [
+        { url: "/icon.svg", type: "image/svg+xml" },
+        { url: "/favicon.ico" },
+      ],
+      shortcut: "/icon.svg",
       apple: "/apple-touch-icon.png",
     },
     appleWebApp: {

@@ -279,7 +279,7 @@ export function AboutSection({ t, founders }: { t: Messages; founders: Founder[]
                           <p className="font-jakarta text-sm font-bold text-foreground group-hover:text-brand transition-colors">
                             {title}
                           </p>
-                          <p className="font-inter mt-1 text-xs leading-relaxed text-muted-foreground line-clamp-3">
+                          <p className="font-inter mt-1 text-xs leading-relaxed text-muted-foreground">
                             {text}
                           </p>
                         </div>

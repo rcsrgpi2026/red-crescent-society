@@ -45,6 +45,9 @@ export function RecruitmentPopup({ campaign }: RecruitmentPopupProps) {
       }
     }
     setIsOpen(false);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("rcy_popup_closed"));
+    }
   };
 
   if (!campaign || !campaign.is_active) return null;

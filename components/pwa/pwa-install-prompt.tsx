@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { Download, X, Share, Info } from "lucide-react";
 
@@ -18,12 +19,25 @@ if (typeof window !== "undefined") {
 }
 
 export function PwaInstallPrompt() {
+  const pathname = usePathname();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [showManualGuide, setShowManualGuide] = useState(false);
 
+  // Check if any popup/modal dialog is currently displayed on screen
+  const hasActivePopup = useCallback(() => {
+    if (typeof document === "undefined") return false;
+    return document.querySelector('[role="dialog"]') !== null;
+  }, []);
+
   useEffect(() => {
+    // 0. Only show on home screen (never on sub-pages like /blood-support, /events, etc.)
+    if (pathname !== "/") {
+      setIsVisible(false);
+      return;
+    }
+
     // 1. Wipe any legacy 7-day localStorage blocker from previous version
     try {
       localStorage.removeItem("rcy_pwa_install_dismissed");
@@ -36,11 +50,11 @@ export function PwaInstallPrompt() {
 
     if (isStandalone) return;
 
-    // 3. Check dismissal timestamp (suppress for 3 minutes if dismissed via 'X')
+    // 3. Check dismissal timestamp (suppress for 10 minutes if user explicitly dismissed via 'X')
     const dismissedAt = sessionStorage.getItem("rcy_pwa_dismissed_time");
     if (dismissedAt) {
       const minutesPassed = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60);
-      if (minutesPassed < 3) return;
+      if (minutesPassed < 10) return;
     }
 
     // 4. Check for pre-captured prompt
@@ -62,7 +76,10 @@ export function PwaInstallPrompt() {
       const promptEvent = e as BeforeInstallPromptEvent;
       (window as any).__rcyPwaPrompt = promptEvent;
       setDeferredPrompt(promptEvent);
-      setIsVisible(true);
+      // Do not force show immediately if a modal popup is open
+      if (!hasActivePopup()) {
+        setIsVisible(true);
+      }
     };
 
     // 7. Hide immediately when app is installed
@@ -74,17 +91,55 @@ export function PwaInstallPrompt() {
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
 
-    // 8. Unconditionally trigger visibility after 1.5s delay if not standalone
-    const timer = setTimeout(() => {
+    let timer: NodeJS.Timeout | null = null;
+
+    const showPromptSafely = () => {
+      if (hasActivePopup()) return;
       setIsVisible(true);
-    }, 1500);
+    };
+
+    // 8. Event listeners for when popups/announcements are closed by the user
+    const handlePopupClosed = () => {
+      if (timer) clearTimeout(timer);
+      // Wait 700ms after user closes the popup so it transitions smoothly
+      timer = setTimeout(() => {
+        if (!hasActivePopup()) {
+          showPromptSafely();
+        }
+      }, 700);
+    };
+
+    window.addEventListener("rcy_announcement_closed", handlePopupClosed);
+    window.addEventListener("rcy_popup_closed", handlePopupClosed);
+
+    // 9. Observer to monitor if popups appear or disappear dynamically
+    const observer = new MutationObserver(() => {
+      if (hasActivePopup()) {
+        // If a popup appears, ensure install prompt stays hidden
+        setIsVisible(false);
+      }
+    });
+
+    try {
+      observer.observe(document.body, { childList: true, subtree: true });
+    } catch {}
+
+    // 10. If no popup appears within 3.5s (giving time for announcements to mount), display prompt
+    timer = setTimeout(() => {
+      if (!hasActivePopup()) {
+        showPromptSafely();
+      }
+    }, 3500);
 
     return () => {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
+      observer.disconnect();
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
+      window.removeEventListener("rcy_announcement_closed", handlePopupClosed);
+      window.removeEventListener("rcy_popup_closed", handlePopupClosed);
     };
-  }, []);
+  }, [pathname, hasActivePopup]);
 
   const handleInstallClick = async () => {
     // If iOS Safari, show guide
@@ -121,7 +176,7 @@ export function PwaInstallPrompt() {
     sessionStorage.setItem("rcy_pwa_dismissed_time", Date.now().toString());
   };
 
-  if (!isVisible) return null;
+  if (!isVisible || pathname !== "/") return null;
 
   return (
     <aside

@@ -19,6 +19,7 @@ import {
   AlertCircle,
   MessageSquare,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useAssistant } from "./assistant-context";
 import { AssistantBotIcon } from "./assistant-bot-icon";
 import type { AssistantAction, AssistantResponse } from "@/lib/ai/types";
@@ -60,9 +61,113 @@ export function AssistantWidget() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // Messenger-style draggable floating bubble position
+  const [bubblePos, setBubblePos] = useState<{ x: number; y: number } | null>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef<{
+    startX: number;
+    startY: number;
+    posX: number;
+    posY: number;
+    moved: boolean;
+  }>({
+    startX: 0,
+    startY: 0,
+    posX: 0,
+    posY: 0,
+    moved: false,
+  });
+
   useEffect(() => {
     setMounted(true);
+    // Initialize and restore saved bubble position from localStorage
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("rcy_bubble_pos_v1");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const maxX = window.innerWidth - 68;
+          const maxY = window.innerHeight - 80;
+          const clampedX = Math.max(12, Math.min(maxX, Number(parsed.x) || 0));
+          const clampedY = Math.max(64, Math.min(maxY, Number(parsed.y) || 0));
+          setBubblePos({ x: clampedX, y: clampedY });
+          return;
+        }
+      } catch {
+        // ignore
+      }
+      // Default: bottom-right
+      const defaultX = window.innerWidth - 76;
+      const defaultY = window.innerHeight - 96;
+      setBubblePos({ x: Math.max(12, defaultX), y: Math.max(64, defaultY) });
+    }
   }, []);
+
+  const handleBubblePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+    const currentX = bubblePos?.x ?? (window.innerWidth - 76);
+    const currentY = bubblePos?.y ?? (window.innerHeight - 96);
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      posX: currentX,
+      posY: currentY,
+      moved: false,
+    };
+    isDraggingRef.current = true;
+  };
+
+  const handleBubblePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    const dx = e.clientX - dragStartRef.current.startX;
+    const dy = e.clientY - dragStartRef.current.startY;
+
+    if (!dragStartRef.current.moved && Math.hypot(dx, dy) > 4) {
+      dragStartRef.current.moved = true;
+    }
+
+    if (dragStartRef.current.moved) {
+      const nextX = dragStartRef.current.posX + dx;
+      const nextY = dragStartRef.current.posY + dy;
+      const maxX = window.innerWidth - 68;
+      const maxY = window.innerHeight - 80;
+      const clampedX = Math.max(12, Math.min(maxX, nextX));
+      const clampedY = Math.max(60, Math.min(maxY, nextY));
+      setBubblePos({ x: clampedX, y: clampedY });
+    }
+  };
+
+  const handleBubblePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+
+    if (!dragStartRef.current.moved) {
+      // Tap without drag -> open assistant modal
+      setIsOpen(true);
+    } else {
+      // Drag completed -> persist position
+      setBubblePos((curr) => {
+        if (curr) {
+          try {
+            localStorage.setItem("rcy_bubble_pos_v1", JSON.stringify(curr));
+          } catch {
+            // ignore
+          }
+        }
+        return curr;
+      });
+    }
+  };
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -190,6 +295,71 @@ export function AssistantWidget() {
 
   return (
     <>
+      {/* Mobile Draggable Messenger Bubble (FAB) - User can drag anywhere on screen */}
+      {!isOpen && (
+        <div
+          role="button"
+          tabIndex={0}
+          onPointerDown={handleBubblePointerDown}
+          onPointerMove={handleBubblePointerMove}
+          onPointerUp={handleBubblePointerUp}
+          onPointerCancel={handleBubblePointerUp}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              setIsOpen(true);
+            }
+          }}
+          aria-label="RCY AI Assistant - রক্ত বা সহায়তার জন্য চ্যাট করুন (ড্র্যাগ করে সরানো যাবে)"
+          title="RCY AI Assistant (ড্র্যাগ করে যেকোনো জায়গায় রাখুন বা ট্যাপ করে চ্যাট করুন)"
+          style={{
+            transform: bubblePos
+              ? `translate3d(${bubblePos.x}px, ${bubblePos.y}px, 0)`
+              : undefined,
+            left: 0,
+            top: 0,
+            touchAction: "none",
+          }}
+          className={cn(
+            "fixed z-40 sm:hidden cursor-grab active:cursor-grabbing select-none transition-shadow",
+            !bubblePos && "bottom-7 right-6"
+          )}
+        >
+          {/* Glowing Radiant Aura Ring (চকচকে অ্যানিমেটেড আভা) */}
+          <span
+            className="pointer-events-none absolute -inset-1.5 rounded-full bg-gradient-to-r from-red-500 via-rose-500 to-amber-500 opacity-75 blur-md animate-pulse"
+            aria-hidden="true"
+          />
+          {/* Subtle Radar Ping Ripple */}
+          <span
+            className="pointer-events-none absolute -inset-1 rounded-full bg-rose-500/30 animate-ping"
+            style={{ animationDuration: "3s" }}
+            aria-hidden="true"
+          />
+
+          <div className="group relative flex h-13.5 w-13.5 items-center justify-center rounded-full bg-gradient-to-b from-white via-white to-rose-50/90 text-red-600 border-2 border-red-300/90 shadow-xl shadow-red-950/25 ring-2 ring-red-500/25 transition-transform duration-150 active:scale-95">
+            {/* AI Assistant Bot Icon */}
+            <AssistantBotIcon
+              className="relative z-10 h-7 w-7 pointer-events-none"
+              primaryColor="#e11d48"
+              wireColor="#94a3b8"
+              eyeColor="#ffffff"
+            />
+
+            {/* Prominent "✨ AI" Badge */}
+            <span className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-red-600 via-rose-600 to-red-600 px-2 py-0.5 text-[9.5px] font-black tracking-wider text-white shadow-md ring-1 ring-white uppercase">
+              <Sparkles className="h-2.5 w-2.5 text-amber-300 animate-pulse" />
+              AI
+            </span>
+
+            {/* Live Online Green Indicator Dot */}
+            <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 z-20 flex h-3.5 w-3.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-80" />
+              <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-white shadow-xs" />
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Floating Modal Window */}
       {isOpen && (
         <div
@@ -238,8 +408,22 @@ export function AssistantWidget() {
             </div>
           </div>
 
-          {/* Messages Body */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm scroll-smooth bg-slate-50/40">
+          {/* Messages Body Area with Watermark */}
+          <div className="relative flex-1 min-h-0 overflow-hidden bg-slate-50/40">
+            {/* Faded Watermark Background */}
+            <div
+              className="pointer-events-none absolute inset-0 flex items-center justify-center select-none overflow-hidden"
+              aria-hidden="true"
+            >
+              <img
+                src="/logos/rcy-watermark.svg"
+                alt=""
+                className="w-[390px] h-[390px] sm:w-[440px] sm:h-[440px] max-w-[98%] object-contain opacity-[0.065] dark:opacity-[0.085] pointer-events-none select-none transition-all duration-300"
+              />
+            </div>
+
+            {/* Messages Scroll Container */}
+            <div className="relative h-full overflow-y-auto p-4 space-y-4 text-sm scroll-smooth">
             {messages.map((m) => {
               const isUser = m.role === "user";
               return (
@@ -361,6 +545,7 @@ export function AssistantWidget() {
             )}
 
             <div ref={messagesEndRef} />
+            </div>
           </div>
 
           {/* Input Footer */}

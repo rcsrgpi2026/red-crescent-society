@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Heart, Droplets, Sparkles, ShieldCheck, HeartHandshake } from "lucide-react";
+import { AddToContactsCard } from "@/components/shared/add-to-contacts-card";
 
 export interface DonorGreetingInfo {
   name: string;
@@ -106,6 +107,9 @@ export function DonorGreetingModal({
               আপনার পাসকোড ও তথ্য সুরক্ষিত রয়েছে। যেকোনো সময় <strong>&ldquo;Manage your listing&rdquo;</strong> অপশন থেকে স্ট্যাটাস পরিবর্তন করতে পারবেন।
             </p>
           </div>
+
+          {/* 1-Click Add to Contacts reminder */}
+          <AddToContactsCard variant="compact" />
 
           {/* Action Buttons */}
           <div className="pt-2 flex flex-col gap-2">

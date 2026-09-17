@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui";
+import { MandatoryContactStep } from "@/components/forms/mandatory-contact-step";
 
 export function StudentRegisterForm() {
   const [formData, setFormData] = useState({
@@ -172,9 +173,10 @@ export function StudentRegisterForm() {
             </div>
           </div>
 
+          <MandatoryContactStep className="my-2" />
+
           <SubmitButton className="w-full">Create Student Account</SubmitButton>
           <p className="text-xs text-muted-foreground">
-
             Every field is required. Student accounts are activated immediately —
             no approval needed.
           </p>

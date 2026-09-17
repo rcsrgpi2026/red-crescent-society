@@ -16,10 +16,16 @@ export function sanitizeCampaignUrl(url?: string | null): string {
   clean = clean.replace(/[:;,\s"'.]+$/, "");
   if (!clean) return "";
 
+  const publicBase = "https://rgpircy.vercel.app";
+
+  // Never send localhost or loopback links in emails over the internet
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(clean)) {
+    return clean.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, publicBase);
+  }
+
   // Relative path like "/notices"
   if (clean.startsWith("/")) {
-    const base = getAppUrl();
-    return `${base}${clean}`;
+    return `${publicBase}${clean}`;
   }
 
   // Absolute with protocol
@@ -32,6 +38,5 @@ export function sanitizeCampaignUrl(url?: string | null): string {
     return `https://${clean}`;
   }
 
-  const base = getAppUrl();
-  return `${base}/${clean}`;
+  return `${publicBase}/${clean}`;
 }

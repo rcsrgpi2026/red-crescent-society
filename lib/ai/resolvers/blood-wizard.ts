@@ -153,12 +153,15 @@ export function extractHospitalAndLocation(text: string): { hospital?: string; l
     }
   }
 
-  // Location / Ward detection
+  // Location / Ward detection (e.g. ৮ নম্বর ওয়ার্ড, কেবিন ১২, আইসিইউ)
   const locMatch = text.match(
-    /([^\n,।]+?(?:ওয়ার্ড|কেবিন|বেড|আইসিইউ|আই\.সি\.ইউ|icu|ward|cabin|bed|উপজেলা|থানা|রাজশাহী))/i
+    /(?:^|[|,\n।])\s*([^|\n,।]{2,25}?(?:ওয়ার্ড|কেবিন|বেড|আইসিইউ|আই\.সি\.ইউ|icu|ward|cabin|bed)\s*\d*)/i
   );
   if (locMatch) {
-    location = locMatch[1].trim();
+    const candidate = locMatch[1].trim();
+    if (!hospital || !hospital.includes(candidate)) {
+      location = candidate;
+    }
   }
 
   return { hospital, location };
@@ -194,14 +197,17 @@ function extractCleanName(rawText: string): string | undefined {
  * Based on the LAST assistant message in history.
  * GUARANTEES linear forward progression:
  * No prior ধাপ -> Stage 1
- * Prior was ধাপ ১/৪ -> Stage 2
- * Prior was ধাপ ২/৪ -> Stage 3
- * Prior was ধাপ ৩/৪ -> Stage 4
- * Prior was ধাপ ৪/৪ -> COMPLETE
+ * Prior was ধাপ ১/৭ -> Stage 2
+ * Prior was ধাপ ২/৭ -> Stage 3
+ * Prior was ধাপ ৩/৭ -> Stage 4
+ * Prior was ধাপ ৪/৭ -> Stage 5
+ * Prior was ধাপ ৫/৭ -> Stage 6
+ * Prior was ধাপ ৬/৭ -> Stage 7
+ * Prior was ধাপ ৭/৭ -> COMPLETE
  */
 export function determineWizardStage(
   history?: Array<{ role: "user" | "assistant"; content: string }>
-): 1 | 2 | 3 | 4 | "COMPLETE" {
+): 1 | 2 | 3 | 4 | 5 | 6 | 7 | "COMPLETE" {
   if (!history || !Array.isArray(history) || history.length === 0) {
     return 1;
   }
@@ -213,16 +219,29 @@ export function determineWizardStage(
 
   const lastAssistantMsg = assistantMsgs[assistantMsgs.length - 1].content;
 
-  if (lastAssistantMsg.includes("ধাপ ৪/৪")) {
+  if (
+    lastAssistantMsg.includes("ধাপ ৭/৭") ||
+    lastAssistantMsg.includes("ধাপ ৬/৬") ||
+    lastAssistantMsg.includes("ধাপ ৪/৪")
+  ) {
     return "COMPLETE";
   }
-  if (lastAssistantMsg.includes("ধাপ ৩/৪")) {
+  if (lastAssistantMsg.includes("ধাপ ৬/৭")) {
+    return 7;
+  }
+  if (lastAssistantMsg.includes("ধাপ ৫/৭") || lastAssistantMsg.includes("ধাপ ৫/৬")) {
+    return 6;
+  }
+  if (lastAssistantMsg.includes("ধাপ ৪/৭") || lastAssistantMsg.includes("ধাপ ৪/৬") || lastAssistantMsg.includes("ধাপ ৩/৪")) {
+    return 5;
+  }
+  if (lastAssistantMsg.includes("ধাপ ৩/৭") || lastAssistantMsg.includes("ধাপ ৩/৬") || lastAssistantMsg.includes("ধাপ ২/৪")) {
     return 4;
   }
-  if (lastAssistantMsg.includes("ধাপ ২/৪")) {
+  if (lastAssistantMsg.includes("ধাপ ২/৭") || lastAssistantMsg.includes("ধাপ ২/৬")) {
     return 3;
   }
-  if (lastAssistantMsg.includes("ধাপ ১/৪")) {
+  if (lastAssistantMsg.includes("ধাপ ১/৭") || lastAssistantMsg.includes("ধাপ ১/৬") || lastAssistantMsg.includes("ধাপ ১/৪")) {
     return 2;
   }
 
@@ -307,36 +326,49 @@ export function parseAllCumulativeSlots(
   }
 
   // Per-turn extraction for conversational context:
-  // Turn 1 (index 0 is initiation, index 1 is reply to Stage 1)
+  // Turn 1 reply (reply to Stage 1: Patient Name)
   if (userTurns.length >= 2 && !state.patientName) {
     const stage1UserReply = userTurns[1];
     state.patientName = extractCleanName(stage1UserReply);
   }
 
-  // Turn 2 reply (reply to Stage 2: Units & Hospital)
-  if (userTurns.length >= 3) {
+  // Turn 2 reply (reply to Stage 2: Blood Group)
+  if (userTurns.length >= 3 && !state.bloodGroup) {
     const stage2UserReply = userTurns[2];
-    if (!state.hospital && !state.location) {
-      const cleanHosp = extractCleanName(stage2UserReply);
-      if (cleanHosp) {
-        state.hospital = cleanHosp;
-      }
-    }
+    state.bloodGroup = extractBloodGroup(stage2UserReply);
   }
 
-  // Turn 3 reply (reply to Stage 3: Date & Urgency)
-  if (userTurns.length >= 4 && !state.requiredDate) {
+  // Turn 3 reply (reply to Stage 3: Units)
+  if (userTurns.length >= 4 && !state.units) {
     const stage3UserReply = userTurns[3];
-    const cleanDate = extractCleanName(stage3UserReply);
+    state.units = extractUnits(stage3UserReply);
+  }
+
+  // Turn 4 reply (reply to Stage 4: Hospital)
+  if (userTurns.length >= 5 && !state.hospital) {
+    const stage4UserReply = userTurns[4];
+    const { hospital, location } = extractHospitalAndLocation(stage4UserReply);
+    state.hospital = hospital || extractCleanName(stage4UserReply);
+    if (location) state.location = location;
+  }
+
+  // Turn 5 reply (reply to Stage 5: Date)
+  if (userTurns.length >= 6 && !state.requiredDate) {
+    const stage5UserReply = userTurns[5];
+    const cleanDate = extractCleanName(stage5UserReply);
     state.requiredDate = cleanDate || "আজ (জরুরি)";
   }
 
-  // Turn 4 reply (reply to Stage 4: Requester Info)
-  if (userTurns.length >= 5) {
-    const stage4UserReply = userTurns[4];
-    if (!state.requesterName) {
-      state.requesterName = extractCleanName(stage4UserReply) || state.patientName || "আবেদনকারী";
-    }
+  // Turn 6 reply (reply to Stage 6: Phone)
+  if (userTurns.length >= 7 && !state.contact) {
+    const stage6UserReply = userTurns[6];
+    state.contact = extractPhoneNumber(stage6UserReply);
+  }
+
+  // Turn 7 reply (reply to Stage 7: Email)
+  if (userTurns.length >= 8 && !state.email) {
+    const stage7UserReply = userTurns[7];
+    state.email = extractEmail(stage7UserReply);
   }
 
   return state;
@@ -389,10 +421,14 @@ export function isBloodRequestWizardQuery(
     if (lastAssistant) {
       const content = lastAssistant.content;
       if (
-        content.includes("ধাপ ১/৪") ||
-        content.includes("ধাপ ২/৪") ||
-        content.includes("ধাপ ৩/৪") ||
-        content.includes("ধাপ ৪/৪")
+        /ধাপ\s*[১-৭1-7]\/[৪-৭4-7]/.test(content) ||
+        content.includes("ধাপ ১/") ||
+        content.includes("ধাপ ২/") ||
+        content.includes("ধাপ ৩/") ||
+        content.includes("ধাপ ৪/") ||
+        content.includes("ধাপ ৫/") ||
+        content.includes("ধাপ ৬/") ||
+        content.includes("ধাপ ৭/")
       ) {
         return true;
       }
@@ -413,9 +449,24 @@ export function buildBloodRequestFormUrl(state: BloodRequestState): string {
   if (state.units) params.set("units", String(state.units));
   if (state.hospital) params.set("hospital", state.hospital);
   if (state.location) params.set("location", state.location);
-  if (state.requiredDate) params.set("requiredDate", state.requiredDate);
+  if (state.requiredDate) {
+    const lower = state.requiredDate.toLowerCase();
+    const today = new Date();
+    if (lower.includes("কাল") || lower.includes("tomorrow")) {
+      today.setDate(today.getDate() + 1);
+      params.set("requiredDate", today.toISOString().split("T")[0]);
+    } else if (lower.includes("আজ") || lower.includes("today") || lower.includes("জরুরি")) {
+      params.set("requiredDate", today.toISOString().split("T")[0]);
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(state.requiredDate.trim())) {
+      params.set("requiredDate", state.requiredDate.trim());
+    } else {
+      params.set("requiredDate", state.requiredDate);
+    }
+  }
   if (state.emergencyLevel) params.set("emergencyLevel", state.emergencyLevel);
-  if (state.requesterName) params.set("requesterName", state.requesterName);
+  if (state.requesterName || state.patientName) {
+    params.set("requesterName", state.requesterName || state.patientName || "আবেদনকারী");
+  }
   if (state.contact) params.set("contact", state.contact);
   if (state.email) params.set("email", state.email);
 
@@ -444,81 +495,125 @@ export function executeBloodRequestWizard(
   // Determine stage based on history
   const currentStage = determineWizardStage(history);
 
-  // If user provided all essential slots at once on turn 1 or turn 2, jump to completion!
+  // If user provided core slots at once (bloodGroup, contact, hospital/patientName), jump to completion!
   const hasAllCoreSlots = Boolean(
     state.bloodGroup &&
-    (state.contact || state.email) &&
-    (state.hospital || state.location || state.patientName)
+    state.contact &&
+    state.email &&
+    (state.hospital || state.patientName)
   );
 
   if (hasAllCoreSlots && currentStage !== 1) {
     return buildCompletionResponse(state);
   }
 
-  // STAGE 1: Initiation -> Ask Patient Name & Blood Group
+  // STAGE 1: Initiation -> Ask Patient Name ONLY
   if (currentStage === 1) {
     return {
       message:
         "অবশ্যই! আমি আপনাকে ধাপে ধাপে রক্তের আবেদন ফর্মটি পূরণ করতে সাহায্য করছি।\n\n" +
-        "👉 **ধাপ ১/৪ (রোগীর তথ্য):** অনুগ্রহ করে **রোগীর পুরো নাম** এবং প্রয়োজনীয় **রক্তের গ্রুপ** (যেমন: A+, B+, O+, AB+) জানান।",
+        "👉 **ধাপ ১/৭ (রোগীর নাম):** অনুগ্রহ করে **রোগীর পুরো নাম** জানান।",
       actions: [fallbackAction],
       sourceType: "form",
       intent: "FORM_GUIDANCE",
     };
   }
 
-  // STAGE 2: Patient info received -> Ask Units & Hospital
+  // STAGE 2: Patient Name received -> Ask Blood Group ONLY
   if (currentStage === 2) {
-    // Extract whatever patient name & blood group we got
     const pName = state.patientName || extractCleanName(currentMessage) || "রোগী";
     state.patientName = pName;
-    const bg = state.bloodGroup || "নির্দিষ্ট গ্রুপ";
 
     return {
       message:
-        `ধন্যবাদ!\n✅ রোগী: **${pName}** | রক্তের গ্রুপ: **${bg}** সংরক্ষিত হয়েছে।\n\n` +
-        `👉 **ধাপ ২/৪ (পরিমাণ ও অবস্থান):** মোট **কত ব্যাগ রক্ত** প্রয়োজন এবং রোগী কোন **হাসপাতালে** (বা নির্দিষ্ট ওয়ার্ড/কেবিনে) চিকিৎসাধীন আছেন?`,
+        `ধন্যবাদ!\n✅ রোগীর নাম: **${pName}** সংরক্ষিত হয়েছে।\n\n` +
+        `👉 **ধাপ ২/৭ (রক্তের গ্রুপ):** রোগীর কোন গ্রুপের রক্ত প্রয়োজন? (যেমন: A+, B+, O+, AB+, A-, B-, O-, AB-)`,
       actions: [fallbackAction],
       sourceType: "form",
       intent: "FORM_GUIDANCE",
     };
   }
 
-  // STAGE 3: Units & Hospital received -> Ask Date & Emergency Level
+  // STAGE 3: Blood Group received -> Ask Units ONLY
   if (currentStage === 3) {
-    const units = state.units || 1;
-    state.units = units;
-    const hosp = state.hospital || state.location || extractCleanName(currentMessage) || "হাসপাতাল";
-    state.hospital = hosp;
+    const bg = state.bloodGroup || extractBloodGroup(currentMessage) || "নির্দিষ্ট গ্রুপ";
+    state.bloodGroup = bg;
 
     return {
       message:
-        `ধন্যবাদ!\n✅ পরিমাণ: **${units} ব্যাগ** | অবস্থান: **${hosp}** সংরক্ষিত হয়েছে।\n\n` +
-        `👉 **ধাপ ৩/৪ (সময় ও জরুরি মাত্রা):** রক্তটি **কবে প্রয়োজন** (যেমন: আজ / কাল / নির্দিষ্ট তারিখ) এবং জরুরি মাত্রা কেমন (সাধারণ / জরুরি / অতি জরুরি)?`,
+        `ধন্যবাদ!\n✅ রক্তের গ্রুপ: **${bg}** সংরক্ষিত হয়েছে।\n\n` +
+        `👉 **ধাপ ৩/৭ (রক্তের পরিমাণ):** মোট **কত ব্যাগ রক্ত** প্রয়োজন? (যেমন: ১ ব্যাগ, ২ ব্যাগ)`,
       actions: [fallbackAction],
       sourceType: "form",
       intent: "FORM_GUIDANCE",
     };
   }
 
-  // STAGE 4: Date & Urgency received -> Ask Requester Contact & Email
+  // STAGE 4: Units received -> Ask Hospital ONLY
   if (currentStage === 4) {
-    const reqDate = state.requiredDate || extractCleanName(currentMessage) || "আজ (Today)";
-    state.requiredDate = reqDate;
-    const emLevel = state.emergencyLevel || "URGENT";
-    state.emergencyLevel = emLevel;
+    const units = state.units || extractUnits(currentMessage) || 1;
+    state.units = units;
 
     return {
       message:
-        `ধন্যবাদ!\n✅ প্রয়োজনীয় সময়: **${reqDate}** | জরুরি মাত্রা: **${emLevel}** সংরক্ষিত হয়েছে।\n\n` +
-        `👉 **ধাপ ৪/৪ (সর্বশেষ ধাপ - আবেদনকারীর তথ্য):**\nআপনার (আবেদনকারীর) **পুরো নাম**, যোগাযোগের **১১ ডিজিটের মোবাইল নম্বর** এবং **ইমেইল ঠিকানা** (অনুরোধ ট্র্যাকিং আইডি পাওয়ার জন্য) প্রদান করুন।`,
+        `ধন্যবাদ!\n✅ রক্তের পরিমাণ: **${units} ব্যাগ** সংরক্ষিত হয়েছে।\n\n` +
+        `👉 **ধাপ ৪/৭ (হাসপাতাল ও স্থান):** রোগী কোন **হাসপাতালে** (বা ক্লিনিকে) চিকিৎসাধীন আছেন? (যেমন: রাজশাহী মেডিকেল কলেজ হাসপাতাল, সদর হাসপাতাল ইত্যাদি)`,
       actions: [fallbackAction],
       sourceType: "form",
       intent: "FORM_GUIDANCE",
     };
   }
 
-  // STAGE COMPLETE: All 4 stages finished!
+  // STAGE 5: Hospital received -> Ask Date / Time ONLY
+  if (currentStage === 5) {
+    const { hospital, location } = extractHospitalAndLocation(currentMessage);
+    const hosp = state.hospital || hospital || extractCleanName(currentMessage) || "হাসপাতাল";
+    state.hospital = hosp;
+    if (location && !state.location) state.location = location;
+
+    return {
+      message:
+        `ধন্যবাদ!\n✅ হাসপাতাল: **${hosp}** সংরক্ষিত হয়েছে।\n\n` +
+        `👉 **ধাপ ৫/৭ (রক্তদানের সময়):** রক্তটি **কবে প্রয়োজন**? (যেমন: আজ, কাল, বা নির্দিষ্ট তারিখ/সময়)`,
+      actions: [fallbackAction],
+      sourceType: "form",
+      intent: "FORM_GUIDANCE",
+    };
+  }
+
+  // STAGE 6: Date received -> Ask Contact Phone ONLY
+  if (currentStage === 6) {
+    const reqDate = state.requiredDate || extractCleanName(currentMessage) || "আজ (জরুরি)";
+    state.requiredDate = reqDate;
+
+    return {
+      message:
+        `ধন্যবাদ!\n✅ প্রয়োজনীয় সময়: **${reqDate}** সংরক্ষিত হয়েছে।\n\n` +
+        `👉 **ধাপ ৬/৭ (মোবাইল নম্বর):** রক্তদাতাদের দ্রুত যোগাযোগের জন্য আপনার একটি সচল **১১ ডিজিটের মোবাইল নম্বর** দিন।`,
+      actions: [fallbackAction],
+      sourceType: "form",
+      intent: "FORM_GUIDANCE",
+    };
+  }
+
+  // STAGE 7: Phone received -> Ask Email ONLY
+  if (currentStage === 7) {
+    const phone = state.contact || extractPhoneNumber(currentMessage) || "";
+    if (phone) state.contact = phone;
+
+    return {
+      message:
+        `ধন্যবাদ!\n✅ মোবাইল নম্বর: **${phone || "সংরক্ষিত"}** হয়েছে।\n\n` +
+        `👉 **ধাপ ৭/৭ (সর্বশেষ ধাপ - ইমেইল ঠিকানা):** আবেদন নিশ্চিতকরণ ও ট্র্যাকিং আপডেটের জন্য আপনার **ইমেইল ঠিকানা** দিন (যেমন: name@example.com)।\n*(ইমেইল না থাকলে 'নেই' লিখতে পারেন)*`,
+      actions: [fallbackAction],
+      sourceType: "form",
+      intent: "FORM_GUIDANCE",
+    };
+  }
+
+  // STAGE COMPLETE: All 7 stages completed!
+  const finalEmail = state.email || extractEmail(currentMessage) || "";
+  state.email = finalEmail;
   return buildCompletionResponse(state);
 }
 
@@ -531,10 +626,10 @@ function buildCompletionResponse(state: BloodRequestState): AssistantResponse {
   const bloodGroup = state.bloodGroup || "A+";
   const units = state.units || 1;
   const hospital = state.hospital || "রাজশাহী মেডিকেল কলেজ হাসপাতাল";
-  const location = state.location || "সাধারণ ওয়ার্ড";
+  const location = state.location || "";
   const requiredDate = state.requiredDate || "আজ (জরুরি)";
   const emergencyLevel = state.emergencyLevel || "URGENT";
-  const requesterName = state.requesterName || patientName || "আবেদনকারী";
+  const requesterName = state.requesterName || patientName;
   const contact = state.contact || "";
   const email = state.email || "";
 
@@ -543,7 +638,7 @@ function buildCompletionResponse(state: BloodRequestState): AssistantResponse {
     bloodGroup,
     units,
     hospital,
-    location,
+    location: location || undefined,
     requiredDate,
     emergencyLevel,
     requesterName,
@@ -559,13 +654,12 @@ function buildCompletionResponse(state: BloodRequestState): AssistantResponse {
     `১. রোগীর নাম: **${patientName}**\n` +
     `২. রক্তের গ্রুপ: **${bloodGroup}**\n` +
     `৩. রক্তের পরিমাণ: **${units} ব্যাগ**\n` +
-    `৪. হাসপাতাল ও অবস্থান: **${hospital}, ${location}**\n` +
+    `৪. হাসপাতাল ও অবস্থান: **${hospital}${location ? `, ${location}` : ""}**\n` +
     `৫. প্রয়োজনীয় তারিখ: **${requiredDate}**\n` +
     `৬. জরুরি মাত্রা: **${emergencyLevel}**\n` +
-    `৭. আবেদনকারীর নাম: **${requesterName}**\n` +
-    `৮. মোবাইল নম্বর: **${contact}**\n` +
-    (email ? `৯. ইমেইল ঠিকানা: **${email}**\n\n` : `৯. ইমেইল: *(ফর্ম খোলার পর দিতে পারবেন)*\n\n`) +
-    `নিচের বাটনে ক্লিক করলেই আপনার সমস্ত তথ্যসহ অফিসিয়াল রক্তের আবেদন ফর্মটি সরাসরি খুলে যাবে। আপনি শুধু একবার রিভিউ করে 'জমা দিন' বাটনে চাপবেন!`;
+    `৭. মোবাইল নম্বর: **${contact}**\n` +
+    (email ? `৮. ইমেইল ঠিকানা: **${email}**\n\n` : `৮. ইমেইল: *(ফর্ম খোলার পর পূরণ করতে পারেন)*\n\n`) +
+    `নিচের বাটনে ক্লিক করলেই আপনার সমস্ত তথ্যসহ অফিসিয়াল রক্তের আবেদন ফর্মটি সরাসরি খুলে যাবে। আপনি শুধু একবার রিভিউ করে 'Submit Request' বাটনে চাপবেন!`;
 
   return {
     message: summaryMessage,

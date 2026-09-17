@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -132,6 +133,7 @@ export default async function PublicRootLayout({
         <PwaRegister />
         <PwaInstallPrompt />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

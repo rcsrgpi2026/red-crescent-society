@@ -4,13 +4,12 @@ import { Droplets, Siren, ShieldCheck, HeartPulse, MapPin, Clock } from "lucide-
 import { PageHero } from "@/components/shared/page-hero";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
-import { DonorSearch } from "@/components/blood/donor-search";
-import { DonorCard } from "@/components/blood/donor-card";
+import { DonorDirectory } from "@/components/blood/donor-directory";
 import { DonorRegisterForm } from "@/components/forms/donor-register-form";
 import { DonorSelfService } from "@/components/forms/donor-self-service";
 import { ContactRequestRecovery } from "@/components/blood/contact-request-recovery";
 import { BloodGuideModal } from "@/components/blood/blood-guide-modal";
-import { getDonors, getPublicBloodRequests } from "@/lib/queries";
+import { getDonors, getPublicBloodRequests, getDonorGroupCounts } from "@/lib/queries";
 import { formatDate } from "@/lib/constants";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 
@@ -32,9 +31,10 @@ export default async function BloodSupportPage({
     getServerLocale(),
     searchParams,
   ]);
-  const [donors, allRequests] = await Promise.all([
-    getDonors({ bloodGroup: params.bloodGroup, area: params.area }),
+  const [allDonors, allRequests, groupCounts] = await Promise.all([
+    getDonors(),
     getPublicBloodRequests(),
+    getDonorGroupCounts(),
   ]);
 
   // Only show active/ongoing blood requests (hide COMPLETED and CANCELLED to prevent donor confusion)
@@ -47,23 +47,24 @@ export default async function BloodSupportPage({
     <>
       <PageHero
         tone="crescent"
+        compact
         eyebrow={t.blood.heroEyebrow}
         title={t.blood.heroTitle}
         description={t.blood.heroDescription}
       >
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
           <Link
             href="/blood-support/request"
-            className="inline-flex items-center gap-2 rounded-full bg-crescent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-crescent-dark"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-crescent px-5 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base font-bold text-white shadow-md shadow-crescent/25 transition-all hover:bg-crescent-dark hover:shadow-lg hover:shadow-crescent/30 active:scale-95"
           >
-            <Siren className="h-4 w-4" aria-hidden />
+            <Siren className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
             {t.blood.requestBlood}
           </Link>
           <a
             href="#donor-registration"
-            className="inline-flex items-center gap-2 rounded-full border border-crescent/30 bg-white px-5 py-2.5 text-sm font-semibold text-crescent transition-colors hover:bg-crescent-soft"
+            className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-crescent/30 bg-white px-5 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base font-bold text-crescent shadow-xs transition-all hover:bg-crescent-soft hover:border-crescent active:scale-95"
           >
-            <Droplets className="h-4 w-4" aria-hidden />
+            <Droplets className="h-4 w-4 sm:h-5 sm:w-5 text-crescent" aria-hidden />
             {t.blood.registerAsDonor}
           </a>
           <BloodGuideModal />
@@ -72,7 +73,7 @@ export default async function BloodSupportPage({
 
       {/* Recent blood requests (placed above donors for immediate emergency visibility) */}
       <section className="border-b border-line bg-white">
-        <div className="container-site py-12 lg:py-16">
+        <div className="container-site py-7 sm:py-10 lg:py-12">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -88,13 +89,15 @@ export default async function BloodSupportPage({
                 এই মুহূর্তে যেসব রোগীর জরুরি রক্তের প্রয়োজন (সক্রিয় অনুরোধসমূহ)
               </p>
             </div>
-            <Link
-              href="/blood-support/request"
-              className="inline-flex items-center gap-1.5 rounded-full border border-crescent/30 bg-crescent-soft px-4 py-2 text-xs font-bold text-crescent transition-colors hover:bg-crescent hover:text-white"
-            >
-              <HeartPulse className="h-3.5 w-3.5" />
-              {t.blood.submitRequest}
-            </Link>
+            <div className="w-full sm:w-auto flex justify-center sm:justify-end">
+              <Link
+                href="/blood-support/request"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-crescent/30 bg-crescent-soft px-4.5 py-2 text-xs sm:text-sm font-bold text-crescent shadow-2xs transition-all hover:bg-crescent hover:text-white active:scale-95"
+              >
+                <HeartPulse className="h-4 w-4" />
+                {t.blood.submitRequest}
+              </Link>
+            </div>
           </div>
           {activeRequests.length > 0 ? (
             <div className="mt-6 overflow-hidden rounded-2xl border border-line bg-white shadow-xs">
@@ -163,41 +166,23 @@ export default async function BloodSupportPage({
 
       {/* Donor directory */}
       <section className="border-b border-line bg-mist/40">
-        <div className="container-site py-14 lg:py-20">
-          <h2 className="text-2xl font-bold text-foreground">{t.blood.availableDonors}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t.blood.availableDonorsText}</p>
-          <div className="mt-6">
-            <DonorSearch current={{ bloodGroup: params.bloodGroup, area: params.area }} />
-          </div>
-          {donors.length > 0 ? (
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {donors.map((donor) => (
-                <DonorCard key={donor.id} donor={donor} />
-              ))}
-            </div>
-          ) : (
-            <div className="mt-8">
-              <EmptyState
-                icon={Droplets}
-                title={
-                  params.bloodGroup || params.area
-                    ? t.blood.noDonorsMatch
-                    : t.blood.noDonorsYet
-                }
-                description={
-                  params.bloodGroup || params.area
-                    ? t.blood.noDonorsMatchText
-                    : t.blood.noDonorsYetText
-                }
-              />
-            </div>
-          )}
-          <div className="mt-8 flex items-start gap-2.5 rounded-xl border border-brand/20 bg-white p-4 text-sm text-brand-ink shadow-2xs">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
-            <p>
-              <span className="font-semibold">{t.blood.privacyFirst}</span> {t.blood.privacyText}
-            </p>
-          </div>
+        <div className="container-site py-7 sm:py-10 lg:py-12">
+          <DonorDirectory
+            allDonors={allDonors}
+            initialBloodGroup={params.bloodGroup}
+            initialArea={params.area}
+            counts={groupCounts}
+            texts={{
+              availableDonors: t.blood.availableDonors,
+              availableDonorsText: t.blood.availableDonorsText,
+              noDonorsMatch: t.blood.noDonorsMatch,
+              noDonorsMatchText: t.blood.noDonorsMatchText,
+              noDonorsYet: t.blood.noDonorsYet,
+              noDonorsYetText: t.blood.noDonorsYetText,
+              privacyFirst: t.blood.privacyFirst,
+              privacyText: t.blood.privacyText,
+            }}
+          />
         </div>
       </section>
 

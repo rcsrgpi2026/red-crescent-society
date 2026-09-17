@@ -202,6 +202,7 @@ export function SiteAnnouncementModal({
       setHasNewAnnouncements(false);
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("rcy_announcement_closed"));
+        window.dispatchEvent(new CustomEvent("rcy_popup_closed"));
       }
     } catch {
       // ignore

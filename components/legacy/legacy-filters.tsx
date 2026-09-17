@@ -34,8 +34,45 @@ export function LegacyFilters({ departments, sessions, current }: LegacyFiltersP
   const hasFilters = Boolean(current.search || current.department || current.session);
 
   return (
-    <div className="rounded-2xl border border-line bg-white p-4 sm:p-5 shadow-xs">
-      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-[1fr_auto_auto_auto]">
+    <div className="space-y-4">
+      {/* Session Quick Selection Bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mr-1 flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5 text-amber-700" />
+          সেশন আর্কাইভ:
+        </span>
+        <button
+          type="button"
+          onClick={() => apply({ ...current, session: undefined })}
+          className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
+            !current.session
+              ? "bg-amber-700 text-white shadow-xs"
+              : "border border-line bg-white text-muted-foreground hover:bg-mist hover:text-foreground"
+          }`}
+        >
+          সব সেশন
+        </button>
+        {sessions.map((s) => {
+          const isSelected = current.session === s;
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => apply({ ...current, session: isSelected ? undefined : s })}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                isSelected
+                  ? "bg-amber-700 text-white shadow-xs"
+                  : "border border-line bg-white text-muted-foreground hover:bg-mist hover:text-foreground"
+              }`}
+            >
+              সেশন {s}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="rounded-2xl border border-line bg-white p-4 sm:p-5 shadow-xs">
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-[1fr_auto_auto_auto]">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -125,5 +162,6 @@ export function LegacyFilters({ departments, sessions, current }: LegacyFiltersP
         )}
       </div>
     </div>
+  </div>
   );
 }

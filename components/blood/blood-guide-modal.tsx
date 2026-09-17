@@ -17,23 +17,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "rcy_blood_guide_seen_v3";
 
-export function BloodGuideModal() {
+export function BloodGuideModal({
+  triggerClassName,
+}: {
+  triggerClassName?: string;
+} = {}) {
   const [open, setOpen] = useState(false);
+  const [hasVisited, setHasVisited] = useState(false);
 
   useEffect(() => {
     try {
-      const hasSeen = localStorage.getItem(STORAGE_KEY);
-      if (!hasSeen) {
-        const timer = setTimeout(() => {
-          setOpen(true);
-        }, 600);
-        return () => clearTimeout(timer);
-      }
+      const seen = localStorage.getItem(STORAGE_KEY);
+      if (seen) setHasVisited(true);
     } catch {
-      // ignore storage errors
+      // ignore
     }
   }, []);
 
@@ -41,6 +42,7 @@ export function BloodGuideModal() {
     setOpen(false);
     try {
       localStorage.setItem(STORAGE_KEY, "true");
+      setHasVisited(true);
     } catch {
       // ignore
     }
@@ -52,10 +54,13 @@ export function BloodGuideModal() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-full border border-crescent/30 bg-crescent-soft/70 px-3.5 py-1.5 text-xs font-semibold text-crescent shadow-xs transition-all hover:bg-crescent hover:text-white"
+        className={cn(
+          "inline-flex items-center justify-center gap-2 rounded-full border-2 border-crescent/30 bg-white px-5 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base font-semibold text-crescent shadow-xs transition-all hover:bg-crescent-soft hover:border-crescent active:scale-95",
+          triggerClassName
+        )}
         aria-label="How it works guide"
       >
-        <HelpCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <HelpCircle className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" aria-hidden />
         <span>কীভাবে কাজ করে?</span>
       </button>
 

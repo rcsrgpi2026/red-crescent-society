@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { DEFAULT_COMMUNITY_MEMBERS, resolveEventStatus } from "@/lib/constants";
+import { DEFAULT_COMMUNITY_MEMBERS, resolveEventStatus, SESSIONS, TEAM_POSITIONS } from "@/lib/constants";
 import type {
   Achievement,
   Activity,
@@ -483,6 +483,25 @@ export async function getDonors(params?: {
     return data ?? [];
   }
 
+export async function getDonorGroupCounts(): Promise<{ counts: Record<string, number>; total: number }> {
+  const supabase = getPublicClient();
+  if (!supabase) return { counts: {}, total: 0 };
+  const { data } = await supabase
+    .from("public_blood_donors")
+    .select("blood_group")
+    .eq("availability", "AVAILABLE");
+
+  const counts: Record<string, number> = {};
+  let total = 0;
+  for (const d of data ?? []) {
+    if (d.blood_group) {
+      counts[d.blood_group] = (counts[d.blood_group] || 0) + 1;
+      total++;
+    }
+  }
+  return { counts, total };
+}
+
 export async function getPublicBloodRequests(): Promise<PublicBloodRequest[]> {
     const supabase = getPublicClient();
     if (!supabase) return [];
@@ -806,6 +825,55 @@ export async function getLegacyMembers(params?: {
 
   const { data } = await query.order("created_at", { ascending: false });
   return (data as PublicLegacyMember[]) ?? [];
+}
+
+export async function getLegacySessions(): Promise<string[]> {
+  const supabase = await db();
+  if (!supabase) return [...SESSIONS];
+  const { data } = await supabase
+    .from("team_members")
+    .select("session")
+    .eq("is_legacy", true)
+    .eq("status", "APPROVED")
+    .not("session", "is", null);
+
+  const set = new Set<string>();
+  for (const s of SESSIONS) set.add(s);
+  for (const row of (data ?? [])) {
+    if (row.session && typeof row.session === "string" && row.session.trim()) {
+      set.add(row.session.trim());
+    }
+  }
+  return Array.from(set).sort().reverse();
+}
+
+export async function getPublicActiveTeamMembers(params?: {
+  department?: string;
+  search?: string;
+}): Promise<PublicLegacyMember[]> {
+  const supabase = await db();
+  if (!supabase) return [];
+  let query = supabase
+    .from("team_members")
+    .select(
+      "id, member_id, name, department, session, area, photo_url, position, legacy_designation, legacy_tenure, legacy_note, joined_at, points"
+    )
+    .eq("is_legacy", false)
+    .eq("status", "APPROVED")
+    .eq("public_profile", true);
+
+  if (params?.search) query = query.ilike("name", `%${params.search}%`);
+  if (params?.department) query = query.eq("department", params.department);
+
+  const { data } = await query.order("created_at", { ascending: false });
+  const members = (data as PublicLegacyMember[]) ?? [];
+
+  const positionOrder = new Map<string, number>(TEAM_POSITIONS.map((p, i) => [p, i]));
+  return members.sort(
+    (a, b) =>
+      (positionOrder.get(a.position as any) ?? TEAM_POSITIONS.length) -
+      (positionOrder.get(b.position as any) ?? TEAM_POSITIONS.length)
+  );
 }
 
 export async function adminGetTeamMember(id: string): Promise<TeamMember | null> {

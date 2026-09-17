@@ -102,6 +102,9 @@ export function CustomSitePopup({ config }: CustomSitePopupProps) {
         localStorage.setItem(versionKey, Date.now().toString());
       }
     } catch {}
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("rcy_popup_closed"));
+    }
   };
 
   const rawUrl = (config.buttonUrl ?? "").trim();

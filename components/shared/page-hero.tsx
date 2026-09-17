@@ -6,7 +6,9 @@ interface PageHeroProps {
   description?: string;
   children?: React.ReactNode;
   className?: string;
+  containerClassName?: string;
   tone?: "brand" | "crescent" | "poly";
+  compact?: boolean;
 }
 
 export function PageHero({
@@ -15,7 +17,9 @@ export function PageHero({
   description,
   children,
   className,
+  containerClassName,
   tone = "brand",
+  compact = false,
 }: PageHeroProps) {
   return (
     <section
@@ -35,17 +39,44 @@ export function PageHero({
         )}
         aria-hidden
       />
-      <div className="container-site relative py-14 sm:py-20">
+      <div
+        className={cn(
+          "container-site relative",
+          compact ? "py-5 sm:py-8 lg:py-9" : "py-14 sm:py-20",
+          containerClassName
+        )}
+      >
         {eyebrow && (
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-brand">
+          <p
+            className={cn(
+              "font-semibold uppercase text-brand",
+              compact
+                ? "mb-1 text-[11px] tracking-wider"
+                : "mb-3 text-xs tracking-[0.18em]"
+            )}
+          >
             {eyebrow}
           </p>
         )}
-        <h1 className="max-w-3xl text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+        <h1
+          className={cn(
+            "max-w-3xl text-balance font-bold tracking-tight text-foreground",
+            compact
+              ? "text-2xl sm:text-3xl font-black"
+              : "text-4xl sm:text-5xl"
+          )}
+        >
           {title}
         </h1>
         {description && (
-          <p className="mt-4 max-w-2xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <p
+            className={cn(
+              "max-w-2xl text-pretty leading-relaxed text-muted-foreground",
+              compact
+                ? "mt-1.5 text-xs sm:text-sm"
+                : "mt-4 text-base sm:text-lg"
+            )}
+          >
             {description}
           </p>
         )}

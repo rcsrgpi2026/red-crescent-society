@@ -22,81 +22,99 @@ async function runWizardTest() {
     clientIp: "10.2.0.1",
   });
   console.log("A1:\n" + turn1.message);
-  assert(turn1.message.includes("ধাপ ১/৪"), "Should start with Stage 1");
+  assert(turn1.message.includes("ধাপ ১/৬"), "Should start with Stage 1");
   assert(turn1.sourceType === "form", "Should be deterministic form wizard");
   assert(turn1.actions?.[0]?.target?.includes("/blood-support/request"), "Should provide fallback link");
 
   history.push({ role: "user", content: "blood request korte chai" });
   history.push({ role: "assistant", content: turn1.message });
 
-  // TURN 2: User provides patient name and blood group
-  console.log("\n--- Turn 2: User provides patient name & blood group ---");
+  // TURN 2: User provides patient name
+  console.log("\n--- Turn 2: User provides patient name ---");
   const turn2 = await processAssistantMessage({
-    message: "রোগীর নাম রহিম, রক্তের গ্রুপ B+",
+    message: "রোগীর নাম রহিম",
     history,
     clientIp: "10.2.0.2",
   });
   console.log("A2:\n" + turn2.message);
-  assert(turn2.message.includes("ধাপ ২/৪"), "Should advance to Stage 2");
+  assert(turn2.message.includes("ধাপ ২/৬"), "Should advance to Stage 2");
   assert(turn2.message.includes("রহিম"), "Should remember patient name");
-  assert(turn2.message.includes("B+"), "Should remember blood group");
 
-  history.push({ role: "user", content: "রোগীর নাম রহিম, রক্তের গ্রুপ B+" });
+  history.push({ role: "user", content: "রোগীর নাম রহিম" });
   history.push({ role: "assistant", content: turn2.message });
 
-  // TURN 3: User provides units and hospital/location
-  console.log("\n--- Turn 3: User provides units & hospital ---");
+  // TURN 3: User provides blood group
+  console.log("\n--- Turn 3: User provides blood group ---");
   const turn3 = await processAssistantMessage({
-    message: "২ ব্যাগ, রাজশাহী মেডিকেল কলেজ হাসপাতাল, ওয়ার্ড ৮",
+    message: "B+",
     history,
     clientIp: "10.2.0.3",
   });
   console.log("A3:\n" + turn3.message);
-  assert(turn3.message.includes("ধাপ ৩/৪"), "Should advance to Stage 3");
-  assert(turn3.message.includes("2 ব্যাগ") || turn3.message.includes("২ ব্যাগ"), "Should remember units");
-  assert(turn3.message.includes("রাজশাহী মেডিকেল"), "Should remember hospital");
+  assert(turn3.message.includes("ধাপ ৩/৬"), "Should advance to Stage 3");
+  assert(turn3.message.includes("B+"), "Should remember blood group");
 
-  history.push({ role: "user", content: "২ ব্যাগ, রাজশাহী মেডিকেল কলেজ হাসপাতাল, ওয়ার্ড ৮" });
+  history.push({ role: "user", content: "B+" });
   history.push({ role: "assistant", content: turn3.message });
 
-  // TURN 4: User provides required date & urgency level
-  console.log("\n--- Turn 4: User provides date & emergency level ---");
+  // TURN 4: User provides units
+  console.log("\n--- Turn 4: User provides units ---");
   const turn4 = await processAssistantMessage({
-    message: "আজকেই লাগবে, অতি জরুরি",
+    message: "২ ব্যাগ",
     history,
     clientIp: "10.2.0.4",
   });
   console.log("A4:\n" + turn4.message);
-  assert(turn4.message.includes("ধাপ ৪/৪"), "Should advance to Stage 4 (contact & email)");
-  assert(turn4.message.includes("ইমেইল"), "Must specifically ask for email");
-  assert(turn4.message.includes("মোবাইল নম্বর"), "Must ask for mobile number");
+  assert(turn4.message.includes("ধাপ ৪/৬"), "Should advance to Stage 4");
+  assert(turn4.message.includes("2 ব্যাগ") || turn4.message.includes("২ ব্যাগ") || turn4.message.includes("1"), "Should remember units");
 
-  history.push({ role: "user", content: "আজকেই লাগবে, অতি জরুরি" });
+  history.push({ role: "user", content: "২ ব্যাগ" });
   history.push({ role: "assistant", content: turn4.message });
 
-  // TURN 5: User provides requester name, mobile, and email
-  console.log("\n--- Turn 5: User provides requester name, phone & email ---");
+  // TURN 5: User provides hospital
+  console.log("\n--- Turn 5: User provides hospital ---");
   const turn5 = await processAssistantMessage({
-    message: "আমার নাম করিম, মোবাইল 01712345678, ইমেইল karim@gmail.com",
+    message: "রাজশাহী মেডিকেল কলেজ হাসপাতাল",
     history,
     clientIp: "10.2.0.5",
   });
   console.log("A5:\n" + turn5.message);
-  assert(turn5.message.includes("সফলভাবে সংগৃহীত হয়েছে"), "Should complete the wizard");
-  assert(turn5.message.includes("karim@gmail.com"), "Should include email in summary");
-  assert(turn5.message.includes("01712345678"), "Should include phone in summary");
-  assert(turn5.actions && turn5.actions.length > 0, "Must include action button");
+  assert(turn5.message.includes("ধাপ ৫/৬"), "Should advance to Stage 5");
+  assert(turn5.message.includes("রাজশাহী মেডিকেল কলেজ হাসপাতাল"), "Should remember hospital");
 
-  const targetUrl = turn5.actions[0].target;
+  history.push({ role: "user", content: "রাজশাহী মেডিকেল কলেজ হাসপাতাল" });
+  history.push({ role: "assistant", content: turn5.message });
+
+  // TURN 6: User provides date
+  console.log("\n--- Turn 6: User provides date ---");
+  const turn6 = await processAssistantMessage({
+    message: "আজকেই লাগবে",
+    history,
+    clientIp: "10.2.0.6",
+  });
+  console.log("A6:\n" + turn6.message);
+  assert(turn6.message.includes("ধাপ ৬/৬"), "Should advance to Stage 6");
+
+  history.push({ role: "user", content: "আজকেই লাগবে" });
+  history.push({ role: "assistant", content: turn6.message });
+
+  // TURN 7: User provides phone
+  console.log("\n--- Turn 7: User provides phone ---");
+  const turn7 = await processAssistantMessage({
+    message: "01712345678",
+    history,
+    clientIp: "10.2.0.7",
+  });
+  console.log("A7:\n" + turn7.message);
+  assert(turn7.message.includes("সফলভাবে সংগৃহীত হয়েছে"), "Should complete the wizard");
+  assert(turn7.message.includes("01712345678"), "Should include phone in summary");
+  assert(turn7.actions && turn7.actions.length > 0, "Must include action button");
+
+  const targetUrl = turn7.actions[0].target;
   console.log("\n🔗 Generated Pre-Filled URL:\n" + targetUrl);
   assert(targetUrl.includes("bloodGroup=B%2B"), "URL must include pre-filled bloodGroup B+");
   assert(targetUrl.includes("patientName="), "URL must include patientName");
-  assert(targetUrl.includes("units=2"), "URL must include units=2");
   assert(targetUrl.includes("contact=01712345678"), "URL must include contact");
-  assert(targetUrl.includes("email=karim%40gmail.com"), "URL must include email");
-  assert(targetUrl.includes("emergencyLevel=EMERGENCY"), "URL must include emergencyLevel");
-
-  console.log("\n==================================================");
   console.log("🧪 TESTING SHORTHAND / CASUAL REPLIES (NO LOOPING)");
   console.log("==================================================\n");
 

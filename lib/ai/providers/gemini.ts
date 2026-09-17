@@ -1,9 +1,13 @@
 import { AI_CONFIG } from "../config";
 import type { AssistantResponse } from "../types";
 import {
-  isProviderAvailable,
-  recordProviderSuccess,
-  recordProviderFailure,
+  isAccountAvailable,
+  recordAccountSuccess,
+  recordAccountFailure,
+  recordAccountQuotaExhausted,
+  isModelDisabled,
+  disableModel,
+  disableAccount,
 } from "./circuit-breaker";
 
 export interface ProviderCallParams {
@@ -20,7 +24,8 @@ export interface ProviderResult {
 }
 
 /**
- * Executes a structured query to Google Gemini with timeouts, retries, and circuit breaker.
+ * Executes a structured query to Google Gemini with multi-account cascading failover.
+ * (Account 1 -> if 429/403/error -> Account 2 -> ... )
  */
 export async function callGeminiProvider({
   systemPrompt,
@@ -28,28 +33,18 @@ export async function callGeminiProvider({
   contextData,
   history = [],
 }: ProviderCallParams): Promise<ProviderResult> {
-  const providerName = "gemini";
+  const accounts = AI_CONFIG.geminiAccounts;
 
-  const apiKeys =
-    AI_CONFIG.geminiApiKeys && AI_CONFIG.geminiApiKeys.length > 0
-      ? AI_CONFIG.geminiApiKeys
-      : AI_CONFIG.geminiApiKey
-      ? [AI_CONFIG.geminiApiKey]
-      : [];
-
-  if (apiKeys.length === 0) {
+  if (accounts.length === 0) {
     return {
       success: false,
-      error: "GEMINI_API_KEY is not configured.",
+      error: "No Gemini API keys configured (set GEMINI_API_KEY, GEMINI_API_KEY_2, or GEMINI_API_KEYS).",
     };
   }
 
-  if (!isProviderAvailable(providerName)) {
-    return {
-      success: false,
-      error: "Gemini provider is currently in cooldown (circuit breaker OPEN).",
-    };
-  }
+  // Filter accounts that are active (not in circuit breaker cooldown)
+  const availableAccounts = accounts.filter((acc) => isAccountAvailable(acc.id));
+  const accountsToTry = availableAccounts.length > 0 ? availableAccounts : accounts;
 
   // Assemble contents
   const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
@@ -72,42 +67,60 @@ export async function callGeminiProvider({
     parts: [{ text: currentTurnText }],
   });
 
-  const candidateModels = (
+  // Filter candidate models (excluding any models that returned 404)
+  const configuredModels = (
     AI_CONFIG.geminiCandidateModels && AI_CONFIG.geminiCandidateModels.length > 0
       ? AI_CONFIG.geminiCandidateModels
-      : [AI_CONFIG.geminiModel, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite"]
+      : [AI_CONFIG.geminiModel, "gemini-3.5-flash", "gemini-flash-lite-latest"]
   ).filter((m, i, arr) => arr.indexOf(m) === i);
+
+  const candidateModels = configuredModels.filter((m) => !isModelDisabled(m));
+
+  if (candidateModels.length === 0) {
+    return {
+      success: false,
+      error: "All configured Gemini models are currently disabled due to 404 errors.",
+    };
+  }
 
   let lastError = "";
 
-  // Cascade across candidate models
-  for (const currentModel of candidateModels) {
-    // Rotate across available API keys for each model
-    for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
-      const currentApiKey = apiKeys[keyIdx];
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${currentApiKey}`;
+  // 1. Cascade across configured Gemini Accounts (Account 1 -> Account 2)
+  for (let accIdx = 0; accIdx < accountsToTry.length; accIdx++) {
+    const currentAccount = accountsToTry[accIdx];
+    const accountId = currentAccount.id;
+    const accountLabel = currentAccount.label;
 
-      // Base generation config
+    if (!isAccountAvailable(accountId) && availableAccounts.length > 0) {
+      console.log(`[AI Multi-Router] Skipping ${accountLabel} (Circuit in Cooldown)...`);
+      continue;
+    }
+
+    let accountHitQuota = false;
+    let accountDisabled = false;
+    let validModelAttempted = false;
+
+    // 2. Cascade across candidate models for this account
+    for (let modelIdx = 0; modelIdx < candidateModels.length; modelIdx++) {
+      const currentModel = candidateModels[modelIdx];
+      if (isModelDisabled(currentModel)) continue;
+
+      const reason = modelIdx === 0 && accIdx === 0 ? "primary" : "fallback-model";
+      console.log(
+        `[AI Multi-Router] Provider=Gemini Account=${accIdx + 1} Model=${currentModel} Reason=${reason}`
+      );
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${currentAccount.key}`;
+
+      // Standard robust generation config (no thinkingConfig which causes 400 on 3.5-flash-lite)
       const generationConfig: Record<string, any> = {
-        temperature: 0.2, // Low temperature for high factual accuracy
+        temperature: 0.2, // Low temperature for factual consistency
         topP: 0.9,
         maxOutputTokens: 2500,
         responseMimeType: "application/json",
       };
 
-      // For models with thinking capability (such as gemini-3.5-flash), disable thinking tokens
-      // to reduce latency from ~10s down to ~1.2s and prevent timeouts
-      if (currentModel.includes("3.5-flash")) {
-        generationConfig.thinkingConfig = {
-          thinkingBudget: 0,
-        };
-      }
-
-      const requestBody: {
-        systemInstruction: { parts: Array<{ text: string }> };
-        contents: typeof contents;
-        generationConfig: Record<string, any>;
-      } = {
+      const requestBody = {
         systemInstruction: {
           parts: [{ text: systemPrompt }],
         },
@@ -120,6 +133,7 @@ export async function callGeminiProvider({
         const timeoutId = setTimeout(() => controller.abort(), AI_CONFIG.providerTimeoutMs);
 
         try {
+          validModelAttempted = true;
           const response = await fetch(endpoint, {
             method: "POST",
             headers: {
@@ -133,22 +147,42 @@ export async function callGeminiProvider({
 
           if (!response.ok) {
             const errorText = await response.text().catch(() => "");
-            lastError = `Gemini [${currentModel} | key #${keyIdx + 1}] HTTP ${response.status}: ${errorText.slice(0, 180)}`;
+            lastError = `Gemini [${currentModel} | ${accountLabel}] HTTP ${response.status}: ${errorText.slice(0, 180)}`;
 
-            // If thinkingConfig is not supported on this model, strip it and retry immediately
-            if (response.status === 400 && requestBody.generationConfig?.thinkingConfig) {
-              delete requestBody.generationConfig.thinkingConfig;
-              continue;
+            // Model unavailable (404): disable model globally, do not penalize account!
+            if (response.status === 404) {
+              console.warn(
+                `[AI Multi-Router] Gemini Account #${accIdx + 1} Model=${currentModel} Error=404 Action=disable-model`
+              );
+              disableModel(currentModel, errorText.slice(0, 100));
+              break; // Try next candidate model
             }
 
-            // Quota exhausted (429): rotate immediately to next API key
+            // Key unauthorized / Project access denied (401 or 403): permanently disable this account
+            if (response.status === 401 || response.status === 403) {
+              console.error(
+                `[AI Multi-Router] Gemini Account #${accIdx + 1} Error=${response.status} (${errorText.slice(0, 100)}) Action=disable-account`
+              );
+              disableAccount(accountId, `HTTP ${response.status}: Access Denied / Invalid Key`);
+              accountDisabled = true;
+              break; // Break model loop, proceed to next account immediately
+            }
+
+            // Quota / Rate limit (429): Cooldown account and failover immediately
             if (response.status === 429) {
-              console.warn(`[Gemini] Key #${keyIdx + 1} hit 429 on ${currentModel}. Rotating key/model...`);
-              break; // breaks out of attempt loop to try next key or next model
+              console.warn(
+                `[AI Multi-Router] Gemini Account #${accIdx + 1} Model=${currentModel} Error=429 (Quota Limit) Action=cooldown-account`
+              );
+              recordAccountQuotaExhausted(accountId, 60000);
+              accountHitQuota = true;
+              break; // Break model loop, proceed to next account immediately
             }
 
-            // Server overload (503): retry once or rotate
+            // Server overload (503): retry once, then try next model
             if (response.status === 503) {
+              console.warn(
+                `[AI Multi-Router] Gemini Account #${accIdx + 1} Model=${currentModel} Error=503 (Overloaded) Action=${attempt < 2 ? "retry" : "try-next-model"}`
+              );
               if (attempt < 2) {
                 await new Promise((r) => setTimeout(r, 200));
                 continue;
@@ -156,10 +190,10 @@ export async function callGeminiProvider({
               break;
             }
 
-            if (attempt < 2) {
-              await new Promise((r) => setTimeout(r, 200));
-              continue;
-            }
+            // General 400 or 500 error
+            console.warn(
+              `[AI Multi-Router] Gemini Account #${accIdx + 1} Model=${currentModel} Error=${response.status} Action=try-next-model`
+            );
             break;
           }
 
@@ -167,13 +201,19 @@ export async function callGeminiProvider({
           const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text;
 
           if (!rawText) {
-            lastError = `Empty response returned from Gemini (${currentModel}).`;
+            lastError = `Empty response returned from Gemini (${currentModel} on ${accountLabel}).`;
+            console.warn(
+              `[AI Multi-Router] Gemini Account #${accIdx + 1} Model=${currentModel} Error=EmptyResponse Action=try-next-model`
+            );
             break;
           }
 
           // Parse and validate structured output
           const parsed = parseStructuredOutput(rawText);
-          recordProviderSuccess(providerName);
+          recordAccountSuccess(accountId);
+          console.log(
+            `[AI Multi-Router] SUCCESS Provider=Gemini Account=${accIdx + 1} Model=${currentModel}`
+          );
           return {
             success: true,
             data: parsed,
@@ -181,18 +221,29 @@ export async function callGeminiProvider({
         } catch (err: any) {
           clearTimeout(timeoutId);
           const isAbort = err.name === "AbortError";
-          lastError = isAbort
-            ? `Gemini [${currentModel}] timed out after ${AI_CONFIG.providerTimeoutMs}ms`
-            : err.message || "Unknown network error";
+          const errDesc = isAbort ? `Timeout after ${AI_CONFIG.providerTimeoutMs}ms` : (err.message || "Network error");
+          lastError = `Gemini [${currentModel} | ${accountLabel}]: ${errDesc}`;
+          console.warn(
+            `[AI Multi-Router] Gemini Account #${accIdx + 1} Model=${currentModel} Error=${errDesc} Action=try-next-model`
+          );
 
           if (isAbort) break;
         }
       }
+
+      // If account hit 429 or was disabled (401/403), stop trying models on this account
+      if (accountHitQuota || accountDisabled) {
+        break;
+      }
+    }
+
+    // Only record generic failure if account was not already handled by 429/403/404
+    if (!accountHitQuota && !accountDisabled && validModelAttempted) {
+      recordAccountFailure(accountId, lastError);
     }
   }
 
-  recordProviderFailure(providerName, lastError);
-  return { success: false, error: lastError || "Failed all candidate models and keys." };
+  return { success: false, error: lastError || "Failed all configured Gemini accounts and models." };
 }
 
 

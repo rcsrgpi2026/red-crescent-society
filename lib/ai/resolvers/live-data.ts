@@ -20,9 +20,9 @@ import { DEFAULT_COMMUNITY_MEMBERS, resolveEventStatus } from "@/lib/constants";
  * Optimized with in-memory caching (60s TTL), targeted search, and semantic filtering.
  */
 
-// In-memory 60s cache store
+// In-memory cache store for live data facts (3 minutes TTL for high-speed sub-millisecond grounding)
 const memCache = new Map<string, { data: any; expiry: number }>();
-const CACHE_TTL_MS = 60_000; // 60 seconds
+const CACHE_TTL_MS = 180_000; // 180 seconds (3 minutes)
 
 async function getCached<T>(key: string, fetcher: () => Promise<T>, ttlMs = CACHE_TTL_MS): Promise<T> {
   const cached = memCache.get(key);
@@ -565,6 +565,69 @@ export async function getEmergencyHelpline(): Promise<SanitizedHelplineSummary> 
   });
 }
 
+export interface SanitizedContactSummary {
+  email: string;
+  phone: string;
+  address: string;
+  officeHours: string;
+}
+
+/**
+ * Resolves official verified contact information (email, phone, address) from Supabase settings.
+ */
+export async function getOfficialContactInfo(): Promise<SanitizedContactSummary> {
+  return getCached("official_contact_info", async () => {
+    const defaultInfo: SanitizedContactSummary = {
+      email: "redcrescentyouthrgpi@gmail.com",
+      phone: "01614424259",
+      address: "Rajshahi Govt. Polytechnic Institute, Rajshahi, Bangladesh",
+      officeHours: "Sunday - Thursday (Office Hours)",
+    };
+
+    try {
+      const supabase = getPublicClient();
+      if (!supabase) return defaultInfo;
+
+      const { data } = await supabase
+        .from("website_settings")
+        .select("key, value")
+        .in("key", ["emergency", "contact"]);
+
+      const rows: Record<string, Record<string, unknown>> = {};
+      for (const row of data ?? []) {
+        rows[row.key] = (row.value as Record<string, unknown>) || {};
+      }
+
+      const contact = rows.contact ?? {};
+      const emergency = rows.emergency ?? {};
+
+      const phone =
+        (typeof contact.phone === "string" && contact.phone.trim()) ||
+        (typeof emergency.bloodHelpline === "string" && emergency.bloodHelpline.trim()) ||
+        defaultInfo.phone;
+
+      const email =
+        (typeof contact.email === "string" && contact.email.trim()) || defaultInfo.email;
+
+      const address =
+        (typeof contact.address === "string" && contact.address.trim()) || defaultInfo.address;
+
+      const officeHours =
+        (typeof contact.officeHours === "string" && contact.officeHours.trim()) || defaultInfo.officeHours;
+
+      return {
+        email,
+        phone,
+        address,
+        officeHours,
+      };
+    } catch (err) {
+      console.error("[AI LiveData Exception] getOfficialContactInfo:", err);
+      return defaultInfo;
+    }
+  });
+}
+
 /**
  * Targeted keyword and historical entity search across events, notices, activities, and team.
  * This guarantees the AI can recall ANY item ever recorded in the database, regardless of age.
@@ -713,10 +776,11 @@ export async function buildTrustedLiveContext(intent: string, query?: string): P
     parts.push("");
   }
 
-  // 2. Global Live Platform Impact Statistics & Recruitment Status
-  const [impact, recruitment] = await Promise.all([
+  // 2. Global Live Platform Impact Statistics, Recruitment & Official Contact Info
+  const [impact, recruitment, contactInfo] = await Promise.all([
     getSiteImpactStats(),
     getVolunteerRecruitmentStatus(),
+    getOfficialContactInfo(),
   ]);
 
   parts.push(`[LIVE RCY PORTAL STATE & IMPACT STATISTICS]`);
@@ -743,7 +807,40 @@ export async function buildTrustedLiveContext(intent: string, query?: string): P
   if (impact.studentsReached > 0) {
     parts.push(`- Students Reached (উপকৃত শিক্ষার্থী): ${impact.studentsReached}+ জন`);
   }
+  parts.push(`- Official Contact Email: ${contactInfo.email}`);
+  parts.push(`- Emergency Helpline & Phone: ${contactInfo.phone}`);
+  parts.push(`- Campus & Office Address: ${contactInfo.address}`);
+  parts.push(`- Official Contact Page: /contact`);
   parts.push("");
+
+  const isContactQuery =
+    q.includes("contact") ||
+    q.includes("email") ||
+    q.includes("mail") ||
+    q.includes("gmail") ||
+    q.includes("phone") ||
+    q.includes("mobile") ||
+    q.includes("number") ||
+    q.includes("address") ||
+    q.includes("office") ||
+    q.includes("যোগাযোগ") ||
+    q.includes("ইমেইল") ||
+    q.includes("ইমেল") ||
+    q.includes("ফোন") ||
+    q.includes("নম্বর") ||
+    q.includes("ঠিকানা") ||
+    q.includes("অফিস");
+
+  if (isContactQuery) {
+    parts.push(`[SPECIFIC FOCUS: OFFICIAL CONTACT & COMMUNICATION]`);
+    parts.push(`- User is asking about contact information (email, phone, address, or how to reach RCY RGPI).`);
+    parts.push(`- Official Email Address: ${contactInfo.email}`);
+    parts.push(`- Helpline & Phone: ${contactInfo.phone}`);
+    parts.push(`- Physical Campus Address: ${contactInfo.address}`);
+    parts.push(`- Direct Contact Page Link: /contact`);
+    parts.push(`- INSTRUCTION FOR AI: Clearly state the official email (${contactInfo.email}) and phone number (${contactInfo.phone}). Always attach a button pointing to "/contact".`);
+    parts.push("");
+  }
 
   // 3. Semantic Intent-Based Context Injection
   if (intent === "EMERGENCY" || intent === "BLOOD_SUPPORT") {

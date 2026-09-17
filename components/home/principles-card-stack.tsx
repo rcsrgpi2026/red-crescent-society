@@ -80,7 +80,7 @@ export function PrinciplesCardStack({ principles }: PrinciplesCardStackProps) {
           return (
             <div
               key={idx}
-              className="w-[82vw] max-w-[320px] shrink-0 snap-center flex flex-col justify-between rounded-2xl border border-line bg-white p-5 shadow-sm transition-all"
+              className="w-[82vw] max-w-[320px] shrink-0 snap-center flex flex-col justify-between rounded-2xl border border-line bg-white p-5 shadow-sm transition-all min-h-[225px]"
             >
               {/* Header */}
               <div className="flex items-center justify-between">
@@ -103,22 +103,22 @@ export function PrinciplesCardStack({ principles }: PrinciplesCardStackProps) {
               </div>
 
               {/* Body Content */}
-              <div className="my-3 flex items-start justify-between gap-2.5">
+              <div className="my-3 flex items-start justify-between gap-2.5 flex-1">
                 <div className="flex-1">
                   <p className="font-jakarta text-sm font-bold text-foreground">
                     {title}
                   </p>
-                  <p className="font-inter mt-1 text-xs leading-relaxed text-muted-foreground line-clamp-3">
+                  <p className="font-inter mt-1.5 text-xs leading-relaxed text-muted-foreground">
                     {description}
                   </p>
                 </div>
-                <div className="h-14 w-14 shrink-0 rounded-xl bg-gradient-to-b from-white to-mist/40 p-1 border border-line/60 shadow-2xs">
+                <div className="h-14 w-14 shrink-0 rounded-xl bg-gradient-to-b from-white to-mist/40 p-1 border border-line/60 shadow-2xs self-start mt-0.5">
                   <VectorIllustration />
                 </div>
               </div>
 
               {/* Footer line */}
-              <div className="flex items-center justify-between border-t border-line/60 pt-2.5">
+              <div className="mt-auto flex items-center justify-between border-t border-line/60 pt-2.5">
                 <div className={cn("h-1 w-10 rounded-full bg-gradient-to-r", cfg.accent)} />
                 <span className="text-[9px] font-semibold text-muted-foreground/60 uppercase">
                   Fundamental Principle

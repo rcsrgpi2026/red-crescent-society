@@ -237,10 +237,10 @@ otp_expiry = 3600
 enabled = true
 host = "smtp.gmail.com"
 port = 465
-user = "redcrescentyouthrgpi@gmail.com"
+user = "supportrgpircy@gmail.com"
 pass = "env(SMTP_PASS)"
-admin_email = "redcrescentyouthrgpi@gmail.com"
-sender_name = "Red Crescent Youth"
+admin_email = "supportrgpircy@gmail.com"
+sender_name = "Red Crescent Youth Support"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

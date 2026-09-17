@@ -383,7 +383,19 @@ export function classifyIntent(message: string): AssistantIntent {
     return "NOTICE";
   }
 
-  // 9. Recruitment & Joining Check
+  // 9. Member Registration & Portal Guidance Check
+  if (
+    q.includes("member registration") ||
+    q.includes("member regestration") ||
+    q.includes("মেম্বার রেজিস্ট্রেশন") ||
+    q.includes("মেম্বার একাউন্ট") ||
+    q.includes("সদস্য নিবন্ধন") ||
+    q.includes("সদস্য রেজিস্ট্রেশন")
+  ) {
+    return "FORM_GUIDANCE";
+  }
+
+  // 10. Recruitment & Joining Check
   if (
     q.includes("রিক্রুটমেন্ট") ||
     q.includes("ভর্তি") ||
@@ -397,7 +409,6 @@ export function classifyIntent(message: string): AssistantIntent {
     q.includes("volunteer") ||
     q.includes("volunteer hote chai") ||
     q.includes("join rcy") ||
-    q.includes("member registration") ||
     q.includes("volunteer kobe") ||
     q.includes("kobe member nibe")
   ) {
@@ -568,6 +579,68 @@ export function tryDeterministicShortcut(message: string): AssistantResponse | n
     };
   }
 
+  // Shortcut 3.5: Official Contact, Email, Hotline & Address Queries
+  const contactQueryPatterns = [
+    "contact email",
+    "contact mail",
+    "official email",
+    "official mail",
+    "what is your email",
+    "what is the email",
+    "email address",
+    "ইমেইল কি",
+    "ইমেইল কী",
+    "ইমেল কি",
+    "ইমেল কী",
+    "ইমেইল কত",
+    "ইমেইল দিন",
+    "ইমেইল ঠিকানা",
+    "যোগাযোগের ইমেইল",
+    "যোগাযোগের ঠিকানা",
+    "অফিস কোথায়",
+    "অফিস কোথায়",
+    "কার্যালয় কোথায়",
+    "কার্যালয় কোথায়",
+    "হেল্পলাইন কত",
+    "হটলাইন কত",
+    "ফোন নম্বর কত",
+    "ফোন নাম্বার কত",
+    "যোগাযোগের নম্বর",
+    "যোগাযোগের নাম্বার",
+  ];
+
+  const isExactContactQuery =
+    contactQueryPatterns.some((pattern) => q.includes(pattern)) ||
+    q === "email" ||
+    q === "mail" ||
+    q === "contact" ||
+    q === "contact?" ||
+    q === "contact email?" ||
+    q === "email?" ||
+    q === "ইমেইল" ||
+    q === "ইমেল" ||
+    q === "যোগাযোগ";
+
+  if (isExactContactQuery) {
+    return {
+      message:
+        "যুব রেড ক্রিসেন্ট আরজিপিআই (RCY RGPI)-এর অফিশিয়াল যোগাযোগের তথ্য:\n\n" +
+        "📧 অফিশিয়াল ইমেইল: redcrescentyouthrgpi@gmail.com\n" +
+        "📞 জরুরি হটলাইন ও ফোন: 01614424259\n" +
+        "📍 কার্যালয়: রাজশাহী পলিটেকনিক ইনস্টিটিউট (RGPI), রাজশাহী, বাংলাদেশ।\n\n" +
+        "সরাসরি মেসেজ পাঠাতে বা যোগাযোগ করতে নিচের বাটনে ক্লিক করুন।",
+      actions: [
+        {
+          type: "navigate",
+          label: "যোগাযোগ পেজে যান",
+          target: "/contact",
+        },
+      ],
+      sourceType: "knowledge",
+      intent: "KNOWLEDGE",
+    };
+  }
+
   // Shortcut 4: Direct Route Navigation Questions (e.g. "blood request page কোথায়?", "যোগাযোগ করব কোথায়?")
   const isDirectNavQuery =
     q.includes("কোথায়") ||
@@ -592,6 +665,87 @@ export function tryDeterministicShortcut(message: string): AssistantResponse | n
         intent: "NAVIGATION",
       };
     }
+  }
+
+  // Shortcut 3.9: Blood Request Step-by-Step Guidance (Explains steps clearly and provides direct form action button)
+  const bloodRequestGuidanceKeywords = [
+    "blood request",
+    "ব্লাড রিকোয়েস্ট",
+    "ব্লাড রিকোয়েস্ট",
+    "রক্তের আবেদন",
+    "রক্তের আবেদন করব",
+    "রক্তের আবেদন করতে",
+    "রক্তের আবেদন ফরম",
+    "রক্তের আবেদন ফর্ম",
+    "আবেদন করব কীভাবে",
+    "আবেদন কীভাবে করব",
+    "ব্লাড লাগবে",
+    "রক্ত লাগবে",
+    "blood lagbe",
+    "rocto lagbe",
+    "rokto lagbe",
+    "blood dorkar",
+    "how to request blood",
+    "request blood",
+  ];
+
+  if (
+    bloodRequestGuidanceKeywords.some((keyword) => q.includes(keyword)) &&
+    (q.includes("কীভাবে") ||
+      q.includes("কিভাবে") ||
+      q.includes("করব") ||
+      q.includes("করবো") ||
+      q.includes("চাই") ||
+      q.includes("নিয়ম") ||
+      q.includes("নিয়ম") ||
+      q.includes("ধাপ") ||
+      q.includes("পদ্ধতি") ||
+      q.includes("ফরম") ||
+      q.includes("ফর্ম") ||
+      q.includes("form") ||
+      q.includes("how to") ||
+      q.includes("help") ||
+      q.includes("kivabe") ||
+      q.includes("kmne") ||
+      q.includes("korbo") ||
+      q.includes("chai") ||
+      q.includes("বলো") ||
+      q.includes("জানাও") ||
+      q.includes("দাও") ||
+      q.includes("দিন") ||
+      q.includes("পাব") ||
+      q.includes("কোথায়") ||
+      q.includes("পদ্ধতি") ||
+      q.length < 35) // Also covers short queries like "রক্তের আবেদন", "blood request"
+  ) {
+    return {
+      message:
+        "🩸 **ওয়েবসাইটে রক্তের আবেদন করার সহজ ধাপসমূহ:**\n\n" +
+        "১. **আবেদন পেজে যান:** নিচে দেওয়া **'রক্তের আবেদন ফর্ম খুলুন'** বাটনে ক্লিক করুন (অথবা মেন্যু থেকে *Blood Support > Request Blood* এ যান)।\n\n" +
+        "২. **রোগীর তথ্য দিন:** রোগীর পুরো নাম এবং প্রয়োজনীয় রক্তের গ্রুপ (A+, B+, O+, AB+ ইত্যাদি) সিলেক্ট করুন।\n\n" +
+        "৩. **পরিমাণ ও স্থান:** মোট কত ব্যাগ রক্ত প্রয়োজন এবং রোগী কোন হাসপাতালে ও কোন ওয়ার্ড/কেবিনে চিকিৎসাধীন তা লিখুন।\n\n" +
+        "৪. **প্রয়োজনীয় সময়:** রক্তটি কোন তারিখে এবং কোন সময়ে প্রয়োজন তা উল্লেখ করুন।\n\n" +
+        "৫. **যোগাযোগের তথ্য:** আপনার নাম, সচল ১১ ডিজিটের মোবাইল নম্বর এবং আপডেট ট্র্যাকিংয়ের জন্য আপনার ইমেইল দিন।\n\n" +
+        "৬. **জমা দিন:** সমস্ত তথ্য সঠিকভাবে দেখে নিয়ে **'Submit Request'** বাটনে চাপুন।\n\n" +
+        "✅ **আবেদন জমা হওয়ার সাথে সাথে:**\n" +
+        "• এটি আমাদের লাইভ ডেটাবেসে ও রক্তদাতাদের নোটিফিকেশন বোর্ডে তাৎক্ষণিক যুক্ত হবে।\n" +
+        "• আপনি একটি ইউনিক ট্র্যাকিং লিঙ্ক পাবেন যার মাধ্যমে ডোনারদের স্ট্যাটাস দেখতে পারবেন।\n\n" +
+        "🚨 **অতি জরুরি প্রয়োজনে সরাসরি হটলাইনে কল করুন:** **০১৬১৪-৪২৪২৫৯**",
+      actions: [
+        {
+          type: "navigate",
+          label: "রক্তের আবেদন ফর্ম খুলুন",
+          target: "/blood-support/request",
+        },
+        {
+          type: "navigate",
+          label: "জরুরি রক্ত সহায়তা পেজ",
+          target: "/blood-support",
+        },
+      ],
+      sourceType: "form",
+      intent: "FORM_GUIDANCE",
+    };
   }
 
   // Shortcut 4: Direct Form Guidance Questions (e.g. "রক্তের আবেদন ফরম কীভাবে পূরণ করব?")
@@ -692,6 +846,48 @@ export function tryDeterministicShortcut(message: string): AssistantResponse | n
       ],
       sourceType: "knowledge",
       intent: "KNOWLEDGE",
+    };
+  }
+
+  // Shortcut 7: RCY Member Registration & Portal Account Inquiry
+  const memberRegPatterns = [
+    "member registration",
+    "member regestration",
+    "মেম্বার রেজিস্ট্রেশন",
+    "মেম্বার রেজিষ্ট্রেশন",
+    "সদস্য নিবন্ধন",
+    "সদস্য রেজিস্ট্রেশন",
+    "সদস্য রেজিষ্ট্রেশন",
+    "মেম্বার একাউন্ট",
+    "member account",
+    "member create account",
+    "member signup",
+    "member sign up",
+    "rcy member",
+  ];
+  if (memberRegPatterns.some((pattern) => q.includes(pattern))) {
+    return {
+      message:
+        "রেড ক্রিসেন্ট যুব দল (RCY RGPI)-এর **সদস্য/স্বেচ্ছাসেবক পোর্টাল অ্যাকাউন্ট (Member Registration)** তৈরির ধাপসমূহ:\n\n👉 **ধাপ ১:** নিচের বাটনে ক্লিক করে সরাসরি **'মেম্বার পোর্টাল' (/volunteer/login)**-এ যান।\n👉 **ধাপ ২:** পেজের উপরে থাকা **'Create account'** ট্যাবে ক্লিক করুন।\n👉 **ধাপ ৩:** ফর্মে আপনার বিবরণ সঠিকভাবে পূরণ করুন:\n  • পুরো নাম (Full name)\n  • রাজশাহী পলিটেকনিকের বোর্ড/ক্লাস রোল ও রেজিস্ট্রেশন নম্বর\n  • শিক্ষাবর্ষ (Session) ও টেকনোলজি/বিভাগ\n  • সচল মোবাইল নম্বর ও ইমেইল ঠিকানা\n  • রক্তের গ্রুপ ও জরুরি যোগাযোগের তথ্য\n👉 **ধাপ ৪:** পাসওয়ার্ড দিয়ে **'Create account'** বাটনে চাপ দিন।\n\n📌 **অনুমোদন প্রক্রিয়া:** অ্যাকাউন্ট তৈরির পর এটি ইউনিট অ্যাডমিন বা টিম লিডারশিপ কর্তৃক ভেরিফাই ও অনুমোদন করা হয়। অনুমোদিত হলে পোর্টালে আপনার ডিজিটাল আইডি কার্ড ও দায়িত্বের হিসেব দেখতে পাবেন।\n\n*(নোট: আপনি যদি নতুন স্বেচ্ছাসেবক হিসেবে অফিসিয়াল নিয়োগে অংশ নিতে চান, তবে বার্ষিক [রিক্রুটমেন্ট ক্যাম্পেইন](/apply-volunteer)-এ আবেদন করতে হবে। আর সাধারণ শিক্ষার্থীদের জন্য রয়েছে [শিক্ষার্থী পোর্টাল](/student/login)।)*",
+      actions: [
+        {
+          type: "navigate",
+          label: "মেম্বার পোর্টাল নিবন্ধন",
+          target: "/volunteer/login",
+        },
+        {
+          type: "navigate",
+          label: "স্বেচ্ছাসেবক নিয়োগ ক্যাম্পেইন",
+          target: "/apply-volunteer",
+        },
+        {
+          type: "navigate",
+          label: "শিক্ষার্থী পোর্টাল",
+          target: "/student/login",
+        },
+      ],
+      sourceType: "knowledge",
+      intent: "FORM_GUIDANCE",
     };
   }
 

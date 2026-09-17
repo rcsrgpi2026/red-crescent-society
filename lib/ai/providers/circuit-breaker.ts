@@ -2,51 +2,81 @@ import { AI_CONFIG } from "../config";
 
 export type CircuitState = "CLOSED" | "OPEN" | "HALF_OPEN";
 
-interface ProviderHealth {
+interface HealthRecord {
   state: CircuitState;
   consecutiveFailures: number;
   lastFailureTime: number;
   lastSuccessTime: number;
+  cooldownMs: number;
 }
 
-const providerCircuits = new Map<string, ProviderHealth>();
+const circuits = new Map<string, HealthRecord>();
+const disabledModels = new Set<string>();
 
-function getOrCreateCircuit(provider: string): ProviderHealth {
-  let circuit = providerCircuits.get(provider);
-  if (!circuit) {
-    circuit = {
+/**
+ * Checks whether a specific model is disabled (e.g. returned HTTP 404).
+ */
+export function isModelDisabled(model: string): boolean {
+  return disabledModels.has(model);
+}
+
+/**
+ * Marks a model as globally disabled across all accounts so it is not retried.
+ */
+export function disableModel(model: string, reason = "HTTP 404 / Model Unavailable") {
+  if (!disabledModels.has(model)) {
+    disabledModels.add(model);
+    console.warn(`[AI Multi-Router] Model "${model}" disabled globally (${reason}).`);
+  }
+}
+
+/**
+ * Permanently disables an account (e.g. invalid API key 401 or permission denied 403).
+ */
+export function disableAccount(id: string, reason = "Permission Denied / Invalid API Key") {
+  const record = getOrCreateRecord(id);
+  record.state = "OPEN";
+  record.cooldownMs = 24 * 60 * 60 * 1000; // 24 hours
+  console.error(`[AI Multi-Router] Account "${id}" disabled (${reason}).`);
+}
+
+function getOrCreateRecord(id: string): HealthRecord {
+  let record = circuits.get(id);
+  if (!record) {
+    record = {
       state: "CLOSED",
       consecutiveFailures: 0,
       lastFailureTime: 0,
       lastSuccessTime: 0,
+      cooldownMs: AI_CONFIG.circuitBreaker.cooldownMs,
     };
-    providerCircuits.set(provider, circuit);
+    circuits.set(id, record);
   }
-  return circuit;
+  return record;
 }
 
 /**
- * Checks whether a given AI provider is available according to the circuit breaker.
+ * Checks whether a specific account/key is available.
  */
-export function isProviderAvailable(provider: string): boolean {
-  const circuit = getOrCreateCircuit(provider);
+export function isAccountAvailable(id: string): boolean {
+  const record = getOrCreateRecord(id);
   const now = Date.now();
 
-  if (circuit.state === "CLOSED") {
+  if (record.state === "CLOSED") {
     return true;
   }
 
-  if (circuit.state === "OPEN") {
+  if (record.state === "OPEN") {
     // If cooldown has elapsed, move to HALF_OPEN to attempt a canary request
-    if (now - circuit.lastFailureTime >= AI_CONFIG.circuitBreaker.cooldownMs) {
-      circuit.state = "HALF_OPEN";
-      console.log(`[CircuitBreaker] Provider "${provider}" cooldown elapsed. State -> HALF_OPEN`);
+    if (now - record.lastFailureTime >= record.cooldownMs) {
+      record.state = "HALF_OPEN";
+      console.log(`[CircuitBreaker] "${id}" cooldown elapsed. State -> HALF_OPEN (Canary retry)`);
       return true;
     }
     return false;
   }
 
-  if (circuit.state === "HALF_OPEN") {
+  if (record.state === "HALF_OPEN") {
     return true;
   }
 
@@ -54,48 +84,78 @@ export function isProviderAvailable(provider: string): boolean {
 }
 
 /**
- * Records a successful response from an AI provider.
+ * Records a successful response for an account.
  */
-export function recordProviderSuccess(provider: string) {
-  const circuit = getOrCreateCircuit(provider);
-  circuit.consecutiveFailures = 0;
-  circuit.lastSuccessTime = Date.now();
-  if (circuit.state !== "CLOSED") {
-    circuit.state = "CLOSED";
-    console.log(`[CircuitBreaker] Provider "${provider}" recovered. State -> CLOSED`);
+export function recordAccountSuccess(id: string) {
+  const record = getOrCreateRecord(id);
+  record.consecutiveFailures = 0;
+  record.lastSuccessTime = Date.now();
+  if (record.state !== "CLOSED") {
+    record.state = "CLOSED";
+    console.log(`[CircuitBreaker] "${id}" recovered successfully. State -> CLOSED`);
   }
 }
 
 /**
- * Records a failure or timeout from an AI provider.
+ * Records a general failure or timeout for an account.
  */
-export function recordProviderFailure(provider: string, errorMessage?: string) {
-  const circuit = getOrCreateCircuit(provider);
-  circuit.consecutiveFailures += 1;
-  circuit.lastFailureTime = Date.now();
+export function recordAccountFailure(id: string, errorMessage?: string) {
+  const record = getOrCreateRecord(id);
+  record.consecutiveFailures += 1;
+  record.lastFailureTime = Date.now();
 
   console.warn(
-    `[CircuitBreaker] Provider "${provider}" failure #${circuit.consecutiveFailures}: ${
+    `[CircuitBreaker] "${id}" error (${record.consecutiveFailures}/${AI_CONFIG.circuitBreaker.failureThreshold}): ${
       errorMessage || "Unknown error"
     }`
   );
 
   if (
-    circuit.consecutiveFailures >= AI_CONFIG.circuitBreaker.failureThreshold ||
-    circuit.state === "HALF_OPEN"
+    record.consecutiveFailures >= AI_CONFIG.circuitBreaker.failureThreshold ||
+    record.state === "HALF_OPEN"
   ) {
-    circuit.state = "OPEN";
+    record.state = "OPEN";
+    record.cooldownMs = AI_CONFIG.circuitBreaker.cooldownMs;
     console.warn(
-      `[CircuitBreaker] Provider "${provider}" tripped. State -> OPEN (Cooldown ${
-        AI_CONFIG.circuitBreaker.cooldownMs / 1000
+      `[CircuitBreaker] "${id}" tripped. State -> OPEN (Cooldown ${
+        record.cooldownMs / 1000
       }s)`
     );
   }
 }
 
 /**
- * Resets a provider circuit (useful for tests)
+ * Instantly puts an account in cooldown upon HTTP 429 (Rate Limit / Quota Exhausted)
+ * to avoid wasting latency on subsequent requests until the quota resets.
  */
-export function resetProviderCircuit(provider: string) {
-  providerCircuits.delete(provider);
+export function recordAccountQuotaExhausted(id: string, customCooldownMs = 60000) {
+  const record = getOrCreateRecord(id);
+  record.consecutiveFailures += 1;
+  record.lastFailureTime = Date.now();
+  record.state = "OPEN";
+  record.cooldownMs = customCooldownMs;
+  console.warn(
+    `[CircuitBreaker] "${id}" reached Quota/Rate Limit (HTTP 429). Marked OPEN for ${
+      customCooldownMs / 1000
+    }s. Immediate failover triggered!`
+  );
+}
+
+/**
+ * Legacy aliases for backwards compatibility
+ */
+export function isProviderAvailable(provider: string): boolean {
+  return isAccountAvailable(provider);
+}
+
+export function recordProviderSuccess(provider: string) {
+  recordAccountSuccess(provider);
+}
+
+export function recordProviderFailure(provider: string, errorMessage?: string) {
+  recordAccountFailure(provider, errorMessage);
+}
+
+export function resetProviderCircuit(id: string) {
+  circuits.delete(id);
 }

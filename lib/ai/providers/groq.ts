@@ -2,13 +2,18 @@ import { AI_CONFIG } from "../config";
 import type { AssistantResponse } from "../types";
 import type { ProviderCallParams, ProviderResult } from "./gemini";
 import {
-  isProviderAvailable,
-  recordProviderSuccess,
-  recordProviderFailure,
+  isAccountAvailable,
+  recordAccountSuccess,
+  recordAccountFailure,
+  recordAccountQuotaExhausted,
+  isModelDisabled,
+  disableModel,
+  disableAccount,
 } from "./circuit-breaker";
 
 /**
- * Executes a structured query to Groq (fallback provider) with timeouts and circuit breaker.
+ * Executes a structured query to Groq with multi-account cascading failover.
+ * (Groq Account 1 -> if 429 or error -> Groq Account 2)
  */
 export async function callGroqProvider({
   systemPrompt,
@@ -16,28 +21,18 @@ export async function callGroqProvider({
   contextData,
   history = [],
 }: ProviderCallParams): Promise<ProviderResult> {
-  const providerName = "groq";
+  const accounts = AI_CONFIG.groqAccounts;
 
-  const apiKeys =
-    AI_CONFIG.groqApiKeys && AI_CONFIG.groqApiKeys.length > 0
-      ? AI_CONFIG.groqApiKeys
-      : AI_CONFIG.groqApiKey
-      ? [AI_CONFIG.groqApiKey]
-      : [];
-
-  if (apiKeys.length === 0) {
+  if (accounts.length === 0) {
     return {
       success: false,
-      error: "GROQ_API_KEY is not configured.",
+      error: "No Groq API keys configured (set GROQ_API_KEY, GROQ_API_KEY_2, or GROQ_API_KEYS).",
     };
   }
 
-  if (!isProviderAvailable(providerName)) {
-    return {
-      success: false,
-      error: "Groq provider is currently in cooldown (circuit breaker OPEN).",
-    };
-  }
+  // Filter accounts that are active (not in circuit breaker cooldown)
+  const availableAccounts = accounts.filter((acc) => isAccountAvailable(acc.id));
+  const accountsToTry = availableAccounts.length > 0 ? availableAccounts : accounts;
 
   const endpoint = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -63,33 +58,58 @@ export async function callGroqProvider({
     content: userContent,
   });
 
-  const candidateModels = (
+  const configuredModels = (
     AI_CONFIG.groqCandidateModels && AI_CONFIG.groqCandidateModels.length > 0
       ? AI_CONFIG.groqCandidateModels
-      : [
-          AI_CONFIG.groqModel,
-          "llama-3.3-70b-versatile",
-          "llama-3.1-8b-instant",
-          "openai/gpt-oss-120b",
-        ]
+      : [AI_CONFIG.groqModel, "openai/gpt-oss-120b", "openai/gpt-oss-20b"]
   ).filter((m, i, arr) => arr.indexOf(m) === i);
+
+  const candidateModels = configuredModels.filter((m) => !isModelDisabled(m));
+
+  if (candidateModels.length === 0) {
+    return {
+      success: false,
+      error: "All configured Groq models are disabled.",
+    };
+  }
 
   let lastError = "";
 
-  // Cascade across candidate models
-  for (const currentModel of candidateModels) {
-    // Rotate across available Groq API keys
-    for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
-      const currentApiKey = apiKeys[keyIdx];
+  // 1. Cascade across configured Groq Accounts (Groq Account 1 -> Groq Account 2)
+  for (let accIdx = 0; accIdx < accountsToTry.length; accIdx++) {
+    const currentAccount = accountsToTry[accIdx];
+    const accountId = currentAccount.id;
+    const accountLabel = currentAccount.label;
+
+    if (!isAccountAvailable(accountId) && availableAccounts.length > 0) {
+      console.log(`[AI Multi-Router] Skipping ${accountLabel} (Circuit in Cooldown)...`);
+      continue;
+    }
+
+    let accountHitQuota = false;
+    let accountDisabled = false;
+    let validModelAttempted = false;
+
+    // 2. Cascade across candidate models for this account
+    for (let modelIdx = 0; modelIdx < candidateModels.length; modelIdx++) {
+      const currentModel = candidateModels[modelIdx];
+      if (isModelDisabled(currentModel)) continue;
+
+      const reason = modelIdx === 0 && accIdx === 0 ? "primary" : "fallback-model";
+      console.log(
+        `[AI Multi-Router] Provider=Groq Account=${accIdx + 1} Model=${currentModel} Reason=${reason}`
+      );
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), AI_CONFIG.providerTimeoutMs);
 
       try {
+        validModelAttempted = true;
         const response = await fetch(endpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${currentApiKey}`,
+            Authorization: `Bearer ${currentAccount.key}`,
           },
           body: JSON.stringify({
             model: currentModel,
@@ -105,14 +125,40 @@ export async function callGroqProvider({
 
         if (!response.ok) {
           const errorText = await response.text().catch(() => "");
-          lastError = `Groq [${currentModel} | key #${keyIdx + 1}] HTTP ${response.status}: ${errorText.slice(0, 180)}`;
+          lastError = `Groq [${currentModel} | ${accountLabel}] HTTP ${response.status}: ${errorText.slice(0, 180)}`;
 
-          // Quota exhausted (429): rotate immediately to next API key
-          if (response.status === 429) {
-            console.warn(`[Groq] Key #${keyIdx + 1} hit 429 on ${currentModel}. Rotating key/model...`);
+          // Model not found (404): disable model globally, try next candidate model
+          if (response.status === 404) {
+            console.warn(
+              `[AI Multi-Router] Groq Account #${accIdx + 1} Model=${currentModel} Error=404 Action=disable-model`
+            );
+            disableModel(currentModel, errorText.slice(0, 100));
             continue;
           }
 
+          // Unauthorized or forbidden (401/403): permanently disable account
+          if (response.status === 401 || response.status === 403) {
+            console.error(
+              `[AI Multi-Router] Groq Account #${accIdx + 1} Error=${response.status} Action=disable-account`
+            );
+            disableAccount(accountId, `HTTP ${response.status}: Access Denied / Invalid Key`);
+            accountDisabled = true;
+            break;
+          }
+
+          // Quota / Rate limit (429): Mark account quota-exhausted and failover to next Groq account immediately!
+          if (response.status === 429) {
+            console.warn(
+              `[AI Multi-Router] Groq Account #${accIdx + 1} Model=${currentModel} Error=429 (Quota Limit) Action=cooldown-account`
+            );
+            recordAccountQuotaExhausted(accountId, 60000);
+            accountHitQuota = true;
+            break;
+          }
+
+          console.warn(
+            `[AI Multi-Router] Groq Account #${accIdx + 1} Model=${currentModel} Error=${response.status} Action=try-next-model`
+          );
           continue;
         }
 
@@ -120,12 +166,18 @@ export async function callGroqProvider({
         const rawText = json?.choices?.[0]?.message?.content;
 
         if (!rawText) {
-          lastError = `Empty response from Groq [${currentModel}].`;
+          lastError = `Empty response from Groq [${currentModel} on ${accountLabel}].`;
+          console.warn(
+            `[AI Multi-Router] Groq Account #${accIdx + 1} Model=${currentModel} Error=EmptyResponse Action=try-next-model`
+          );
           continue;
         }
 
         const parsed = parseStructuredOutput(rawText);
-        recordProviderSuccess(providerName);
+        recordAccountSuccess(accountId);
+        console.log(
+          `[AI Multi-Router] SUCCESS Provider=Groq Account=${accIdx + 1} Model=${currentModel}`
+        );
         return {
           success: true,
           data: parsed,
@@ -133,17 +185,22 @@ export async function callGroqProvider({
       } catch (err: any) {
         clearTimeout(timeoutId);
         const isAbort = err.name === "AbortError";
-        lastError = isAbort
-          ? `Groq [${currentModel}] timed out after ${AI_CONFIG.providerTimeoutMs}ms`
-          : err.message || "Groq connection error";
+        const errDesc = isAbort ? `Timeout after ${AI_CONFIG.providerTimeoutMs}ms` : (err.message || "Unknown Groq error");
+        lastError = `Groq [${currentModel} | ${accountLabel}]: ${errDesc}`;
+        console.warn(
+          `[AI Multi-Router] Groq Account #${accIdx + 1} Model=${currentModel} Error=${errDesc} Action=try-next-model`
+        );
 
         if (isAbort) break;
       }
     }
+
+    if (!accountHitQuota && !accountDisabled && validModelAttempted) {
+      recordAccountFailure(accountId, lastError);
+    }
   }
 
-  recordProviderFailure(providerName, lastError);
-  return { success: false, error: lastError || "Failed all candidate Groq models." };
+  return { success: false, error: lastError || "Failed all configured Groq accounts and models." };
 }
 
 

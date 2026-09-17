@@ -349,9 +349,11 @@ export function CampaignComposer({
   // Dynamic origin helper to avoid static DDNS domain triggers in spam filters
   const getBaseAppUrl = () => {
     if (typeof window !== "undefined" && window.location.origin) {
-      return window.location.origin;
+      if (!window.location.origin.includes("localhost") && !window.location.origin.includes("127.0.0.1")) {
+        return window.location.origin;
+      }
     }
-    return "https://rcy-rgpi.org";
+    return "https://rgpircy.vercel.app";
   };
 
   // Handle Category Change & Default Templates
@@ -395,7 +397,7 @@ export function CampaignComposer({
         "An urgent request for voluntary blood donation has been received for a critical patient.\n\nIf you or someone in your network is available and eligible to donate, please contact the coordinator or visit the blood bank immediately."
       );
       setButtonText("Respond / View Contact");
-      setButtonUrl(`${origin}/blood`);
+      setButtonUrl(`${origin}/blood-support`);
       setSecondaryInfo("Patient: Critical Care Unit • Hospital: Rajshahi Medical College Hospital (RMCH)");
       // Auto select blood donors
       setSelectedAudiences(["donors", "volunteers"]);
@@ -600,7 +602,7 @@ export function CampaignComposer({
           setDispatchLogs((prev) => [successLog, ...prev]);
 
           if (batchRes.errors && batchRes.errors.length > 0) {
-            batchRes.errors.forEach((err) => {
+            batchRes.errors.forEach((err: { email: string; error: string }) => {
               setDispatchLogs((prev) => [`⚠ ${err.email}: ${err.error}`, ...prev]);
             });
           }

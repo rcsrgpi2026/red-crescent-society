@@ -48,17 +48,49 @@ export function BloodRequestForm({ fields }: { fields?: FormFieldConfig[] }) {
   // Pre-fill form from URL Search Parameters (e.g. from AI Assistant)
   useEffect(() => {
     if (!searchParams) return;
-    const pName = searchParams.get("patientName");
-    const bg = searchParams.get("bloodGroup");
-    const u = searchParams.get("units");
-    const hosp = searchParams.get("hospital");
-    const loc = searchParams.get("location");
-    const rName = searchParams.get("requesterName");
-    const cont = searchParams.get("contact");
-    const em = searchParams.get("emergencyLevel");
-    const rDate = searchParams.get("requiredDate");
-    const rTime = searchParams.get("requiredTime");
-    const mail = searchParams.get("email");
+    const pName = searchParams.get("patientName")?.trim() || "";
+
+    // Robust blood group normalization: handle space vs +, lowercase, etc.
+    const rawBg = searchParams.get("bloodGroup");
+    let bg = "";
+    if (rawBg) {
+      let normalized = rawBg.trim().replace(/\s+/g, "+").toUpperCase();
+      if (!normalized.endsWith("+") && !normalized.endsWith("-")) {
+        normalized = `${normalized}+`;
+      }
+      if (BLOOD_GROUPS.includes(normalized as any)) {
+        bg = normalized;
+      }
+    }
+
+    const u = searchParams.get("units")?.trim() || "";
+    const hosp = searchParams.get("hospital")?.trim() || "";
+    const loc = searchParams.get("location")?.trim() || "";
+    const rName = searchParams.get("requesterName")?.trim() || pName;
+    const cont = searchParams.get("contact")?.trim() || "";
+    const em = searchParams.get("emergencyLevel")?.trim() || "";
+
+    // Parse requiredDate into YYYY-MM-DD format required by <input type="date">
+    const rawDate = searchParams.get("requiredDate");
+    let rDate = "";
+    if (rawDate) {
+      const trimmed = rawDate.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        rDate = trimmed;
+      } else {
+        const today = new Date();
+        const lower = trimmed.toLowerCase();
+        if (lower.includes("কাল") || lower.includes("tomorrow")) {
+          today.setDate(today.getDate() + 1);
+          rDate = today.toISOString().split("T")[0];
+        } else if (lower.includes("আজ") || lower.includes("today") || lower.includes("জরুরি")) {
+          rDate = today.toISOString().split("T")[0];
+        }
+      }
+    }
+
+    const rTime = searchParams.get("requiredTime")?.trim() || "";
+    const mail = searchParams.get("email")?.trim() || "";
 
     const hasAny = Boolean(pName || bg || u || hosp || loc || rName || cont || em || rDate || rTime || mail);
     if (hasAny) {

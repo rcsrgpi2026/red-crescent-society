@@ -9,8 +9,12 @@ export function LegacyMemberCard({ member }: { member: PublicLegacyMember }) {
     member.legacy_designation?.trim() ||
     (member.position ? `Former ${member.position}` : "Former Member");
 
+  const isTopLeader =
+    /leader|chief|head|coordinator/i.test(member.position || "") ||
+    /leader|chief|head|coordinator/i.test(member.legacy_designation || "");
+
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-amber-200/90 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-amber-300 hover:shadow-md">
+    <article className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-amber-200/90 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-amber-300 hover:shadow-md">
       {/* Top Banner — Gold/Bronze Heritage Stripe */}
       <div className="relative bg-gradient-to-r from-amber-900 via-amber-800 to-brand-dark px-4 py-3.5 text-center text-white">
         <div className="flex items-center justify-center gap-2">
@@ -26,10 +30,14 @@ export function LegacyMemberCard({ member }: { member: PublicLegacyMember }) {
         </div>
 
         {/* Floating Honor Badge */}
-        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-amber-300/80 bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white shadow-xs">
+        <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white shadow-xs ${
+          isTopLeader
+            ? "border-amber-200 bg-gradient-to-r from-amber-600 via-yellow-600 to-amber-700"
+            : "border-amber-300/80 bg-gradient-to-r from-amber-500 to-amber-600"
+        }`}>
           <span className="flex items-center gap-1">
             <Award className="h-3 w-3" />
-            Served with Honor
+            {isTopLeader ? "Leadership Alumni" : "Served with Honor"}
           </span>
         </div>
       </div>
@@ -81,10 +89,11 @@ export function LegacyMemberCard({ member }: { member: PublicLegacyMember }) {
           {member.session && (
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                Session
+                Session / Batch
               </span>
-              <span className="font-semibold text-foreground">
+              <span className="inline-flex items-center gap-1 font-semibold text-amber-950 font-mono text-xs">
                 {member.session}
+                <span className="text-[9px] font-sans font-medium text-amber-700/80 bg-amber-100/70 px-1.5 py-0.2 rounded">7th Sem</span>
               </span>
             </div>
           )}

@@ -19,6 +19,7 @@ import {
   DonorGreetingModal,
   type DonorGreetingInfo,
 } from "@/components/blood/donor-greeting-modal";
+import { MandatoryContactStep } from "@/components/forms/mandatory-contact-step";
 import {
   CheckCircle2,
   AlertCircle,
@@ -283,6 +284,9 @@ export function DonorRegisterForm() {
           </div>
           <input type="hidden" name="phonePublic" value={phonePublic ? "on" : ""} />
         </div>
+
+        {/* Mandatory Contact Save Step */}
+        <MandatoryContactStep className="my-2" />
 
         <Button
           type="submit"

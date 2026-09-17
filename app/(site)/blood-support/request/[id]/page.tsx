@@ -18,6 +18,7 @@ import { getPublicBloodRequestById, getSettings } from "@/lib/queries";
 import { formatDate, BLOOD_REQUEST_STATUS_LABELS } from "@/lib/constants";
 import { getServerLocale, getServerMessages } from "@/lib/i18n/server";
 import { DonorResponseModal } from "@/components/blood/donor-response-modal";
+import { AddToContactsCard } from "@/components/shared/add-to-contacts-card";
 
 export async function generateMetadata({
   params,
@@ -245,6 +246,9 @@ export default async function BloodRequestStatusPage({
                   <li>Notify the society coordinator once blood has been received.</li>
                 </ul>
               </div>
+
+              {/* 1-Click Add to Contacts & Safe Sender */}
+              <AddToContactsCard variant="compact" />
 
               <div className="rounded-3xl border border-line bg-mist/60 p-6 text-center">
                 <p className="text-sm font-semibold text-foreground">Need another blood unit?</p>

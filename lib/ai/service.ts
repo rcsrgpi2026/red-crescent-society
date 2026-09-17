@@ -7,7 +7,6 @@ import { classifyIntent, tryDeterministicShortcut } from "./intent-router";
 import { isRegisteredRoute } from "./registries/route-registry";
 import { buildTrustedLiveContext, getActiveBloodRequestsSummary, getEmergencyHelpline } from "./resolvers/live-data";
 import { buildAssistantSystemPrompt } from "./system-prompt";
-import { isBloodRequestWizardQuery, executeBloodRequestWizard } from "./resolvers/blood-wizard";
 import { callGeminiProvider } from "./providers/gemini";
 import { callGroqProvider } from "./providers/groq";
 import { logRetrievalMiss } from "./logger";
@@ -177,13 +176,6 @@ export async function processAssistantMessage({
     return shortcut;
   }
 
-  // 4.5. Deterministic Step-by-Step Blood Request Wizard (Zero LLM Tokens)
-  if (isBloodRequestWizardQuery(cleanInput, history)) {
-    const wizardResponse = executeBloodRequestWizard(cleanInput, history);
-    wizardResponse.actions = sanitizeActions(wizardResponse.actions);
-    return wizardResponse;
-  }
-
   // 4.8. High-Speed In-Memory Cache (Sub-millisecond latency & zero LLM quota consumption)
   if (history.length === 0) {
     const cachedResponse = getCachedResponse(cleanInput);
@@ -209,23 +201,49 @@ export async function processAssistantMessage({
 
   const systemPrompt = buildAssistantSystemPrompt(helplineData.bloodHelpline);
 
-  // 6. Execute Primary Provider (Gemini with candidate models & keys cascade)
-  let providerRes = await callGeminiProvider({
-    systemPrompt,
-    userMessage: cleanInput,
-    contextData: liveContext,
-    history,
-  });
+  // 6. Execute Primary Provider (Groq or Gemini depending on AI_CONFIG.primaryProvider)
+  let providerRes: { success: boolean; data?: AssistantResponse; error?: string };
 
-  // 7. Execute Fallback Provider (Groq with candidate models cascade) if Gemini failed
-  if (!providerRes.success && (AI_CONFIG.groqApiKey || AI_CONFIG.groqApiKeys.length > 0)) {
-    console.warn(`[AI Engine] Gemini failed (${providerRes.error}). Falling back to Groq...`);
+  const isGroqPrimary = AI_CONFIG.primaryProvider === "groq";
+
+  if (isGroqPrimary) {
+    // Primary: Groq Multi-Account Cascade
     providerRes = await callGroqProvider({
       systemPrompt,
       userMessage: cleanInput,
       contextData: liveContext,
       history,
     });
+
+    // Fallback: Gemini Multi-Account Cascade
+    if (!providerRes.success && (AI_CONFIG.geminiApiKey || AI_CONFIG.geminiAccounts.length > 0)) {
+      console.warn(`[AI Multi-Router] All Groq accounts unavailable (${providerRes.error}). Cascading to Gemini...`);
+      providerRes = await callGeminiProvider({
+        systemPrompt,
+        userMessage: cleanInput,
+        contextData: liveContext,
+        history,
+      });
+    }
+  } else {
+    // Primary: Gemini Multi-Account Cascade
+    providerRes = await callGeminiProvider({
+      systemPrompt,
+      userMessage: cleanInput,
+      contextData: liveContext,
+      history,
+    });
+
+    // Fallback: Groq Multi-Account Cascade
+    if (!providerRes.success && (AI_CONFIG.groqApiKey || AI_CONFIG.groqAccounts.length > 0)) {
+      console.warn(`[AI Multi-Router] All Gemini accounts unavailable (${providerRes.error}). Cascading to Groq...`);
+      providerRes = await callGroqProvider({
+        systemPrompt,
+        userMessage: cleanInput,
+        contextData: liveContext,
+        history,
+      });
+    }
   }
 
   // 8. Graceful Zero-Degradation Degradation if all providers failed

@@ -38,6 +38,22 @@ export function LegacyMemberDialog({ member, trigger }: LegacyMemberDialogProps)
   );
   const [legacyNote, setLegacyNote] = useState(member.legacy_note ?? "");
 
+  const apply7thSemesterPreset = () => {
+    setIsLegacy(true);
+    setLegacyDesignation(
+      member.position
+        ? member.position.startsWith("Former")
+          ? member.position
+          : `Former ${member.position}`
+        : "Former Executive Member"
+    );
+    setLegacyTenure(member.session ? `Session ${member.session}` : "7th Sem Graduate");
+    if (!legacyNote) {
+      setLegacyNote(`৭ম সেমিস্টার সম্পন্নকারী প্রাক্তন দায়িত্বপ্রাপ্ত সদস্য (সেশন ${member.session || ""})`);
+    }
+    toast.info("৭ম সেমিস্টার ফেয়ারওয়েল তথ্য পূরণ করা হয়েছে। এবার Save চাপুন।");
+  };
+
   const handleSave = () => {
     startTransition(async () => {
       const formData = new FormData();
@@ -113,9 +129,20 @@ export function LegacyMemberDialog({ member, trigger }: LegacyMemberDialogProps)
 
           {isLegacy && (
             <div className="space-y-3.5 rounded-xl border border-amber-200/80 bg-amber-50/40 p-3.5">
-              <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-800">
-                <Sparkles className="h-3.5 w-3.5" />
-                Legacy Profile Details
+              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-amber-800">
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-700" />
+                  Legacy Profile Details
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={apply7thSemesterPreset}
+                  className="h-7 border-amber-300 bg-amber-100/80 px-2 text-[10px] font-bold text-amber-950 hover:bg-amber-200"
+                >
+                  ⚡ ১-ক্লিকে ৭ম সেমিস্টার প্রিসেট
+                </Button>
               </div>
 
               <div>

@@ -22,7 +22,7 @@ export function getSmtpConfig() {
   const secure = process.env.SMTP_SECURE !== "false";
   const user = process.env.SMTP_USER || "redcrescentyouthrgpi@gmail.com";
   const pass = process.env.SMTP_PASS?.replace(/\s+/g, "");
-  const fromName = process.env.SMTP_FROM_NAME || "Red Crescent Youth";
+  const fromName = (process.env.SMTP_FROM_NAME || "Red Crescent Youth").replace(/^["']|["']$/g, "").trim();
   const defaultFrom = `"${fromName}" <${user}>`;
 
   const resendApiKey = process.env.RESEND_API_KEY;
@@ -310,27 +310,20 @@ export interface BuildCampaignHtmlParams {
 
 /**
  * Builds a responsive, branded HTML email template for RCY email campaigns,
- * strictly optimized for spam filters (CAN-SPAM compliant, table layout, preheader, RFC unsubscribe).
+ * strictly optimized for spam filters.
  */
 export function buildCampaignHtml({
+  subject,
   heading,
   body,
   badge = "Announcement",
   recipientName,
-  recipientEmail,
   buttonText,
   buttonUrl,
   secondaryInfo,
 }: BuildCampaignHtmlParams): string {
   const greeting = recipientName ? `Hello ${recipientName},` : "Dear RCY Member,";
   const safeButtonUrl = sanitizeCampaignUrl(buttonUrl);
-  const appUrl = getAppUrl();
-  const config = getSmtpConfig();
-  const supportEmail = config.user || "redcrescentyouthrgpi@gmail.com";
-  const cleanEmail = recipientEmail ? recipientEmail.trim().toLowerCase() : "";
-
-  // Extract clean preheader snippet (first ~100 characters of body)
-  const preheader = body.replace(/[\r\n\t]+/g, " ").trim().slice(0, 110);
 
   // Convert raw line breaks into clean paragraph tags
   const formattedBody = body
@@ -338,7 +331,7 @@ export function buildCampaignHtml({
     .map((paragraph) => {
       const clean = paragraph.trim().replace(/\n/g, "<br>");
       return clean
-        ? `<p class="paragraph-text" style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.7; color: #334155;">${clean}</p>`
+        ? `<p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.7; color: #334155;">${clean}</p>`
         : "";
     })
     .join("");
@@ -346,8 +339,8 @@ export function buildCampaignHtml({
   const ctaSection =
     buttonText && safeButtonUrl
       ? `
-      <div class="cta-box" style="text-align: center; margin: 28px 0 14px 0;">
-        <a href="${safeButtonUrl}" target="_blank" rel="noopener noreferrer" class="btn" style="display: inline-block; background-color: #dc2626; color: #ffffff !important; text-decoration: none; font-weight: 700; font-size: 14.5px; padding: 13px 34px; border-radius: 10px; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); text-align: center;">
+      <div style="text-align: center; margin: 28px 0 14px 0;">
+        <a href="${safeButtonUrl}" target="_blank" rel="noopener noreferrer" class="btn">
           ${buttonText}
         </a>
       </div>
@@ -356,185 +349,31 @@ export function buildCampaignHtml({
 
   const secondarySection = secondaryInfo
     ? `
-      <div class="note-box" style="background-color: #f8fafc; border-left: 4px solid #dc2626; border-radius: 8px; padding: 14px 18px; margin: 22px 0; font-size: 13.5px; color: #475569; line-height: 1.6;">
+      <div style="background-color: #f8fafc; border-left: 4px solid #dc2626; border-radius: 8px; padding: 14px 18px; margin: 22px 0; font-size: 13.5px; color: #475569; line-height: 1.6;">
         ${secondaryInfo.replace(/\n/g, "<br>")}
       </div>
     `
       : "";
 
-  return `<!DOCTYPE html>
-<html lang="bn" dir="ltr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>${heading}</title>
-  <style>
-    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      margin: 0 !important;
-      padding: 0 !important;
-      background-color: #f1f5f9;
-      color: #334155;
-      width: 100% !important;
-    }
-    .wrapper { width: 100%; table-layout: fixed; background-color: #f1f5f9; padding: 24px 0; }
-    .main-table {
-      max-width: 580px;
-      margin: 0 auto;
-      background-color: #ffffff;
-      border-radius: 14px;
-      overflow: hidden;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
-    }
-    .header {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      padding: 28px 24px;
-      text-align: center;
-      border-bottom: 3px solid #dc2626;
-    }
-    .badge {
-      display: inline-block;
-      background-color: rgba(220, 38, 38, 0.22);
-      color: #fca5a5;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      padding: 5px 14px;
-      border-radius: 9999px;
-      border: 1px solid rgba(220, 38, 38, 0.35);
-      margin-bottom: 10px;
-    }
-    .heading-title {
-      margin: 0 0 6px 0;
-      color: #ffffff;
-      font-size: 21px;
-      font-weight: 800;
-      line-height: 1.35;
-      letter-spacing: -0.02em;
-    }
-    .org-sub {
-      margin: 0;
-      color: #94a3b8;
-      font-size: 12.5px;
-      font-weight: 500;
-    }
-    .content-body { padding: 30px 26px; }
-    .greeting {
-      font-size: 15px;
-      font-weight: 600;
-      color: #0f172a;
-      margin: 0 0 16px 0;
-    }
-    .paragraph-text {
-      font-size: 15px;
-      line-height: 1.7;
-      color: #334155;
-      margin: 0 0 16px 0;
-    }
-    .note-box {
-      background-color: #f8fafc;
-      border-left: 4px solid #dc2626;
-      border-radius: 8px;
-      padding: 14px 18px;
-      margin: 22px 0;
-      font-size: 13.5px;
-      color: #475569;
-      line-height: 1.6;
-    }
-    .cta-box { text-align: center; margin: 28px 0 12px 0; }
-    .btn {
-      display: inline-block;
-      background-color: #dc2626;
-      color: #ffffff !important;
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 14.5px;
-      padding: 13px 34px;
-      border-radius: 10px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-    }
-    .footer {
-      background-color: #f8fafc;
-      padding: 24px;
-      text-align: center;
-      border-top: 1px solid #e2e8f0;
-      font-size: 12px;
-      color: #64748b;
-      line-height: 1.6;
-    }
-    .footer a { color: #dc2626; text-decoration: none; font-weight: 600; }
-    @media only screen and (max-width: 600px) {
-      .content-body { padding: 22px 18px !important; }
-      .header { padding: 22px 16px !important; }
-      .heading-title { font-size: 18px !important; }
-      .btn { width: 100% !important; box-sizing: border-box; }
-    }
-  </style>
-</head>
-<body>
-  <!-- Hidden preheader text to prevent snippet parsing issues in mail clients -->
-  <div style="display: none; font-size: 1px; color: #f1f5f9; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all;">
-    ${preheader}
-  </div>
-  <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="wrapper">
-    <tr>
-      <td align="center">
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="main-table">
-          <tr>
-            <td class="header">
-              <span class="badge">${badge || "Official Circular"}</span>
-              <h1 class="heading-title">${heading}</h1>
-              <p class="org-sub">Red Crescent Youth · Rajshahi Govt. Polytechnic Institute</p>
-            </td>
-          </tr>
-          <tr>
-            <td class="content-body">
-              <p class="greeting">${greeting}</p>
-              ${formattedBody}
-              ${secondarySection}
-              ${ctaSection}
-            </td>
-          </tr>
-          <tr>
-            <td class="footer">
-              <p style="margin: 0 0 6px 0; font-weight: 600; color: #334155;">
-                বাংলাদেশ রেড ক্রিসেন্ট সোসাইটি · যুব রেড ক্রিসেন্ট দল<br>
-                রাজশাহী পলিটেকনিক ইনস্টিটিউট শাখা
-              </p>
-              <p style="margin: 0 0 10px 0; color: #94a3b8; font-size: 11px;">
-                Rajshahi Government Polytechnic Institute, Kazla, Rajshahi-6203, Bangladesh
-              </p>
-              <div style="margin: 12px 0 12px 0;">
-                <a href="https://facebook.com/rcsrgpi" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 0 4px; padding: 5px 12px; background-color: #1877f2; color: #ffffff !important; text-decoration: none; border-radius: 16px; font-size: 11px; font-weight: 600;">
-                  Facebook
-                </a>
-                <a href="https://instagram.com/rcy_rgpi" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 0 4px; padding: 5px 12px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #ffffff !important; text-decoration: none; border-radius: 16px; font-size: 11px; font-weight: 600;">
-                  Instagram
-                </a>
-              </div>
-              <p style="margin: 0 0 8px 0; font-size: 11.5px;">
-                <a href="${appUrl}" target="_blank" rel="noopener noreferrer">Portal</a> · 
-                <a href="mailto:${supportEmail}">Help & Support</a>
-              </p>
-              <p style="margin: 0; font-size: 11px; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: 10px;">
-                You received this official circular as a registered member or volunteer of RCY RGPI.<br>
-                To opt out of broadcasts: <a href="mailto:${supportEmail}?subject=Unsubscribe%20Request%20(${encodeURIComponent(cleanEmail)})" style="color: #64748b; text-decoration: underline;">click here to request unsubscribe</a>.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`.trim();
+  const contentHtml = `
+    <h2 style="margin: 0 0 14px 0; font-size: 20px; color: #0f172a; font-weight: 700; line-height: 1.35;">
+      ${heading}
+    </h2>
+    <p style="font-size: 15px; font-weight: 600; color: #0f172a; margin: 0 0 14px 0;">
+      ${greeting}
+    </p>
+    ${formattedBody}
+    ${secondarySection}
+    ${ctaSection}
+  `;
+
+  return buildBrandedEmailShell({
+    preheader: body.replace(/[\r\n\t]+/g, " ").trim().slice(0, 110),
+    badgeText: badge || "Red Crescent Youth",
+    title: heading || subject,
+    contentHtml,
+    footerNote: "You received this official update as a registered member or contact of RCY RGPI.",
+  });
 }
 
 export interface SendCampaignBatchParams {
@@ -577,8 +416,6 @@ export async function sendCampaignEmailBatch({
   }
 
   const config = getSmtpConfig();
-  const transporter = createSmtpTransporter({ pool: true });
-  const resendClient = config.resendApiKey ? new Resend(config.resendApiKey) : null;
 
   try {
     for (let i = 0; i < recipients.length; i++) {
@@ -616,79 +453,35 @@ export async function sendCampaignEmailBatch({
         "---",
         "Red Crescent Youth, Rajshahi Govt. Polytechnic Institute",
         "Kazla, Rajshahi-6203, Bangladesh",
-        `To unsubscribe: mailto:${config.user}?subject=Unsubscribe%20Request`,
+        `Contact: ${config.user}`,
       ]
         .filter((line) => line !== undefined && line !== null)
         .join("\n");
 
-      // RFC-compliant Anti-Spam & Unsubscribe headers
-      const headers = {
+      // Clean notification headers (identical to successful transactional system emails)
+      // Removing "Precedence: bulk" and raw List-Unsubscribe headers that trigger Gmail spam classification on personal/SMTP senders
+      const headers: Record<string, string> = {
         "X-Mailer": "Red Crescent Youth Notification Engine",
         "X-Priority": "3",
         "Auto-Submitted": "auto-generated",
-        "List-Unsubscribe": `<mailto:${config.user}?subject=Unsubscribe%20${encodeURIComponent(cleanEmail)}>`,
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        "Precedence": "bulk",
       };
 
-      let sent = false;
-      let lastError = "";
+      const sendRes = await sendSystemEmail({
+        to: cleanEmail,
+        subject: campaign.subject,
+        html,
+        text: textVersion,
+        replyTo: config.user,
+      });
 
-      // 1. Try Gmail SMTP (Primary)
-      if (transporter && config.pass) {
-        try {
-          // NOTE: Do NOT pass a custom messageId here. Let Gmail assign its authentic Message-ID!
-          await transporter.sendMail({
-            from: config.defaultFrom,
-            to: recipient.name ? `"${recipient.name}" <${cleanEmail}>` : cleanEmail,
-            replyTo: config.user,
-            subject: campaign.subject,
-            text: textVersion,
-            html,
-            headers,
-          });
-          sent = true;
-          result.successCount++;
-          console.log(`[Batch Send SMTP Success]: ${cleanEmail}`);
-        } catch (smtpErr: unknown) {
-          lastError = smtpErr instanceof Error ? smtpErr.message : "SMTP send failed";
-          console.error(`[Batch Send SMTP Error] ${cleanEmail}:`, lastError);
-        }
+      if (sendRes.success) {
+        result.successCount++;
+        console.log(`[Batch Send Success]: ${cleanEmail}`);
       } else {
-        lastError = "SMTP credentials not configured";
-      }
-
-      // 2. Try Resend fallback if SMTP wasn't configured or failed and Resend is available
-      if (!sent && resendClient) {
-        try {
-          const { error } = await resendClient.emails.send({
-            from: config.resendFrom,
-            to: [cleanEmail],
-            replyTo: config.user,
-            subject: campaign.subject,
-            text: textVersion,
-            html,
-            headers: {
-              "List-Unsubscribe": `<mailto:${config.user}?subject=Unsubscribe%20${encodeURIComponent(cleanEmail)}>`,
-            },
-          });
-          if (error) {
-            lastError = error.message;
-          } else {
-            sent = true;
-            result.successCount++;
-            console.log(`[Batch Send Resend Success]: ${cleanEmail}`);
-          }
-        } catch (resendErr: unknown) {
-          lastError = resendErr instanceof Error ? resendErr.message : "Resend send failed";
-        }
-      }
-
-      if (!sent) {
         result.failedCount++;
         result.errors.push({
           email: cleanEmail,
-          error: lastError || "Failed to deliver email through configured providers.",
+          error: sendRes.error || "Failed to deliver email through configured providers.",
         });
       }
 
@@ -697,14 +490,8 @@ export async function sendCampaignEmailBatch({
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
     }
-  } finally {
-    if (transporter) {
-      try {
-        transporter.close();
-      } catch (closeErr) {
-        // ignore close error
-      }
-    }
+  } catch (batchErr: any) {
+    console.error("[sendCampaignEmailBatch critical error]:", batchErr);
   }
 
   return result;
@@ -807,6 +594,14 @@ export async function sendSystemEmail({
   };
 }
 
+export function getEmailPublicUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+    return envUrl.replace(/\/+$/, "");
+  }
+  return "https://rgpircy.vercel.app";
+}
+
 /**
  * Master HTML Email Shell optimized for deliverability and high inbox placement.
  */
@@ -823,7 +618,7 @@ function buildBrandedEmailShell({
   contentHtml: string;
   footerNote?: string;
 }): string {
-  const appUrl = getAppUrl();
+  const appUrl = getEmailPublicUrl();
 
   return `<!DOCTYPE html>
 <html lang="bn" dir="ltr">
@@ -972,9 +767,27 @@ function buildBrandedEmailShell({
                   Instagram
                 </a>
               </div>
+              <!-- 1-Click Add to Contacts & Safe Sender Badge -->
+              <div style="margin: 18px 0 16px 0; padding: 14px 16px; background-color: #f1f5f9; border-radius: 12px; border: 1px dashed #cbd5e1; text-align: center;">
+                <p style="margin: 0 0 8px 0; font-size: 11.5px; color: #334155; font-weight: 700;">
+                  📬 নিয়মিত নোটিশ ও জরুরি রক্তের আবেদন সরাসরি ইনবক্সে পেতে:
+                </p>
+                <div style="margin: 6px 0;">
+                  <a href="https://contacts.google.com/new?email=supportrgpircy@gmail.com&name=Red+Crescent+Youth+RGPI" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 3px 4px; padding: 7px 14px; background-color: #ffffff; color: #1e293b !important; text-decoration: none; border-radius: 20px; font-size: 11px; font-weight: 700; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                    ➕ Add to Google Contacts
+                  </a>
+                  <a href="${appUrl}/api/vcard" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 3px 4px; padding: 7px 14px; background-color: #dc2626; color: #ffffff !important; text-decoration: none; border-radius: 20px; font-size: 11px; font-weight: 700; box-shadow: 0 1px 3px rgba(220,38,38,0.25);">
+                    📇 Save Phone Contact (.vcf)
+                  </a>
+                </div>
+                <p style="margin: 6px 0 0 0; font-size: 10.5px; color: #64748b;">
+                  মেইলটি Spam এ পেয়ে থাকলে অনুগ্রহ করে <strong>&apos;Report not spam&apos;</strong> এ ক্লিক করুন।
+                </p>
+              </div>
+
               <p style="margin: 0; font-size: 11.5px;">
                 <a href="${appUrl}">Website</a> · 
-                <a href="mailto:redcrescentyouthrgpi@gmail.com">Help & Support</a> · 
+                <a href="mailto:supportrgpircy@gmail.com">Help & Support</a> · 
                 <a href="${appUrl}/blood-support">Blood Support</a>
               </p>
             </td>

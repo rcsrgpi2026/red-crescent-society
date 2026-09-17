@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui";
+import { MandatoryContactStep } from "@/components/forms/mandatory-contact-step";
 
 export function VolunteerRegisterForm() {
   const [formData, setFormData] = useState({
@@ -287,6 +288,8 @@ export function VolunteerRegisterForm() {
             />
             <FieldError errors={errors} name="motivation" />
           </div>
+
+          <MandatoryContactStep className="my-2" />
 
           <SubmitButton className="w-full">Submit Volunteer Application</SubmitButton>
           <p className="text-xs text-muted-foreground">

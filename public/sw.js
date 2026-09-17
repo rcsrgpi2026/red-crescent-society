@@ -1,5 +1,5 @@
 // Service Worker for Red Crescent Youth PWA
-const CACHE_NAME = "rcs-rgpi-pwa-v5";
+const CACHE_NAME = "rcs-rgpi-pwa-v6";
 const OFFLINE_URLS = [
   "/",
   "/offline.html",
@@ -45,9 +45,14 @@ self.addEventListener("fetch", (event) => {
   // Only handle GET requests
   if (event.request.method !== "GET") return;
 
-  // Let browser handle API / dynamic POST requests naturally
+  // Let browser handle Next.js chunks, HMR, API, and Admin requests naturally
   const url = new URL(event.request.url);
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin/")) {
+  if (
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/admin/") ||
+    url.pathname.startsWith("/_next/") ||
+    url.pathname.includes("__next")
+  ) {
     return;
   }
 

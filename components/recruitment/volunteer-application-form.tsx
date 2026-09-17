@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/select";
 import { BLOOD_GROUPS, SEMESTERS } from "@/lib/constants";
 import { submitVolunteerApplication } from "@/lib/recruitment-actions";
+import { AddToContactsCard } from "@/components/shared/add-to-contacts-card";
+import { MandatoryContactStep } from "@/components/forms/mandatory-contact-step";
 import type { RecruitmentCampaign, Student } from "@/types/database";
 
 interface VolunteerApplicationFormProps {
@@ -128,6 +130,9 @@ export function VolunteerApplicationForm({
           <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
           Status: 🟡 Under Review
         </div>
+
+        {/* 1-Click Add to Contacts reminder to ensure future notification emails reach inbox */}
+        <AddToContactsCard className="mt-7" />
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <Button asChild size="lg" className="bg-brand hover:bg-brand-dark">
@@ -405,6 +410,8 @@ export function VolunteerApplicationForm({
 
       {/* 4. Confirmation & Agreement */}
       <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-5">
+        <MandatoryContactStep />
+
         <div className="flex items-start gap-3">
           <input
             id="va-agreement"

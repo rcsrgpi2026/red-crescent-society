@@ -212,7 +212,7 @@ export function SiteHeader({
           </nav>
 
           <div className="flex items-center gap-2">
-            <AssistantTrigger />
+            <AssistantTrigger className="hidden sm:inline-flex" />
             <NotificationBell userId={currentUser?.id} />
 
             {currentUser ? (

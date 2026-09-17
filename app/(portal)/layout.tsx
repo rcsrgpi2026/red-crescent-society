@@ -2,6 +2,7 @@ import "../globals.css";
 import "./print.css";
 
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LocaleProvider } from "@/components/providers/locale-provider";
@@ -33,6 +34,7 @@ export default function PortalRootLayout({
           <Toaster position="top-center" richColors closeButton />
         </TooltipProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

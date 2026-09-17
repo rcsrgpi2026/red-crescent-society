@@ -152,7 +152,7 @@ export function AboutCardsStack({ t }: { t: Messages }) {
           return (
             <div
               key={card.id}
-              className="w-[86vw] max-w-[340px] shrink-0 snap-center flex flex-col justify-between rounded-2xl border border-line bg-white p-5 shadow-sm transition-all"
+              className="w-[86vw] max-w-[340px] shrink-0 snap-center flex flex-col justify-between rounded-2xl border border-line bg-white p-5 shadow-sm transition-all min-h-[285px]"
             >
               {/* Header */}
               <div className="flex items-center justify-between">
@@ -175,33 +175,33 @@ export function AboutCardsStack({ t }: { t: Messages }) {
               </div>
 
               {/* Body Content */}
-              <div className="my-3.5 grid grid-cols-[1fr_75px] items-center gap-3">
-                <div className="space-y-1.5">
+              <div className="my-4 grid grid-cols-[1fr_75px] items-start gap-3 flex-1">
+                <div className="space-y-2">
                   <h3 className="font-jakarta text-base font-bold tracking-tight text-foreground">
                     {card.title}
                   </h3>
                   {card.bullets ? (
-                    <ul className="font-inter space-y-1 text-xs leading-relaxed text-muted-foreground">
-                      {card.bullets.slice(0, 3).map((bullet) => (
+                    <ul className="font-inter space-y-1.5 text-xs leading-relaxed text-muted-foreground">
+                      {card.bullets.map((bullet) => (
                         <li key={bullet} className="flex items-start gap-1.5">
-                          <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-crescent" />
-                          <span className="line-clamp-1">{bullet}</span>
+                          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-crescent" />
+                          <span className="leading-snug">{bullet}</span>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="font-inter text-xs leading-relaxed text-muted-foreground line-clamp-3">
+                    <p className="font-inter text-xs leading-relaxed text-muted-foreground">
                       {card.body}
                     </p>
                   )}
                 </div>
-                <div className="flex h-18 w-18 shrink-0 items-center justify-center rounded-2xl border border-line/60 bg-mist/60 p-1.5">
+                <div className="flex h-18 w-18 shrink-0 items-center justify-center rounded-2xl border border-line/60 bg-mist/60 p-1.5 self-start mt-0.5">
                   <VectorIllustration />
                 </div>
               </div>
 
               {/* Footer line */}
-              <div className="flex items-center justify-between border-t border-line/60 pt-3">
+              <div className="mt-auto flex items-center justify-between border-t border-line/60 pt-3">
                 <div className={cn("h-1.5 w-12 rounded-full bg-gradient-to-r", card.accent)} />
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
                   RGPI Unit

@@ -276,10 +276,10 @@ export async function sendTestCampaignEmail({
   const result = await sendCampaignEmailBatch({
     recipients: [{ email: cleanEmail, name: "Admin Preview" }],
     campaign: {
-      subject: `[Preview] ${subject}`,
+      subject: subject.trim(),
       heading,
       body,
-      badge: badge ? `[Preview] ${badge}` : "[Preview] Official Circular",
+      badge: badge || "Notice Preview",
       buttonText,
       buttonUrl,
       secondaryInfo,

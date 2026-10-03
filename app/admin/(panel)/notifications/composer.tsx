@@ -238,7 +238,7 @@ export function NotificationComposer() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Low (Respects quiet hours & limits)</SelectItem>
+                  <SelectItem value="low">Low (Standard priority & limits)</SelectItem>
                   <SelectItem value="normal">Normal (Standard priority)</SelectItem>
                   <SelectItem value="high">High (Bypasses cooldown)</SelectItem>
                   <SelectItem value="critical">🚨 Critical (Emergency alert)</SelectItem>
@@ -448,7 +448,7 @@ export function NotificationComposer() {
               <div>
                 <p className="font-semibold">Critical Emergency Priority</p>
                 <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-400">
-                  Critical alerts bypass standard daily limits and quiet hours. Please use only for genuine urgent blood requests or disaster alerts.
+                  Critical alerts bypass standard daily limits and cooldowns. Please use only for genuine urgent blood requests or disaster alerts.
                 </p>
               </div>
             </div>
@@ -465,7 +465,7 @@ export function NotificationComposer() {
             </DialogTitle>
             <DialogDescription className="text-xs leading-relaxed pt-2">
               You are about to dispatch a <strong>CRITICAL PRIORITY</strong> notification to approximately{" "}
-              <strong>{estimate?.estimatedCount ?? 0} users</strong>. This alert will trigger loud push notifications and bypass quiet hours.
+              <strong>{estimate?.estimatedCount ?? 0} users</strong>. This alert will trigger high-priority push notifications to all recipients.
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-lg border bg-muted/30 p-3 text-xs">

@@ -12,8 +12,9 @@ import { createAndDispatchNotification } from "@/lib/notifications/notification-
 import { sendVolunteerApprovalEmail } from "@/lib/email/mailer";
 import type { ActionResult } from "@/lib/actions";
 import type { CustomPopupConfig } from "@/types/database";
-import { invalidateLeadershipCache } from "@/lib/ai/resolvers/live-data";
+import { invalidateLeadershipCache, invalidateNoticesCache } from "@/lib/ai/resolvers/live-data";
 import { clearResponseCache } from "@/lib/ai/cache";
+import { syncTeamMemberToCommunity, deleteCommunityMemberByTeamId, syncAllTeamMembersToCommunity } from "@/lib/community-sync";
 
 function guardConfig() {
   if (!isSupabaseConfigured) {
@@ -154,10 +155,17 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
     }
   }
 
+  await syncTeamMemberToCommunity(supabase, id);
   await logAudit(`volunteer_${status.toLowerCase()}`, "volunteer", id);
   revalidatePath("/admin/team");
+  revalidatePath("/admin/community");
   revalidatePath("/team");
+  revalidatePath("/community");
+  revalidatePath("/");
   updateTag("volunteers");
+  updateTag("community");
+  invalidateLeadershipCache();
+  clearResponseCache();
   return { success: true, message: `Team member ${status.toLowerCase()}.` };
 }
 
@@ -194,11 +202,19 @@ export async function deleteTeamMember(id: string): Promise<ActionResult> {
     }
   }
 
+  await deleteCommunityMemberByTeamId(supabase, id);
   const { error } = await supabase.from("team_members").delete().eq("id", id);
   if (error)    return { success: false, message: "Could not delete the team member." };
   await logAudit("volunteer_deleted", "volunteer", id);
   revalidatePath("/admin/team");
+  revalidatePath("/admin/community");
+  revalidatePath("/team");
+  revalidatePath("/community");
+  revalidatePath("/");
   updateTag("volunteers");
+  updateTag("community");
+  invalidateLeadershipCache();
+  clearResponseCache();
   return { success: true, message: "Team member and their login account deleted." };
 }
 
@@ -267,10 +283,17 @@ export async function updateTeamMemberPosition(formData: FormData): Promise<Acti
     .update({ position, rcy_department: isLeader ? null : undefined })
     .eq("id", id);
   if (error) return { success: false, message: "Could not update the position." };
+  await syncTeamMemberToCommunity(supabase, id);
   await logAudit("position_changed", "team_member", id, { position, ...(isLeader ? { rcy_department: null } : {}) });
   revalidatePath("/admin/team");
+  revalidatePath("/admin/community");
   revalidatePath("/team");
+  revalidatePath("/community");
+  revalidatePath("/");
   updateTag("volunteers");
+  updateTag("community");
+  invalidateLeadershipCache();
+  clearResponseCache();
   return { success: true, message: `Position set to ${position}.` };
 }
 
@@ -300,10 +323,17 @@ export async function updateTeamMemberRcyDepartment(formData: FormData): Promise
     .update({ rcy_department: value })
     .eq("id", id);
   if (error) return { success: false, message: "Could not update the RCY department." };
+  await syncTeamMemberToCommunity(supabase, id);
   await logAudit("rcy_department_changed", "team_member", id, { rcy_department: value });
   revalidatePath("/admin/team");
+  revalidatePath("/admin/community");
   revalidatePath("/team");
+  revalidatePath("/community");
+  revalidatePath("/");
   updateTag("volunteers");
+  updateTag("community");
+  invalidateLeadershipCache();
+  clearResponseCache();
   return {
     success: true,
     message: value ? `RCY department set to ${value}.` : "RCY department cleared.",
@@ -340,11 +370,19 @@ export async function updateTeamMemberLegacyStatus(formData: FormData): Promise<
     return { success: false, message: "Could not update legacy status." };
   }
 
+  await syncTeamMemberToCommunity(supabase, id);
   await logAudit("legacy_status_changed", "team_member", id, patch);
+  revalidatePath("/admin");
   revalidatePath("/admin/team");
+  revalidatePath("/admin/community");
   revalidatePath("/team");
+  revalidatePath("/community");
   revalidatePath("/legacy-members");
+  revalidatePath("/");
   updateTag("volunteers");
+  updateTag("community");
+  invalidateLeadershipCache();
+  clearResponseCache();
 
   return {
     success: true,
@@ -399,10 +437,17 @@ export async function updateTeamMemberPhoto(formData: FormData): Promise<ActionR
     .update({ photo_url: photoUrl || null })
     .eq("id", id);
   if (error) return { success: false, message: "Could not update the photo." };
+  await syncTeamMemberToCommunity(supabase, id);
   await logAudit("volunteer_photo_updated", "volunteer", id);
   revalidatePath(`/admin/team/${id}`);
+  revalidatePath("/admin/community");
   revalidatePath("/team");
+  revalidatePath("/community");
+  revalidatePath("/");
   updateTag("volunteers");
+  updateTag("community");
+  invalidateLeadershipCache();
+  clearResponseCache();
   return { success: true, message: "Photo updated." };
 }
 
@@ -621,6 +666,25 @@ export async function removeTeamMemberFromCommunity(formData: FormData): Promise
   clearResponseCache();
 
   return { success: true, message: "Removed from Community leadership tree." };
+}
+
+/**
+ * Synchronizes all approved executive team members to the Community leadership tree.
+ */
+export async function syncAllCommunityMembers(): Promise<ActionResult> {
+  await guard();
+  const supabase = await createClient();
+  const { syncedCount } = await syncAllTeamMembersToCommunity(supabase);
+  await logAudit("community_all_synced", "community", undefined, { count: syncedCount });
+  revalidatePath("/admin/team");
+  revalidatePath("/admin/community");
+  revalidatePath("/community");
+  revalidatePath("/");
+  updateTag("community");
+  updateTag("volunteers");
+  invalidateLeadershipCache();
+  clearResponseCache();
+  return { success: true, message: `Successfully synchronized ${syncedCount} executive team members to the community tree.` };
 }
 
 // ---------------------------------------------------------------------------
@@ -1076,9 +1140,32 @@ export async function saveActivity(formData: FormData): Promise<ActionResult> {
     const { error } = await supabase.from("activities").insert(payload);
     if (error) return { success: false, message: "Could not create the activity." };
     await logAudit("activity_created", "activity", payload.title);
+
+    // Trigger notification for newly published activity
+    try {
+      const coverImage = images[0] || undefined;
+      const snippet = payload.description
+        ? payload.description.slice(0, 130) + (payload.description.length > 130 ? "..." : "")
+        : `Check out our latest society activity: ${payload.title}.`;
+      const dateText = payload.date ? `Date: ${payload.date} · ` : "";
+
+      await createAndDispatchNotification({
+        title: `📢 New Activity: ${payload.title}`,
+        body: `${dateText}${snippet}`,
+        type: "event",
+        priority: "normal",
+        actionUrl: `/activities/${payload.slug}`,
+        imageUrl: coverImage,
+      });
+    } catch (notifErr) {
+      console.warn("Could not dispatch activity notification:", notifErr);
+    }
   }
   revalidatePath("/admin/activities");
   revalidatePath("/gallery");
+  revalidatePath(`/activities/${payload.slug}`);
+  revalidatePath("/volunteer");
+  revalidatePath("/");
   updateTag("activities");
   return { success: true, message: "Activity saved." };
 }
@@ -1297,6 +1384,8 @@ export async function saveNotice(formData: FormData): Promise<ActionResult> {
   revalidatePath("/events");
   updateTag("notices");
   updateTag("events");
+  invalidateNoticesCache();
+  clearResponseCache("notice");
   return { success: true, message: "Notice saved." };
 }
 
@@ -1309,6 +1398,8 @@ export async function deleteNotice(id: string): Promise<ActionResult> {
   revalidatePath("/admin/notices");
   revalidatePath("/notices");
   updateTag("notices");
+  invalidateNoticesCache();
+  clearResponseCache("notice");
   return { success: true, message: "Notice deleted." };
 }
 

@@ -22,10 +22,6 @@ export const NOTIFICATION_CONFIG = {
     MAX_EMERGENCY_PER_DAY: 10,
     COOLDOWN_MINUTES_SIMILAR: 30,
   },
-  defaultQuietHours: {
-    start: "22:00",
-    end: "07:00",
-  },
 };
 
 /** Blood group compatibility chart for blood donations (recipient -> compatible donor blood groups) */

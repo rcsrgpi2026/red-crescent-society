@@ -26,6 +26,7 @@ import { AssistantTrigger } from "@/components/ai/assistant-trigger";
 import { useLocale } from "@/components/providers/locale-provider";
 import { stripLocalePrefix } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 type NavKey = keyof typeof import("@/lib/i18n/messages").messages.nav;
 
@@ -73,6 +74,7 @@ export function SiteHeader({
   }, []);
 
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
     const supabase = createClient();
     async function loadUser() {
       const {

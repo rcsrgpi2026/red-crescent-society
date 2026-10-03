@@ -6,7 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface SendPasswordResetEmailParams {
   to: string;
-  resetLink: string;
+  otpCode?: string;
+  resetLink?: string;
   recipientName?: string | null;
 }
 
@@ -60,9 +61,11 @@ function createSmtpTransporter({ pool = false }: { pool?: boolean } = {}) {
  */
 export function buildPasswordResetHtml({
   resetLink,
+  otpCode,
   recipientName,
 }: {
-  resetLink: string;
+  resetLink?: string;
+  otpCode?: string;
   recipientName?: string | null;
 }): string {
   const nameGreeting = recipientName ? `Hello ${recipientName},` : "Hello,";
@@ -136,11 +139,40 @@ export function buildPasswordResetHtml({
       font-size: 15px;
       line-height: 1.65;
       color: #475569;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
+    }
+    .otp-box {
+      background-color: #fff1f2;
+      border: 2px dashed #e11d48;
+      border-radius: 14px;
+      padding: 24px 16px;
+      text-align: center;
+      margin: 24px 0;
+    }
+    .otp-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #e11d48;
+      margin: 0 0 8px 0;
+    }
+    .otp-code {
+      font-family: 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: 8px;
+      color: #9f1239;
+      padding: 4px 0;
+    }
+    .otp-sub {
+      font-size: 12px;
+      color: #64748b;
+      margin: 8px 0 0 0;
     }
     .cta-box {
       text-align: center;
-      margin: 32px 0;
+      margin: 24px 0;
     }
     .btn {
       display: inline-block;
@@ -161,7 +193,8 @@ export function buildPasswordResetHtml({
       border-left: 4px solid #dc2626;
       border-radius: 8px;
       padding: 14px 16px;
-      margin-bottom: 24px;
+      margin-top: 24px;
+      margin-bottom: 20px;
       font-size: 13px;
       color: #64748b;
       line-height: 1.5;
@@ -170,7 +203,7 @@ export function buildPasswordResetHtml({
       font-size: 12px;
       color: #94a3b8;
       word-break: break-all;
-      margin-top: 20px;
+      margin-top: 16px;
       line-height: 1.5;
     }
     .footer {
@@ -188,24 +221,51 @@ export function buildPasswordResetHtml({
   <div class="container">
     <div class="header">
       <div class="header-badge">Red Crescent Youth</div>
-      <h1>Password Reset Request</h1>
+      <h1>Password Reset</h1>
       <p>Rajshahi Govt. Polytechnic Institute RCY Portal</p>
     </div>
     <div class="content">
       <p class="greeting">${nameGreeting}</p>
       <p class="text">
-        We received a request to reset the password for your account in the Red Crescent Youth portal. Click the button below to choose a new password:
+        We received a request to reset the password for your account in the Red Crescent Youth portal.
       </p>
+
+      ${
+        otpCode
+          ? `
+      <div class="otp-box">
+        <div class="otp-label">Your 6-Digit Verification Code</div>
+        <div class="otp-code">${otpCode}</div>
+        <div class="otp-sub">Enter this 6-digit code on the reset password page.</div>
+      </div>
+      `
+          : ""
+      }
+
+      ${
+        resetLink
+          ? `
       <div class="cta-box">
-        <a href="${resetLink}" class="btn" target="_blank" rel="noopener noreferrer">Reset My Password</a>
+        <a href="${resetLink}" class="btn" target="_blank" rel="noopener noreferrer">Reset My Password Directly</a>
       </div>
+      `
+          : ""
+      }
+
       <div class="note-box">
-        <strong>Security Notice:</strong> This password reset link is valid for <strong>1 hour</strong>. If you did not make this request, you can safely ignore this email — your password will remain unchanged.
+        <strong>Security Notice:</strong> This code is valid for <strong>1 hour</strong>. If you did not make this request, you can safely ignore this email — your password will remain unchanged.
       </div>
+
+      ${
+        resetLink
+          ? `
       <div class="alt-link">
-        If the button above does not work, copy and paste the following URL into your browser:<br>
+        If the button above does not work, you can also paste this URL into your browser:<br>
         <a href="${resetLink}" style="color: #dc2626;">${resetLink}</a>
       </div>
+      `
+          : ""
+      }
     </div>
     <div class="footer">
       <div style="margin: 0 0 12px 0;">
@@ -232,12 +292,17 @@ export function buildPasswordResetHtml({
  */
 export async function sendPasswordResetEmail({
   to,
+  otpCode,
   resetLink,
   recipientName,
 }: SendPasswordResetEmailParams): Promise<EmailResult> {
-  const htmlContent = buildPasswordResetHtml({ resetLink, recipientName });
-  const subject = "Reset your Red Crescent Youth portal password";
-  const textContent = `Hello${recipientName ? ` ${recipientName}` : ""},\n\nWe received a request to reset your password. Please open the link below within 1 hour:\n\n${resetLink}\n\nIf you did not request this, you can ignore this email.`;
+  const htmlContent = buildPasswordResetHtml({ resetLink, otpCode, recipientName });
+  const subject = otpCode
+    ? `${otpCode} is your Red Crescent Youth verification code`
+    : "Reset your Red Crescent Youth portal password";
+  const textContent = otpCode
+    ? `Hello${recipientName ? ` ${recipientName}` : ""},\n\nYour 6-digit password reset verification code is:\n\n${otpCode}\n\nEnter this code on the password reset page within 1 hour.\n\nIf you did not request this, please ignore this email.`
+    : `Hello${recipientName ? ` ${recipientName}` : ""},\n\nWe received a request to reset your password. Please open the link below within 1 hour:\n\n${resetLink}\n\nIf you did not request this, you can ignore this email.`;
 
   const config = getSmtpConfig();
   const resendClient = config.resendApiKey ? new Resend(config.resendApiKey) : null;

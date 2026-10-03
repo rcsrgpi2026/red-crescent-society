@@ -1,9 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/actions";
+import { syncTeamMemberToCommunity } from "@/lib/community-sync";
 
 /**
  * Leadership positions are declared by the society leadership (admin panel)
@@ -240,8 +241,22 @@ export async function updateTeamMemberProfile(
   // Sync profile name
   await supabase.from("profiles").update({ full_name: v.name }).eq("id", user.id);
 
+  // Sync to community tree in real-time
+  const { data: memberRecord } = await supabase
+    .from("team_members")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (memberRecord?.id) {
+    await syncTeamMemberToCommunity(supabase, memberRecord.id);
+  }
+
   revalidatePath("/volunteer");
   revalidatePath("/team");
+  revalidatePath("/community");
+  revalidatePath("/");
+  updateTag("volunteers");
+  updateTag("community");
   return { success: true, message: "Team member profile details updated successfully!" };
 }
 
@@ -268,7 +283,21 @@ export async function updateTeamMemberPhoto(photoUrl: string): Promise<ActionRes
   // Sync to profiles avatar
   await supabase.from("profiles").update({ avatar_url: photoUrl }).eq("id", user.id);
 
+  // Sync to community tree in real-time
+  const { data: memberRecord } = await supabase
+    .from("team_members")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (memberRecord?.id) {
+    await syncTeamMemberToCommunity(supabase, memberRecord.id);
+  }
+
   revalidatePath("/volunteer");
   revalidatePath("/team");
+  revalidatePath("/community");
+  revalidatePath("/");
+  updateTag("volunteers");
+  updateTag("community");
   return { success: true, message: "Profile picture updated successfully!" };
 }

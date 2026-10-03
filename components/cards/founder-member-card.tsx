@@ -63,7 +63,7 @@ export function FounderMemberCard({ founder }: { founder: Founder }) {
             href={`/founders/${founder.id}`}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-poly hover:text-poly-dark transition-colors"
           >
-            <span>সম্পূর্ণ প্রোফাইল ও বাণী</span>
+            <span>Full Profile & Message</span>
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>

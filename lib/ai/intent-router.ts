@@ -152,7 +152,28 @@ export function classifyIntent(message: string): AssistantIntent {
     return "FORM_GUIDANCE";
   }
 
-  // 4. Events, Dates, and Campaigns Check
+  // 4. Notices & Announcements Check (Prioritized so notice queries with terms like committee, meeting, or event route to notices)
+  if (
+    q.includes("নোটিশ") ||
+    q.includes("বিজ্ঞপ্তি") ||
+    q.includes("ঘোষণা") ||
+    q.includes("সার্কুলার") ||
+    q.includes("notice") ||
+    q.includes("notices") ||
+    q.includes("announcement") ||
+    q.includes("announcements") ||
+    q.includes("circular") ||
+    q.includes("circulars") ||
+    q.includes("আজকের নোটিশ") ||
+    q.includes("সাম্প্রতিক নোটিশ") ||
+    q.includes("নতুন নোটিশ") ||
+    q.includes("notis") ||
+    q.includes("notish")
+  ) {
+    return "NOTICE";
+  }
+
+  // 5. Events, Dates, and Campaigns Check
   if (
     q.includes("event") ||
     q.includes("ইভেন্ট") ||
@@ -197,7 +218,7 @@ export function classifyIntent(message: string): AssistantIntent {
     q.includes("february") ||
     q.includes("march") ||
     q.includes("april") ||
-    q.includes("may") ||
+    /\bmay\b/i.test(q) ||
     q.includes("june") ||
     q.includes("july") ||
     q.includes("august") ||
@@ -209,7 +230,7 @@ export function classifyIntent(message: string): AssistantIntent {
     q.includes("ফেব্রুয়ারি") ||
     q.includes("মার্চ") ||
     q.includes("এপ্রিল") ||
-    q.includes("মে") ||
+    /(?:^|\s)মে(?:\s*মাস|$|\s|[০-৯\d,।?!])/i.test(q) ||
     q.includes("জুন") ||
     q.includes("জুলাই") ||
     q.includes("আগস্ট")
@@ -311,6 +332,23 @@ export function classifyIntent(message: string): AssistantIntent {
     q.includes("founder") ||
     q.includes("principal") ||
     q.includes("মেম্বার") ||
+    q.includes("community") ||
+    q.includes("community member") ||
+    q.includes("community members") ||
+    q.includes("কমিউনিটি") ||
+    q.includes("কমিউনিটি মেম্বার") ||
+    q.includes("কমিউনিটি সদস্য") ||
+    q.includes("executive") ||
+    q.includes("executive committee") ||
+    q.includes("executive member") ||
+    q.includes("executive members") ||
+    q.includes("কার্যনির্বাহী") ||
+    q.includes("কার্যনির্বাহী কমিটি") ||
+    q.includes("কার্যনির্বাহী পরিষদ") ||
+    q.includes("leadership") ||
+    q.includes("লিডারশিপ") ||
+    q.includes("প্যানেল") ||
+    q.includes("panel") ||
     q.includes("উপদেষ্টা") ||
     q.includes("alumni") ||
     q.includes("legacy") ||
@@ -368,19 +406,6 @@ export function classifyIntent(message: string): AssistantIntent {
     q.includes("নুসরাত")
   ) {
     return "TEAM_FOUNDER";
-  }
-
-  // 8. Notices & Announcements Check
-  if (
-    q.includes("নোটিশ") ||
-    q.includes("বিজ্ঞপ্তি") ||
-    q.includes("ঘোষণা") ||
-    q.includes("সার্কুলার") ||
-    q.includes("notice") ||
-    q.includes("আজকের নোটিশ") ||
-    q.includes("সাম্প্রতিক নোটিশ")
-  ) {
-    return "NOTICE";
   }
 
   // 9. Member Registration & Portal Guidance Check

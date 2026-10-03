@@ -39,7 +39,7 @@ export function LegacyFilters({ departments, sessions, current }: LegacyFiltersP
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mr-1 flex items-center gap-1.5">
           <Calendar className="h-3.5 w-3.5 text-amber-700" />
-          সেশন আর্কাইভ:
+          Sessions:
         </span>
         <button
           type="button"
@@ -50,7 +50,7 @@ export function LegacyFilters({ departments, sessions, current }: LegacyFiltersP
               : "border border-line bg-white text-muted-foreground hover:bg-mist hover:text-foreground"
           }`}
         >
-          সব সেশন
+          All Sessions
         </button>
         {sessions.map((s) => {
           const isSelected = current.session === s;
@@ -65,7 +65,7 @@ export function LegacyFilters({ departments, sessions, current }: LegacyFiltersP
                   : "border border-line bg-white text-muted-foreground hover:bg-mist hover:text-foreground"
               }`}
             >
-              সেশন {s}
+              Session {s}
             </button>
           );
         })}

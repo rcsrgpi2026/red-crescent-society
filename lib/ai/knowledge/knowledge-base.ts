@@ -308,34 +308,15 @@ export const RCY_KNOWLEDGE_BASE: KnowledgeArticle[] = [
       "resource mobilization",
       "সম্পদ সংগ্রহ",
     ],
-    contentBn: `যুব রেড ক্রিসেন্ট, রাজশাহী পলিটেকনিক ইনস্টিটিউট (RCY RGPI)-এর প্রধান দায়িত্বশীল ও পূর্ণাঙ্গ কার্যনির্বাহী পরিষদ:
+    contentBn: `যুব রেড ক্রিসেন্ট, রাজশাহী পলিটেকনিক ইনস্টিটিউট (RCY RGPI)-এর প্রাতিষ্ঠানিক অভিভাবক ও উপদেষ্টা পরিষদ:
 ১. ইনচার্জ শিক্ষক (Incharge Teacher): জনাব মো: নূরুল আমিন (Md. Nurul Amin)।
 ২. অধ্যক্ষ ও প্রধান উপদেষ্টা (Principal Sir): ইঞ্জিনিয়ার আজম মাসুদুর রহমান (Engr. Ajm Masudur Rahman)।
 ৩. উপাধ্যক্ষ ও প্রতিষ্ঠাতা: ইঞ্জিনিয়ার মো: রাশিদুল আমিন (Engr. Md. Rashidul Amin)।
-৪. যুব দলনেতা (Youth Team Leader): মো: রেজওয়ান (MD. Rejwan)।
-৫. উপ-দলনেতা (Deputy Leaders): হোসাইন মোহাম্মদ এসাম (Hossain Mohammad Esam) ও মোছা: নুসরাত জাহান (Most. Nusrat Jahan)।
 
-বিভাগীয় উইং ও গ্রুপ লিডার (GL) এবং সহকারী গ্রুপ লিডার (AGL) তালিকা:
-• তথ্যপ্রযুক্তি, মিডিয়া ও যোগাযোগ (ICT Media & Communication):
-  - গ্রুপ লিডার (GL): মিনহাজুল আবেদীন পিয়াস (Minhajul Abadin Pius)
-  - সহকারী গ্রুপ লিডার (AGL): মো: সায়েম শাহাদাত (Md. Sayem Shahadat)
-• সম্পদ সংগ্রহ ও ব্যবস্থাপনা (Resource Mobilization):
-  - গ্রুপ লিডার (GL): মো: ইশতিয়াক আহমেদ ইহান (Md. Istiyak Ahmed Ihan)
-  - সহকারী গ্রুপ লিডার (AGL): মো: মারুফ ইসলাম (Md. Maruf Islam)
-• প্রশাসন, সংগঠন ও সদস্য সংগ্রহ (Administration, Organisation & Recruitment):
-  - গ্রুপ লিডার (GL): মো: সজল (MD. Sojol)
-  - সহকারী গ্রুপ লিডার (AGL): নূর মুহাম্মদ আলী (Noor Muhammad Ali)
-• প্রশিক্ষণ ও সহ-শিক্ষা (Training and Co-Curriculum):
-  - গ্রুপ লিডার (GL): অলিউল্লাহ শাওন (Oliullah Shawon)
-  - সহকারী গ্রুপ লিডার (AGL): সুরাইয়া ইয়াসমিন সেতু (Suraiaya Yasmin Setu)
-• দুর্যোগ ও মানবিক সহায়তা (Disaster & Humanitarian Response):
-  - গ্রুপ লিডার (GL): মো: জাকারিয়া (Md. Jakariya)
-  - সহকারী গ্রুপ লিডার (AGL): মো: তামিম হোসেন (Md. Tamim Hossain)
-• স্বাস্থ্য ও সেবা (Health & Services):
-  - গ্রুপ লিডার (GL): সাইফুল্লাহ মনসুর নোমান (Saifullah Mansur Noman)
-  - সহকারী গ্রুপ লিডার (AGL): মো: আব্দুল বারী (Md. Abdul Bari)
+সাবেক ও প্রাক্তন নেতৃবৃন্দ (Former Leaders & Legacy Members):
+মো: রেজওয়ান (সাবেক টিম লিডার), হোসাইন মোহাম্মদ এসাম (সাবেক উপ-দলনেতা ১), মোছা: নুসরাত জাহান (সাবেক উপ-দলনেতা ২), মিনহাজুল আবেদীন পিয়াস (সাবেক গ্রুপ লিডার - আইসিটি), অলিউল্লাহ শাওন (সাবেক গ্রুপ লিডার - ট্রেনিং), মো: তামিম হোসেন (সাবেক সহকারী গ্রুপ লিডার) প্রমুখ তাদের সেশনের সফল দায়িত্ব পালন শেষে বর্তমানে সম্মানিত প্রাক্তন সদস্য (Legacy Members) হিসেবে অন্তর্ভুক্ত হয়েছেন। তাঁদের পূর্ণাঙ্গ প্রোফাইল ও সেশনের তালিকা দেখতে /legacy-members ভিজিট করুন।
 
-কমিটির বিস্তারিত তালিকা ও দায়িত্ব সম্পর্কে যেকোনো তথ্য সরাসরি চ্যাটে জানতে পারেন।`,
+বর্তমান সক্রিয় যুব কার্যনির্বাহী পরিষদ ও বিভাগীয় উইং লিডারদের তালিকা ডেটাবেজ থেকে রিয়েল-টাইমে আপডেট করা হয়।`,
   },
   {
     id: "site-statistics-and-impact",
@@ -433,8 +414,16 @@ export const RCY_KNOWLEDGE_BASE: KnowledgeArticle[] = [
       "সাবেক নেতা",
       "সিনিয়র",
       "former leaders",
+      "সাবেক লিডার",
+      "প্রাক্তন দলনেতা",
     ],
-    contentBn: `আরজিপিআই যুব রেড ক্রিসেন্ট দলের প্রাক্তন নেতৃবৃন্দ ও সম্মানিত আজীবন সদস্যদের অবদানকে স্মরণীয় করে রাখতে 'প্রাক্তন ও আজীবন সদস্য' (/legacy-members) পাতাটি তৈরি করা হয়েছে। এখানে বিভিন্ন সেশনের সাবেক টিম লিডার ও দায়িত্বপ্রাপ্তদের তালিকা সংরক্ষিত আছে।`,
+    contentBn: `আরজিপিআই যুব রেড ক্রিসেন্ট দলের সাবেক নেতৃবৃন্দ ও সম্মানিত আজীবন সদস্যদের অবদানকে স্মরণীয় করে রাখতে 'প্রাক্তন ও আজীবন সদস্য' (/legacy-members) পাতাটি তৈরি করা হয়েছে। 
+
+গুরুত্বপূর্ণ তথ্য:
+• তাঁরা পূর্বে যুব দলনেতা, উপ-দলনেতা, গ্রুপ লিডার প্রভৃতি পদে সফলভাবে নেতৃত্ব দিয়েছেন এবং তাঁদের কার্যকাল (যেমন: সেশন ২০২২-২৩) সফলভাবে সম্পন্ন করেছেন।
+• তাঁরা বর্তমানে কোনো সক্রিয় পদে নেই, বরং সম্মানিত প্রাক্তন সদস্য (Legacy Members) হিসেবে অন্তর্ভুক্ত রয়েছেন।
+• সাবেক নেতৃবৃন্দের মধ্যে রয়েছেন: মো: রেজওয়ান (সাবেক টিম লিডার), হোসাইন মোহাম্মদ এসাম (সাবেক ডেপুটি লিডার ১), মোছা: নুসরাত জাহান (সাবেক ডেপুটি লিডার ২), মিনহাজুল আবেদীন পিয়াস (সাবেক গ্রুপ লিডার), অলিউল্লাহ শাওন (সাবেক গ্রুপ লিডার), মো: তামিম হোসেন (সাবেক এজিএল) প্রমুখ।
+• তাঁদের পূর্ণাঙ্গ তালিকা, সেশন ও পদবী দেখতে /legacy-members ভিজিট করুন।`,
   },
   {
     id: "pwa-mobile-app",
@@ -559,15 +548,15 @@ export async function findRelevantKnowledge(query: string): Promise<string | nul
 
   keywordMatches.sort((a, b) => b.score - a.score);
 
-  // Strong keyword match: >= 2 hits -> return immediately
-  if (keywordMatches.length > 0 && keywordMatches[0].score >= 2) {
+  // Fast in-memory path: If any curated domain keywords match, return immediately (0ms, 0 API calls)
+  if (keywordMatches.length > 0 && keywordMatches[0].score >= 1) {
     return keywordMatches
       .slice(0, 2)
       .map((m) => `[${m.article.titleBn}]:\n${m.article.contentBn}`)
       .join("\n\n");
   }
 
-  // 2. Semantic Embedding Fallback
+  // 2. Semantic Embedding Fallback (only when no keywords match at all)
   try {
     const queryVector = await embedTextWithGemini(q);
     if (queryVector && Array.isArray(kbEmbeddings)) {

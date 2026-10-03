@@ -71,9 +71,9 @@ export interface NotificationPreferences {
   volunteer_notification: boolean;
   event_notification: boolean;
   system_notification: boolean;
-  quiet_hours_enabled: boolean;
-  quiet_hours_start: string;
-  quiet_hours_end: string;
+  quiet_hours_enabled?: boolean;
+  quiet_hours_start?: string;
+  quiet_hours_end?: string;
   created_at?: string;
   updated_at?: string;
 }

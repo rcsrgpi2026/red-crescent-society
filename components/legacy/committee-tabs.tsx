@@ -30,8 +30,8 @@ export function CommitteeTabs({ activeTab, counts }: CommitteeTabsProps) {
   }[] = [
     {
       id: "legacy",
-      label: "সাবেক কার্যনির্বাহী পরিষদ",
-      subLabel: "Legacy & Alumni Archives",
+      label: "Legacy Executive Council",
+      subLabel: "Alumni & 7th Sem Graduates",
       icon: Award,
       color: "text-amber-700",
       activeBadgeBg: "bg-amber-100 text-amber-900 border-amber-300",
@@ -39,8 +39,8 @@ export function CommitteeTabs({ activeTab, counts }: CommitteeTabsProps) {
     },
     {
       id: "active",
-      label: "বর্তমান পরিষদ",
-      subLabel: "Active Executive Team",
+      label: "Active Committee",
+      subLabel: "Current Executive Team",
       icon: Users,
       color: "text-brand",
       activeBadgeBg: "bg-brand/10 text-brand border-brand/20",
@@ -48,8 +48,8 @@ export function CommitteeTabs({ activeTab, counts }: CommitteeTabsProps) {
     },
     {
       id: "founders",
-      label: "প্রতিষ্ঠাতা ও উপদেষ্টা",
-      subLabel: "Founders & Advisory Council",
+      label: "Founders & Advisors",
+      subLabel: "Patrons & Advisory Council",
       icon: Landmark,
       color: "text-poly",
       activeBadgeBg: "bg-poly/10 text-poly border-poly/20",

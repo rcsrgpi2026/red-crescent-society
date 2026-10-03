@@ -63,8 +63,8 @@ export default async function LegacyMembersPage({
     <>
       <PageHero
         eyebrow={t.legacyMembers.heroEyebrow}
-        title="কার্যনির্বাহী পরিষদ ও লিগ্যাসি আর্কাইভ"
-        description="রাজশাহী পলিটেকনিক ইনস্টিটিউট রেড ক্রিসেন্ট যুব ইউনিটের বর্তমান কার্যনির্বাহী পরিষদ, ৭ম সেমিস্টার সম্পন্নকারী সম্মানিত সাবেক নেতৃবৃন্দ এবং প্রতিষ্ঠাতা ও উপদেষ্টামণ্ডলী।"
+        title={t.legacyMembers.heroTitle}
+        description={t.legacyMembers.heroDescription}
       >
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/80 bg-amber-100/90 px-4 py-2 text-xs font-bold text-amber-950 shadow-xs">
@@ -114,7 +114,7 @@ export default async function LegacyMembersPage({
                     <p className="text-sm font-medium text-muted-foreground">
                       {params.session ? (
                         <span className="font-semibold text-amber-900">
-                          সেশন {params.session}-এর সাবেক নেতৃবৃন্দ:{" "}
+                          Former leaders from Session {params.session}:{" "}
                         </span>
                       ) : null}
                       {format(t.legacyMembers.showing, {
@@ -150,10 +150,10 @@ export default async function LegacyMembersPage({
                   <Users className="h-5 w-5" />
                 </div>
                 <h2 className="mt-2 text-lg font-bold text-foreground">
-                  বর্তমান কার্যনির্বাহী পরিষদ (Active Committee)
+                  Active Executive Committee
                 </h2>
                 <p className="mx-auto mt-1 max-w-xl text-xs text-muted-foreground">
-                  বর্তমানে রাজশাহী পলিটেকনিক ইনস্টিটিউটে রেড ক্রিসেন্ট যুব ইউনিটের নিয়মিত মানবিক কার্যক্রম, রক্তদান ও টিম পরিচালনায় নিয়োজিত দায়িত্বপ্রাপ্ত সদস্যবৃন্দ।
+                  Current leaders and executive members actively directing humanitarian operations, blood donation initiatives, and youth activities at Rajshahi Polytechnic Institute.
                 </p>
               </div>
 
@@ -161,7 +161,7 @@ export default async function LegacyMembersPage({
                 <>
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-muted-foreground">
-                      মোট সক্রিয় সদস্য: {activeMembers.length.toLocaleString(locale === "bn" ? "bn-BD" : "en-US")} জন
+                      Total Active Members: {activeMembers.length.toLocaleString(locale === "bn" ? "bn-BD" : "en-US")}
                     </p>
                   </div>
 
@@ -175,8 +175,8 @@ export default async function LegacyMembersPage({
                 <div className="mt-12">
                   <EmptyState
                     icon={Users}
-                    title="কোনো সক্রিয় সদস্য পাওয়া যায়নি"
-                    description="বর্তমানে কোনো সক্রিয় কমিটির তথ্য সংরক্ষিত নেই।"
+                    title="No active committee members found"
+                    description="Active committee records will appear here once configured."
                   />
                 </div>
               )}
@@ -191,10 +191,10 @@ export default async function LegacyMembersPage({
                   <Landmark className="h-5 w-5" />
                 </div>
                 <h2 className="mt-2 text-lg font-bold text-foreground">
-                  প্রতিষ্ঠাতা ও উপদেষ্টামণ্ডলী (Founders & Advisory Council)
+                  Founders & Advisory Council
                 </h2>
                 <p className="mx-auto mt-1 max-w-xl text-xs text-muted-foreground">
-                  যাঁদের ঐকান্তিক প্রচেষ্টা ও নির্দেশনায় রাজশাহী পলিটেকনিক ইনস্টিটিউট রেড ক্রিসেন্ট যুব ইউনিটের ভিত্তি রচিত হয়েছিল।
+                  Honoring the visionary founders, teachers, and patrons who established and nurtured the Rajshahi Polytechnic Institute Red Crescent Youth Unit.
                 </p>
               </div>
 
@@ -208,8 +208,8 @@ export default async function LegacyMembersPage({
                 <div className="mt-12">
                   <EmptyState
                     icon={Landmark}
-                    title="প্রতিষ্ঠাতাদের তথ্য শীঘ্রই আপডেট করা হবে"
-                    description="প্রতিষ্ঠাতা ও উপদেষ্টামণ্ডলীর তালিকা খুব শীঘ্রই যুক্ত করা হবে।"
+                    title="Founders records updating soon"
+                    description="The roster of founders and advisory council members will be available shortly."
                   />
                 </div>
               )}

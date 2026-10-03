@@ -133,8 +133,8 @@ export function ResetPasswordForm() {
 
         <div className="pt-2">
           <Link href="/forgot-password">
-            <Button className="w-full h-9 text-xs sm:h-10 sm:text-sm">
-              Request a New Reset Link
+            <Button className="w-full h-10 text-xs sm:text-sm rounded-full bg-crescent hover:bg-crescent-dark text-white">
+              Reset Password with 6-Digit Code
             </Button>
           </Link>
         </div>

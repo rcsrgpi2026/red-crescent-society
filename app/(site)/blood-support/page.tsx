@@ -81,12 +81,14 @@ export default async function BloodSupportPage({
                 <h2 className="text-2xl font-bold text-foreground">{t.blood.recentRequests}</h2>
                 {completedCount > 0 && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200">
-                    ✨ সফল রক্তদান: {completedCount} জন
+                    ✨ {locale === "bn" ? `সফল রক্তদান: ${completedCount} জন` : `Fulfilled Requests: ${completedCount}`}
                   </span>
                 )}
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                এই মুহূর্তে যেসব রোগীর জরুরি রক্তের প্রয়োজন (সক্রিয় অনুরোধসমূহ)
+                {locale === "bn"
+                  ? "এই মুহূর্তে যেসব রোগীর জরুরি রক্তের প্রয়োজন (সক্রিয় অনুরোধসমূহ)"
+                  : "Active emergency blood requests requiring immediate donors"}
               </p>
             </div>
             <div className="w-full sm:w-auto flex justify-center sm:justify-end">
@@ -156,8 +158,16 @@ export default async function BloodSupportPage({
             <div className="mt-6">
               <EmptyState
                 icon={HeartPulse}
-                title="বর্তমানে কোনো সক্রিয় রক্তের অনুরোধ নেই"
-                description="আলহামদুলিল্লাহ, পূর্বের রক্তের অনুরোধগুলো সফলভাবে সম্পন্ন হয়েছে। নতুন কোনো রোগীর জরুরি রক্তের প্রয়োজন হলে উপরের বাটনে ক্লিক করে অনুরোধ জানাতে পারেন।"
+                title={
+                  locale === "bn"
+                    ? "বর্তমানে কোনো সক্রিয় রক্তের অনুরোধ নেই"
+                    : "No Active Blood Requests at the Moment"
+                }
+                description={
+                  locale === "bn"
+                    ? "আলহামদুলিল্লাহ, পূর্বের রক্তের অনুরোধগুলো সফলভাবে সম্পন্ন হয়েছে। নতুন কোনো রোগীর জরুরি রক্তের প্রয়োজন হলে উপরের বাটনে ক্লিক করে অনুরোধ জানাতে পারেন।"
+                    : "All previous blood requests have been successfully fulfilled. If a patient requires emergency blood support, please click the button above to submit a request."
+                }
               />
             </div>
           )}

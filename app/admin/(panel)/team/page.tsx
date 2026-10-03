@@ -48,14 +48,20 @@ export default async function AdminTeamMembersPage({
   const isLegacy =
     params.view === "legacy" ? true : params.view === "active" ? false : undefined;
 
-  const [volunteers, communityMembers] = await Promise.all([
+  const [allMembers, communityMembers] = await Promise.all([
     adminGetTeamMembers({
       status: params.status || undefined,
       search: params.search,
-      isLegacy,
     }),
     adminGetCommunityMembers(),
   ]);
+
+  const activeCount = allMembers.filter((m) => !m.is_legacy).length;
+  const legacyCount = allMembers.filter((m) => m.is_legacy).length;
+  const volunteers =
+    isLegacy === undefined
+      ? allMembers
+      : allMembers.filter((m) => Boolean(m.is_legacy) === isLegacy);
 
   const communityMap = new Map(
     communityMembers
@@ -223,6 +229,12 @@ export default async function AdminTeamMembersPage({
           <div className="flex flex-wrap gap-2 border-b border-line pb-2.5">
             {ROSTER_TABS.map((tab) => {
               const active = (params.view ?? "") === tab.value;
+              const count =
+                tab.value === "legacy"
+                  ? legacyCount
+                  : tab.value === "active"
+                    ? activeCount
+                    : allMembers.length;
               return (
                 <Link
                   key={tab.value}
@@ -235,7 +247,17 @@ export default async function AdminTeamMembersPage({
                   )}
                 >
                   {tab.value === "legacy" && <GraduationCap className="h-3.5 w-3.5" />}
-                  {tab.label}
+                  <span>{tab.label}</span>
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.2 text-[10px]",
+                      active
+                        ? "bg-white/20 text-white"
+                        : "bg-black/5 text-muted-foreground"
+                    )}
+                  >
+                    {count}
+                  </span>
                 </Link>
               );
             })}

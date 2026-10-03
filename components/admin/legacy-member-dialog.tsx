@@ -49,9 +49,9 @@ export function LegacyMemberDialog({ member, trigger }: LegacyMemberDialogProps)
     );
     setLegacyTenure(member.session ? `Session ${member.session}` : "7th Sem Graduate");
     if (!legacyNote) {
-      setLegacyNote(`৭ম সেমিস্টার সম্পন্নকারী প্রাক্তন দায়িত্বপ্রাপ্ত সদস্য (সেশন ${member.session || ""})`);
+      setLegacyNote(`7th semester graduate and former executive member (Session ${member.session || ""})`);
     }
-    toast.info("৭ম সেমিস্টার ফেয়ারওয়েল তথ্য পূরণ করা হয়েছে। এবার Save চাপুন।");
+    toast.info("7th semester farewell preset applied. Click Save Changes to confirm.");
   };
 
   const handleSave = () => {
@@ -141,7 +141,7 @@ export function LegacyMemberDialog({ member, trigger }: LegacyMemberDialogProps)
                   onClick={apply7thSemesterPreset}
                   className="h-7 border-amber-300 bg-amber-100/80 px-2 text-[10px] font-bold text-amber-950 hover:bg-amber-200"
                 >
-                  ⚡ ১-ক্লিকে ৭ম সেমিস্টার প্রিসেট
+                  ⚡ 1-Click 7th Sem Preset
                 </Button>
               </div>
 

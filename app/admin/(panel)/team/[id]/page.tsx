@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, BadgeCheck, Camera, PhoneCall, UserRound, Sparkles } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Camera, PhoneCall, UserRound, Sparkles, GraduationCap } from "lucide-react";
 import { adminGetTeamMember, adminGetPoints, getSettings } from "@/lib/queries";
 import { submitTeamMemberStatus, deleteTeamMember, updateTeamMemberPhoto } from "@/lib/admin-actions";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
@@ -9,6 +9,7 @@ import { ConfirmDelete } from "@/components/admin/confirm-delete";
 import { AdminFormDialog } from "@/components/admin/admin-form-dialog";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { PointsForm } from "@/components/admin/points-form";
+import { LegacyMemberDialog } from "@/components/admin/legacy-member-dialog";
 import { Reveal } from "@/components/shared/reveal";
 import { POINT_CATEGORIES, formatDateTime } from "@/lib/constants";
 
@@ -41,8 +42,16 @@ export default async function AdminTeamMemberDetailPage({
     LEADERSHIP: Number(ps.leadership ?? POINT_CATEGORIES.LEADERSHIP),
   };
 
-  const rows: { label: string; value: string | null }[] = [
+  const rows: { label: string; value: string | null | undefined }[] = [
     { label: "Member ID", value: volunteer.member_id },
+    { label: "Roster Status", value: volunteer.is_legacy ? "Legacy / Alumni Member" : "Active Team Member" },
+    ...(volunteer.is_legacy
+      ? [
+          { label: "Legacy Designation", value: volunteer.legacy_designation },
+          { label: "Legacy Tenure", value: volunteer.legacy_tenure },
+          { label: "Legacy Note", value: volunteer.legacy_note },
+        ]
+      : []),
     { label: "Roll", value: volunteer.roll },
     { label: "Registration number", value: volunteer.registration_no },
     { label: "Session", value: volunteer.session },
@@ -112,6 +121,12 @@ export default async function AdminTeamMemberDetailPage({
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-bold text-foreground">{volunteer.name}</h1>
               <StatusBadge label={volunteer.status} tone={statusTone(volunteer.status)} />
+              {volunteer.is_legacy && (
+                <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                  <GraduationCap className="h-3.5 w-3.5" />
+                  Legacy Member
+                </span>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
               {volunteer.member_id ?? "No member ID yet"} · {volunteer.position}
@@ -119,6 +134,7 @@ export default async function AdminTeamMemberDetailPage({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <LegacyMemberDialog member={volunteer} />
           {volunteer.status !== "APPROVED" && (
             <form action={submitTeamMemberStatus}>
               <input type="hidden" name="id" value={volunteer.id} />

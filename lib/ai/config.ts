@@ -76,12 +76,10 @@ export const AI_CONFIG = {
   geminiModel: process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
   groqModel: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
 
-  // Model Cascading Fallback Chains - Valid, currently active models only
+  // Model Cascading Fallback Chains - Streamlined for low latency
   geminiCandidateModels: [
     process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
     "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    "gemini-flash-lite-latest",
   ],
   groqCandidateModels: [
     process.env.GROQ_MODEL || "openai/gpt-oss-120b",
@@ -92,9 +90,9 @@ export const AI_CONFIG = {
   maxMessageLength: 2500, // Reject prompts exceeding ~2500 characters
   maxHistoryTurns: 6, // Keep recent 6 conversation turns for context
 
-  // Timeouts (Milliseconds) — 7s per attempt to prevent premature aborts while keeping system snappy
-  providerTimeoutMs: 7000,
-  totalRequestTimeoutMs: 14000,
+  // Timeouts (Milliseconds) — Snappy 4s per attempt to prevent slow hanging requests
+  providerTimeoutMs: 4000,
+  totalRequestTimeoutMs: 8000,
 
   // Response Caching (Multiplies effective RPD by 3x-5x)
   cache: {

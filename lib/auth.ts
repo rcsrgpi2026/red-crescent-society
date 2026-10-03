@@ -3,9 +3,11 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Profile, Student, TeamMember, UserRole } from "@/types/database";
 
 export async function getCurrentUser() {
+  if (!isSupabaseConfigured) return null;
   const supabase = await createClient();
   const {
     data: { user },
@@ -14,6 +16,7 @@ export async function getCurrentUser() {
 }
 
 export async function getProfile(): Promise<Profile | null> {
+  if (!isSupabaseConfigured) return null;
   const user = await getCurrentUser();
   if (!user) return null;
 
@@ -28,6 +31,7 @@ export async function getProfile(): Promise<Profile | null> {
 }
 
 export async function getCurrentTeamMember(): Promise<TeamMember | null> {
+  if (!isSupabaseConfigured) return null;
   const user = await getCurrentUser();
   if (!user) return null;
 
@@ -42,6 +46,7 @@ export async function getCurrentTeamMember(): Promise<TeamMember | null> {
 }
 
 export async function getCurrentStudent(): Promise<Student | null> {
+  if (!isSupabaseConfigured) return null;
   const user = await getCurrentUser();
   if (!user) return null;
 

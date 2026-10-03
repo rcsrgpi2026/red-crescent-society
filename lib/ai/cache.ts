@@ -54,8 +54,14 @@ export function getCachedResponse(query: string): AssistantResponse | null {
 export function setCachedResponse(query: string, response: AssistantResponse): void {
   if (!AI_CONFIG.cache.enabled) return;
 
-  // Don't cache errors, fallbacks, or emergency answers
-  if (response.sourceType === "fallback" || response.intent === "EMERGENCY") {
+  // Don't cache errors, fallbacks, emergency answers, or real-time dynamic queries (notices, blood, leadership & community)
+  if (
+    response.sourceType === "fallback" ||
+    response.intent === "EMERGENCY" ||
+    response.intent === "NOTICE" ||
+    response.intent === "BLOOD_SUPPORT" ||
+    response.intent === "TEAM_FOUNDER"
+  ) {
     return;
   }
 
@@ -75,8 +81,17 @@ export function setCachedResponse(query: string, response: AssistantResponse): v
 }
 
 /**
- * Clears the cache (useful in tests)
+ * Clears the cache (optionally matching a pattern or tag)
  */
-export function clearResponseCache(): void {
-  responseStore.clear();
+export function clearResponseCache(pattern?: string): void {
+  if (!pattern) {
+    responseStore.clear();
+    return;
+  }
+  const norm = pattern.toLowerCase();
+  for (const key of responseStore.keys()) {
+    if (key.includes(norm)) {
+      responseStore.delete(key);
+    }
+  }
 }

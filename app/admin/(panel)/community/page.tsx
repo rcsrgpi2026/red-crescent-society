@@ -2,7 +2,8 @@ import Image from "next/image";
 import { Plus, Pencil, Network } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { adminGetCommunityMembers } from "@/lib/queries";
-import { saveCommunityMember, deleteCommunityMember } from "@/lib/admin-actions";
+import { saveCommunityMember, deleteCommunityMember, syncAllCommunityMembers } from "@/lib/admin-actions";
+import { SyncCommunityButton } from "@/components/admin/sync-community-button";
 import { AdminFormDialog, FieldError } from "@/components/admin/admin-form-dialog";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
@@ -28,20 +29,23 @@ export default async function AdminCommunityPage() {
         description="The incharge teacher and executive members shown as the leadership tree on the Community page. Level 1 is the top of the tree (incharge teacher) down to level 5 (assistant group leaders). Edit names, photos and roles here."
         tone="bg-gradient-to-br from-teal-500 to-cyan-700"
         actions={
-          <AdminFormDialog
-            trigger={
-              <Button>
-                <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-                Add person
-              </Button>
-            }
-            title="Add community member"
-            description="This person appears on the Community page at the chosen level, in display order."
-            action={saveCommunityMember}
-            submitLabel="Add person"
-          >
-            <MemberFields />
-          </AdminFormDialog>
+          <div className="flex items-center gap-2">
+            <SyncCommunityButton action={syncAllCommunityMembers} />
+            <AdminFormDialog
+              trigger={
+                <Button>
+                  <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+                  Add person
+                </Button>
+              }
+              title="Add community member"
+              description="This person appears on the Community page at the chosen level, in display order."
+              action={saveCommunityMember}
+              submitLabel="Add person"
+            >
+              <MemberFields />
+            </AdminFormDialog>
+          </div>
         }
       />
 

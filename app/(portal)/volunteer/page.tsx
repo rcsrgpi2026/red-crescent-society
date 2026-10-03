@@ -170,7 +170,7 @@ export default async function TeamMemberPortalPage() {
             <div>
               <h3 className="text-base font-bold text-foreground">Notification & Alert Preferences</h3>
               <p className="text-xs text-muted-foreground">
-                Customize which alerts you receive and manage quiet hours for your account.
+                Customize which alerts and categories you receive on your account.
               </p>
             </div>
             <NotificationPreferencesForm initialPreferences={notifPrefs} />

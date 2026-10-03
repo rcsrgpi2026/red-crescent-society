@@ -37,7 +37,7 @@ export async function embedTextWithGemini(text: string): Promise<number[] | null
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000); // 4s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5s snappy timeout
 
     const res = await fetch(url, {
       method: "POST",

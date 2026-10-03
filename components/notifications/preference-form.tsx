@@ -9,7 +9,6 @@ import {
   Users,
   Calendar,
   Settings,
-  Moon,
   Smartphone,
   Check,
   Loader2,
@@ -17,7 +16,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { updateMyNotificationPreferences } from "@/lib/notifications/actions";
 import { subscribeUserToPush, getNotificationPermissionState, isPushSupported } from "@/lib/notifications/client";
@@ -45,9 +43,6 @@ export function NotificationPreferencesForm({
     volunteer_notification: initialPreferences?.volunteer_notification ?? true,
     event_notification: initialPreferences?.event_notification ?? true,
     system_notification: initialPreferences?.system_notification ?? true,
-    quiet_hours_enabled: initialPreferences?.quiet_hours_enabled ?? false,
-    quiet_hours_start: initialPreferences?.quiet_hours_start ?? "22:00",
-    quiet_hours_end: initialPreferences?.quiet_hours_end ?? "07:00",
   });
 
   const handleToggle = (key: keyof typeof form, value: boolean) => {
@@ -242,47 +237,6 @@ export function NotificationPreferencesForm({
         </div>
       </div>
 
-      {/* Quiet Hours */}
-      <div className="rounded-2xl border bg-card p-5 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-start gap-3">
-            <Moon className="mt-0.5 h-4 w-4 text-poly" />
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">Quiet Hours</h3>
-              <p className="text-xs text-muted-foreground">
-                Mute non-urgent notifications during your sleep hours (Critical emergency alerts still pass through).
-              </p>
-            </div>
-          </div>
-          <Switch
-            checked={form.quiet_hours_enabled}
-            onCheckedChange={(v) => handleToggle("quiet_hours_enabled", v)}
-          />
-        </div>
-
-        {form.quiet_hours_enabled && (
-          <div className="grid grid-cols-2 gap-4 pt-2">
-            <div>
-              <Label className="text-xs text-muted-foreground">Start Time</Label>
-              <Input
-                type="time"
-                value={form.quiet_hours_start}
-                onChange={(e) => setForm((prev) => ({ ...prev, quiet_hours_start: e.target.value }))}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">End Time</Label>
-              <Input
-                type="time"
-                value={form.quiet_hours_end}
-                onChange={(e) => setForm((prev) => ({ ...prev, quiet_hours_end: e.target.value }))}
-                className="mt-1"
-              />
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Save Button */}
       <div className="flex justify-end">

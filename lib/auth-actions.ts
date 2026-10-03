@@ -9,7 +9,7 @@ import { z } from "zod";
 import { studentSignupSchema, teamMemberSignupSchema } from "@/lib/validation";
 import { sendPasswordResetEmail } from "@/lib/email/resend";
 import { createAndDispatchNotification } from "@/lib/notifications/notification-service";
-import { getAppUrl } from "@/lib/constants";
+import { getAppUrl, getPublicAppUrl } from "@/lib/constants";
 import type { ActionResult } from "@/lib/actions";
 
 export interface LoginResult extends ActionResult {
@@ -306,7 +306,7 @@ export async function requestPasswordReset(email: string): Promise<ActionResult>
     };
   }
 
-  const appUrl = getAppUrl();
+  const appUrl = getPublicAppUrl();
   const redirectTo = `${appUrl}/auth/callback?next=/reset-password`;
 
   // 1. Direct email delivery via Gmail SMTP or Resend using admin generateLink
@@ -322,7 +322,10 @@ export async function requestPasswordReset(email: string): Promise<ActionResult>
         },
       });
 
-      if (!error && data?.properties?.action_link) {
+      if (!error && (data?.properties?.email_otp || data?.properties?.action_link)) {
+        const otpCode = data?.properties?.email_otp;
+        const actionLink = data?.properties?.action_link;
+
         const { data: profile } = await admin
           .from("profiles")
           .select("full_name")
@@ -331,14 +334,15 @@ export async function requestPasswordReset(email: string): Promise<ActionResult>
 
         const emailResult = await sendPasswordResetEmail({
           to: cleanEmail,
-          resetLink: data.properties.action_link,
+          otpCode,
+          resetLink: actionLink,
           recipientName: profile?.full_name || null,
         });
 
         if (emailResult.success) {
           return {
             success: true,
-            message: "Password reset link sent! Please check your email inbox and spam folder.",
+            message: "A 6-digit verification code has been sent to your email. Please check your inbox and spam folder.",
           };
         } else {
           console.warn("[requestPasswordReset] Email delivery failed, falling back to Supabase auth:", emailResult.error);
@@ -363,10 +367,100 @@ export async function requestPasswordReset(email: string): Promise<ActionResult>
 
     return {
       success: true,
-      message: "Password reset link sent! Please check your email inbox and spam folder.",
+      message: "Password reset instruction has been sent! Please check your email inbox and spam folder.",
     };
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to send reset link.";
+    const msg = err instanceof Error ? err.message : "Failed to send reset code.";
+    return { success: false, message: msg };
+  }
+}
+
+/**
+ * Verifies the 6-digit recovery OTP and updates the user's password directly.
+ */
+export async function resetPasswordWithCode({
+  email,
+  code,
+  newPassword,
+}: {
+  email: string;
+  code: string;
+  newPassword: string;
+}): Promise<LoginResult> {
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanCode = code.trim().replace(/\s+/g, "");
+
+  const emailCheck = z.string().email().safeParse(cleanEmail);
+  if (!emailCheck.success) {
+    return { success: false, message: "Please enter a valid email address." };
+  }
+
+  if (!cleanCode || cleanCode.length !== 6 || !/^\d{6}$/.test(cleanCode)) {
+    return { success: false, message: "Please enter the 6-digit verification code sent to your email." };
+  }
+
+  if (!newPassword || newPassword.length < 8) {
+    return { success: false, message: "Password must be at least 8 characters long." };
+  }
+
+  if (!isSupabaseConfigured) {
+    return { success: false, message: "Authentication service is not configured." };
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+      email: cleanEmail,
+      token: cleanCode,
+      type: "recovery",
+    });
+
+    if (verifyError || !verifyData?.user) {
+      console.warn("[resetPasswordWithCode] verifyOtp failed:", verifyError);
+      return {
+        success: false,
+        message: verifyError?.message || "Invalid or expired 6-digit code. Please request a new code.",
+      };
+    }
+
+    const userId = verifyData.user.id;
+
+    // Update the password using the now-active session
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    // Also defensively update with admin client to guarantee the change in Supabase Auth
+    if (isServiceRoleConfigured) {
+      try {
+        const admin = createAdminClient();
+        await admin.auth.admin.updateUserById(userId, { password: newPassword });
+      } catch (adminErr) {
+        console.warn("[resetPasswordWithCode] Admin update fallback error:", adminErr);
+      }
+    }
+
+    if (updateError) {
+      return { success: false, message: updateError.message };
+    }
+
+    // Determine destination based on user profile
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const role = profile?.role ?? null;
+    const destination = isAdminRole(role) ? "/admin" : homeForRole(role);
+
+    return {
+      success: true,
+      message: "Password reset successful! Logging you in...",
+      redirectTo: destination,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to reset password.";
     return { success: false, message: msg };
   }
 }

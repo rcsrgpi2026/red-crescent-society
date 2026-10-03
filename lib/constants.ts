@@ -172,21 +172,10 @@ export const DEFAULT_COMMUNITY_MEMBERS: {
   display_order: number;
 }[] = [
   { name: "Md. Nurul Amin", position: "INCHARGE TEACHER", sub_role: null, level: 1, display_order: 0 },
-  { name: "MD. Rejwan", position: "TEAM LEADER", sub_role: null, level: 2, display_order: 0 },
-  { name: "Hossain Mohammad Esam", position: "DEPUTY LEADER - 01", sub_role: null, level: 3, display_order: 0 },
-  { name: "Most. Nusrat Jahan", position: "DEPUTY LEADER - 02", sub_role: null, level: 3, display_order: 1 },
-  { name: "MD. Sojol", position: "GROUP LEADER", sub_role: "Administration, Organisation & Recruitment", level: 4, display_order: 0 },
-  { name: "Oliullah Shawon", position: "GROUP LEADER", sub_role: "Training and Co-Curriculum", level: 4, display_order: 1 },
-  { name: "Minhajul Abadin Pius", position: "GROUP LEADER", sub_role: "ICT Media & Communication", level: 4, display_order: 2 },
-  { name: "Md. Jakariya", position: "GROUP LEADER", sub_role: "Disaster & Humanitarian Response", level: 4, display_order: 3 },
-  { name: "Saifullah Mansur Noman", position: "GROUP LEADER", sub_role: "Health & Services", level: 4, display_order: 4 },
-  { name: "Md. Istiyak Ahmed Ihan", position: "GROUP LEADER", sub_role: "Resource Mobilization", level: 4, display_order: 5 },
-  { name: "Noor Muhammad Ali", position: "ASST. GROUP LEADER", sub_role: "Administration, Organisation & Recruitment", level: 5, display_order: 0 },
-  { name: "Suraiaya Yasmin Setu", position: "ASST. GROUP LEADER", sub_role: "Training and Co-Curriculum", level: 5, display_order: 1 },
-  { name: "Md. Sayem Shahadat", position: "ASST. GROUP LEADER", sub_role: "ICT Media & Communication", level: 5, display_order: 2 },
-  { name: "Md. Tamim Hossain", position: "ASST. GROUP LEADER", sub_role: "Disaster & Humanitarian Response", level: 5, display_order: 3 },
-  { name: "Md. Abdul Bari", position: "ASST. GROUP LEADER", sub_role: "Health & Services", level: 5, display_order: 4 },
-  { name: "Md. Maruf Islam", position: "ASST. GROUP LEADER", sub_role: "Resource Mobilization", level: 5, display_order: 5 },
+  { name: "Noor Muhammad Ali", position: "TEAM LEADER", sub_role: null, level: 2, display_order: 0 },
+  { name: "Suraiaya Yasmin Setu", position: "GROUP LEADER", sub_role: "Training and Co-Curriculum", level: 4, display_order: 0 },
+  { name: "Mehedi Hasan", position: "ASST. GROUP LEADER", sub_role: null, level: 5, display_order: 0 },
+  { name: "Md. Sayem Shahadat", position: "GENERAL MEMBER", sub_role: null, level: 5, display_order: 1 },
 ];
 
 export const ADMIN_ROLES: UserRole[] = [
@@ -440,3 +429,24 @@ export function getAppUrl(): string {
   // In local development, use env or default to localhost
   return (envUrl || "http://localhost:3000").replace(/\/+$/, "");
 }
+
+/**
+ * Returns a publicly reachable base URL (never localhost) for emails and external webhooks.
+ */
+export function getPublicAppUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+    return envUrl.replace(/\/+$/, "");
+  }
+  if (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL.replace(/\/+$/, "")}`;
+  }
+  if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+    return `https://${process.env.NEXT_PUBLIC_VERCEL_URL.replace(/\/+$/, "")}`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL.replace(/\/+$/, "")}`;
+  }
+  return "https://rgpircy.vercel.app";
+}
+

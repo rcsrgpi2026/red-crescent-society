@@ -239,11 +239,13 @@ export const getCommunityMembers = unstable_cache(
     }
     const { data } = await supabase
       .from("community_members")
-      .select("*")
+      .select("*, team_members(is_legacy)")
       .eq("is_active", true)
       .order("level", { ascending: true })
       .order("display_order", { ascending: true });
-    const members = data ?? [];
+    const members = (data ?? [])
+      .filter((m: any) => !m.team_members?.is_legacy)
+      .map(({ team_members, ...rest }: any) => rest as CommunityMember);
     return members.length > 0 ? members : DEFAULT_COMMUNITY_MEMBERS.map(defaultCommunityMember);
   },
   ["community-members"],
@@ -957,10 +959,12 @@ export async function adminGetCommunityMembers(): Promise<CommunityMember[]> {
   if (!supabase) return [];
   const { data } = await supabase
     .from("community_members")
-    .select("*")
+    .select("*, team_members(is_legacy)")
     .order("level", { ascending: true })
     .order("display_order", { ascending: true });
-  return data ?? [];
+  return (data ?? [])
+    .filter((m: any) => !m.team_members?.is_legacy)
+    .map(({ team_members, ...rest }: any) => rest as CommunityMember);
 }
 
 export async function adminGetNotices(): Promise<Notice[]> {

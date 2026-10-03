@@ -43,6 +43,17 @@ export function invalidateLeadershipCache(): void {
 }
 
 /**
+ * Invalidates cached notices summary when an admin adds/updates a notice.
+ */
+export function invalidateNoticesCache(): void {
+  for (const key of memCache.keys()) {
+    if (key.startsWith("recent_notices") || key.includes("notices")) {
+      memCache.delete(key);
+    }
+  }
+}
+
+/**
  * Resolves real-time active blood requests summary from Supabase.
  */
 export async function getActiveBloodRequestsSummary(): Promise<SanitizedBloodSummary> {
@@ -257,7 +268,7 @@ export async function getLegacyMembersSummary(limit = 6): Promise<SanitizedLegac
 /**
  * Resolves current published notices for AI grounding.
  */
-export async function getRecentNoticesSummary(limit = 4): Promise<SanitizedNoticeItem[]> {
+export async function getRecentNoticesSummary(limit = 6): Promise<SanitizedNoticeItem[]> {
   return getCached(`recent_notices_${limit}`, async () => {
     try {
       const supabase = getPublicClient();
@@ -265,26 +276,60 @@ export async function getRecentNoticesSummary(limit = 4): Promise<SanitizedNotic
 
       const { data, error } = await supabase
         .from("notices")
-        .select("id, title, slug, category, published_at, notice_attachments(id)")
-        .eq("is_published", true)
-        .order("published_at", { ascending: false })
+        .select("id, title, slug, category, created_at, pinned, content, notice_attachments(id, name, url)")
+        .eq("published", true)
+        .order("pinned", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(limit);
 
-      if (error || !data) return [];
+      if (error || !data) {
+        if (error) console.error("[AI LiveData Exception] getRecentNoticesSummary:", error);
+        return [];
+      }
 
-      return data.map((n: any) => ({
-        id: n.id,
-        title: n.title,
-        slug: n.slug,
-        category: n.category || "General",
-        publishedAt: n.published_at,
-        hasAttachment: Array.isArray(n.notice_attachments) && n.notice_attachments.length > 0,
-      }));
+      return data.map((n: any) => {
+        const firstAttachment = Array.isArray(n.notice_attachments) && n.notice_attachments.length > 0
+          ? n.notice_attachments[0]
+          : null;
+
+        let formattedDate = "";
+        if (n.created_at) {
+          try {
+            const d = new Date(n.created_at);
+            const enDate = d.toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            });
+            const bnDate = d.toLocaleDateString("bn-BD", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            });
+            formattedDate = `${bnDate} (${enDate})`;
+          } catch {
+            formattedDate = String(n.created_at).slice(0, 10);
+          }
+        }
+
+        return {
+          id: n.id,
+          title: n.title,
+          slug: n.slug,
+          category: n.category || "General",
+          publishedAt: formattedDate || "Recent",
+          pinned: !!n.pinned,
+          content: n.content ? n.content.replace(/\r?\n+/g, " ").trim().slice(0, 300) : null,
+          hasAttachment: !!firstAttachment,
+          attachmentName: firstAttachment?.name || null,
+          attachmentUrl: firstAttachment?.url || null,
+        };
+      });
     } catch (err) {
       console.error("[AI LiveData Exception] getRecentNoticesSummary:", err);
       return [];
     }
-  });
+  }, 30_000);
 }
 
 /**
@@ -395,7 +440,7 @@ export async function getLeadershipSummary(): Promise<SanitizedLeadershipSummary
           .eq("is_active", true)
           .order("level", { ascending: true })
           .order("display_order", { ascending: true })
-          .limit(30),
+          .limit(40),
         supabase
           .from("founders")
           .select("name, title, category, bio")
@@ -404,10 +449,9 @@ export async function getLeadershipSummary(): Promise<SanitizedLeadershipSummary
           .limit(6),
         supabase
           .from("team_members")
-          .select("name, position, level")
-          .eq("is_active", true)
-          .order("display_order", { ascending: true })
-          .limit(8),
+          .select("id, name, position, rcy_department, photo_url")
+          .eq("status", "APPROVED")
+          .limit(20),
       ]);
 
       const community = communityRes.data || [];
@@ -478,7 +522,7 @@ export async function getLeadershipSummary(): Promise<SanitizedLeadershipSummary
       console.error("[AI LiveData Exception] getLeadershipSummary:", err);
       return defaultData;
     }
-  });
+  }, 30_000);
 }
 
 /**
@@ -665,15 +709,19 @@ export async function searchHistoricalEntities(query: string): Promise<string[]>
       // 2. Search notices
       const { data: matchedNotices } = await supabase
         .from("notices")
-        .select("title, slug, category, published_at")
-        .ilike("title", `%${term}%`)
-        .eq("is_published", true)
-        .limit(2);
+        .select("title, slug, category, created_at, content, pinned")
+        .or(`title.ilike.%${term}%,content.ilike.%${term}%`)
+        .eq("published", true)
+        .order("pinned", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(3);
 
       if (matchedNotices && matchedNotices.length > 0) {
         for (const n of matchedNotices) {
+          const dateStr = n.created_at ? n.created_at.slice(0, 10) : "Recent";
+          const snippet = n.content ? ` - সারসংক্ষেপ: ${n.content.replace(/\r?\n+/g, " ").slice(0, 120)}...` : "";
           results.push(
-            `Matched Notice: "${n.title}" (${n.category}, Published: ${n.published_at?.slice(0, 10) || "Recent"}, Link: /notices/${n.slug})`
+            `Matched Notice: "${n.title}" [Category: ${n.category || "General"}, Date: ${dateStr}, Link: /notices/${n.slug}]${snippet}`
           );
         }
       }
@@ -681,14 +729,15 @@ export async function searchHistoricalEntities(query: string): Promise<string[]>
       // 3. Search community members & incharge teacher
       const { data: matchedComm } = await supabase
         .from("community_members")
-        .select("name, position, level")
-        .or(`name.ilike.%${term}%,position.ilike.%${term}%`)
+        .select("name, position, sub_role, level")
+        .or(`name.ilike.%${term}%,position.ilike.%${term}%,sub_role.ilike.%${term}%`)
         .eq("is_active", true)
-        .limit(2);
+        .limit(5);
 
       if (matchedComm && matchedComm.length > 0) {
         for (const c of matchedComm) {
-          results.push(`Matched Leadership / Incharge: "${c.name}" - ${c.position} (Level ${c.level})`);
+          const sub = c.sub_role ? ` (${c.sub_role})` : "";
+          results.push(`Matched Leadership / Community Member: "${c.name}" - ${c.position}${sub}`);
         }
       }
 
@@ -709,16 +758,25 @@ export async function searchHistoricalEntities(query: string): Promise<string[]>
       // 5. Search team members
       const { data: matchedMembers } = await supabase
         .from("team_members")
-        .select("name, position, level")
-        .ilike("name", `%${term}%`)
-        .eq("is_active", true)
-        .limit(2);
+        .select("name, position, rcy_department, is_legacy, legacy_designation, session")
+        .or(`name.ilike.%${term}%,position.ilike.%${term}%,legacy_designation.ilike.%${term}%`)
+        .eq("status", "APPROVED")
+        .limit(4);
 
       if (matchedMembers && matchedMembers.length > 0) {
         for (const m of matchedMembers) {
-          results.push(
-            `Matched Team Member: "${m.name}" - ${m.position} (${m.level})`
-          );
+          if (m.is_legacy) {
+            const desig = m.legacy_designation || m.position || "সাবেক কার্যনির্বাহী সদস্য";
+            const sess = m.session ? ` (সেশন: ${m.session})` : "";
+            results.push(
+              `Matched Legacy Member (সাবেক/প্রাক্তন সদস্য - পূর্বে দায়িত্ব পালন করেছেন): "${m.name}" - ${desig}${sess} [Archive: /legacy-members]`
+            );
+          } else {
+            const dept = m.rcy_department ? ` [উইং: ${m.rcy_department}]` : "";
+            results.push(
+              `Matched Active Team Member (বর্তমান সক্রিয় সদস্য): "${m.name}" - ${m.position}${dept}`
+            );
+          }
         }
       }
       // 6. Search trainings
@@ -768,33 +826,52 @@ export async function buildTrustedLiveContext(intent: string, query?: string): P
   const parts: string[] = [];
   const q = query || "";
 
-  // 1. Check for targeted historical entity matches first (e.g. "12 september", "first aid", "ডেঙ্গু")
-  const specificMatches = q ? await searchHistoricalEntities(q) : [];
-  if (specificMatches.length > 0) {
-    parts.push(`[SPECIFIC SEARCH MATCHES FOR USER QUERY]`);
-    specificMatches.forEach((m) => parts.push(`- ${m}`));
+  // 1. Only run historical searches if the query actually pertains to activities, notices or specific events
+  const needsHistoricalSearch =
+    intent === "EVENT_ACTIVITY" ||
+    intent === "NOTICE" ||
+    /\b(202[0-9]|event|activity|notice|ইভেন্ট|কার্যক্রম|নোটিশ|ক্যাম্পেইন|অভিযান|প্রশিক্ষণ|training)\b/i.test(q);
+
+  if (needsHistoricalSearch && q) {
+    const specificMatches = await searchHistoricalEntities(q);
+    if (specificMatches.length > 0) {
+      parts.push(`[SPECIFIC SEARCH MATCHES FOR USER QUERY]`);
+      specificMatches.forEach((m) => parts.push(`- ${m}`));
+      parts.push("");
+    }
+  }
+
+  // 2. Fetch baseline essentials (fast cached contact & recruitment)
+  // Only query full 5-table impact stats if the query or intent explicitly asks for statistics
+  const needsSiteStats =
+    intent === "SITE_STATS" ||
+    /\b(পরিসংখ্যান|সর্বমোট|কতোজন|কতজন|কত ব্যাগ|কত ইউনিট|রক্তদান সম্পন্ন|stats|total|impact|donated)\b/i.test(q);
+
+  const [recruitment, contactInfo, impact] = await Promise.all([
+    getVolunteerRecruitmentStatus(),
+    getOfficialContactInfo(),
+    needsSiteStats ? getSiteImpactStats() : Promise.resolve(null),
+  ]);
+
+  if (impact) {
+    parts.push(`[LIVE RCY PORTAL STATE & IMPACT STATISTICS]`);
+    parts.push(`- Total Blood Units Donated (সর্বমোট রক্তদান সম্পন্ন): ${impact.totalBloodDonations} ব্যাগ/ইউনিট (সফল রক্তদান আবেদন: ${impact.completedBloodRequests}টি)`);
+    parts.push(`- Active Registered Blood Donors (নিবন্ধিত রক্তদাতা): ${impact.activeDonors} জন`);
+    if (Object.keys(impact.availableDonorsByGroup).length > 0) {
+      const donorsByGroupStr = Object.entries(impact.availableDonorsByGroup)
+        .map(([bg, count]) => `${bg}: ${count} জন`)
+        .join(", ");
+      parts.push(`- Available Donors by Blood Group (গ্রুপভিত্তিক সক্রিয় রক্তদাতা): ${donorsByGroupStr}`);
+    }
+    parts.push(`- Total Volunteers & Team Members (স্বেচ্ছাসেবক ও সদস্য): ${impact.totalVolunteers} জন`);
+    parts.push(`- Completed Humanitarian Events (সম্পন্ন কর্মসূচি): ${impact.eventsCompleted}টি`);
+    parts.push(`- Training Sessions Conducted (প্রশিক্ষণ কর্মসূচি): ${impact.trainingSessions}টি`);
+    if (impact.studentsReached > 0) {
+      parts.push(`- Students Reached (উপকৃত শিক্ষার্থী): ${impact.studentsReached}+ জন`);
+    }
     parts.push("");
   }
 
-  // 2. Global Live Platform Impact Statistics, Recruitment & Official Contact Info
-  const [impact, recruitment, contactInfo] = await Promise.all([
-    getSiteImpactStats(),
-    getVolunteerRecruitmentStatus(),
-    getOfficialContactInfo(),
-  ]);
-
-  parts.push(`[LIVE RCY PORTAL STATE & IMPACT STATISTICS]`);
-  parts.push(`- Total Blood Units Donated (সর্বমোট রক্তদান সম্পন্ন): ${impact.totalBloodDonations} ব্যাগ/ইউনিট (সফল রক্তদান আবেদন: ${impact.completedBloodRequests}টি)`);
-  parts.push(`- Active Registered Blood Donors (নিবন্ধিত রক্তদাতা): ${impact.activeDonors} জন`);
-  if (Object.keys(impact.availableDonorsByGroup).length > 0) {
-    const donorsByGroupStr = Object.entries(impact.availableDonorsByGroup)
-      .map(([bg, count]) => `${bg}: ${count} জন`)
-      .join(", ");
-    parts.push(`- Available Donors by Blood Group (গ্রুপভিত্তিক সক্রিয় রক্তদাতা): ${donorsByGroupStr}`);
-  } else {
-    parts.push(`- Available Donors by Blood Group: বর্তমানে নির্দিষ্ট গ্রুপে কোনো সক্রিয় ডোনার লিস্টেড নেই।`);
-  }
-  parts.push(`- Total Volunteers & Team Members (স্বেচ্ছাসেবক ও সদস্য): ${impact.totalVolunteers} জন`);
   parts.push(
     `- Volunteer Recruitment Status: ${
       recruitment.isActive
@@ -802,11 +879,6 @@ export async function buildTrustedLiveContext(intent: string, query?: string): P
         : `CLOSED (বর্তমানে নতুন সদস্য আবেদন সাময়িকভাবে বন্ধ রয়েছে। পরবর্তী ক্যাম্পেইন নোটিশ বোর্ডে জানানো হবে)`
     }`
   );
-  parts.push(`- Completed Humanitarian Events (সম্পন্ন কর্মসূচি): ${impact.eventsCompleted}টি`);
-  parts.push(`- Training Sessions Conducted (প্রশিক্ষণ কর্মসূচি): ${impact.trainingSessions}টি`);
-  if (impact.studentsReached > 0) {
-    parts.push(`- Students Reached (উপকৃত শিক্ষার্থী): ${impact.studentsReached}+ জন`);
-  }
   parts.push(`- Official Contact Email: ${contactInfo.email}`);
   parts.push(`- Emergency Helpline & Phone: ${contactInfo.phone}`);
   parts.push(`- Campus & Office Address: ${contactInfo.address}`);
@@ -952,8 +1024,11 @@ export async function buildTrustedLiveContext(intent: string, query?: string): P
     }
 
   } else if (intent === "TEAM_FOUNDER") {
-    // Focus on incharge teacher, principal, founders, and youth committee (~200 tokens)
-    const leadership = await getLeadershipSummary();
+    // Focus on incharge teacher, principal, founders, active youth committee, and legacy former leaders
+    const [leadership, legacyMembers] = await Promise.all([
+      getLeadershipSummary(),
+      getLegacyMembersSummary(12),
+    ]);
     parts.push(`- Official Incharge Teacher & Leadership Directory:`);
     if (leadership.inchargeTeacher) {
       parts.push(`  * ইনচার্জ শিক্ষক (Incharge Teacher): ${leadership.inchargeTeacher.name} [পদবী: ${leadership.inchargeTeacher.position}]`);
@@ -966,25 +1041,42 @@ export async function buildTrustedLiveContext(intent: string, query?: string): P
       leadership.founders.forEach((f) => parts.push(`    - ${f.name} (${f.position})`));
     }
     if (leadership.keyLeaders && leadership.keyLeaders.length > 0) {
-      parts.push(`  * যুব দল ও কার্যনির্বাহী পরিষদ (Youth Leadership & Executive Committee):`);
+      parts.push(`  * বর্তমান সক্রিয় যুব কার্যনির্বাহী পরিষদ (Current Active Youth Leadership):`);
       leadership.keyLeaders.forEach((l) => {
         const wingInfo = l.subRole ? ` [উইং/বিভাগ: ${l.subRole}]` : "";
-        parts.push(`    - ${l.position}${wingInfo}: ${l.name} (${l.level})`);
+        parts.push(`    - ${l.position}${wingInfo}: ${l.name}`);
       });
     }
-    parts.push(`- Founders & Advisors Page: /founders | Join & About: /join (Note: /team is private staff-only, never link it)`);
+    if (legacyMembers && legacyMembers.length > 0) {
+      parts.push(`  * প্রাক্তন কার্যনির্বাহী সদস্য ও সাবেক নেতৃবৃন্দ (Former Leaders & Legacy Members / সেশন সমাপনকারী সাবেক নেতৃবৃন্দ):`);
+      legacyMembers.forEach((lm) => {
+        const desig = lm.designation || lm.position || "সাবেক কার্যনির্বাহী সদস্য";
+        const sessionInfo = lm.session ? ` [সেশন: ${lm.session}]` : "";
+        parts.push(`    - ${lm.name}: ${desig}${sessionInfo} (পূর্বে সফলভাবে দায়িত্ব পালন করেছেন, বর্তমানে সম্মানিত প্রাক্তন সদস্য)`);
+      });
+    }
+    parts.push(`- CRITICAL RULE ON LEGACY MEMBERS: Legacy members (যেমন: মো: রেজওয়ান, হোসাইন মোহাম্মদ এসাম, মোছা: নুসরাত জাহান, অলিউল্লাহ শাওন, মিনহাজুল আবেদীন পিয়াস, মো: তামিম হোসেন) are FORMER leaders who completed their tenure. They are NOT current leaders. Always clarify that they are former/legacy leaders and direct users to /legacy-members.`);
+    parts.push(`- Founders & Advisors Page: /founders | Legacy Members Page: /legacy-members | Join & About: /join (Note: /team is private staff-only, never link it)`);
 
   } else if (intent === "NOTICE") {
-    // Focus on notices (~120 tokens)
-    const notices = await getRecentNoticesSummary(5);
+    // Focus on notices (~300 tokens)
+    const notices = await getRecentNoticesSummary(6);
     if (notices.length > 0) {
-      parts.push(`- Published Notices:`);
-      notices.forEach((n) =>
+      parts.push(`- All Active & Recent Published Notices (অফিসিয়াল নোটিশ বোর্ড ও সার্কুলার তালিকা):`);
+      notices.forEach((n, idx) => {
+        const pinBadge = n.pinned ? " [📌 Pinned/জরুরি নোটিশ]" : "";
+        const attachBadge = n.hasAttachment ? " [অফিশিয়াল সার্কুলার ফাইল/ছবি সংযুক্ত]" : "";
+        const snippet = n.content
+          ? `\n    সারসংক্ষেপ/মূল বিষয়বস্তু: ${n.content}`
+          : "";
         parts.push(
-          `  * "${n.title}" (${n.category}, Link: /notices/${n.slug}${n.hasAttachment ? ", অফিশিয়াল সার্কুলার ফাইল সংযুক্ত" : ""})`
-        )
-      );
-      parts.push(`- Notices Page: /notices`);
+          `  ${idx + 1}. "${n.title}"${pinBadge}\n    ক্যাটাগরি: ${n.category} | প্রকাশের তারিখ: ${n.publishedAt} | সরাসরি লিংক: /notices/${n.slug}${attachBadge}${snippet}`
+        );
+      });
+      parts.push(`- Notices Hub Page: /notices (সকল নোটিশ ও সার্কুলার দেখতে নোটিশ বোর্ডের অ্যাকশন বাটন যুক্ত করুন)`);
+    } else {
+      parts.push(`- Published Notices: বর্তমানে নোটিশ বোর্ডে কোনো সক্রিয় নোটিশ নেই।`);
+      parts.push(`- Notices Hub Page: /notices`);
     }
 
   } else if (intent === "RECRUITMENT") {
@@ -1001,7 +1093,7 @@ export async function buildTrustedLiveContext(intent: string, query?: string): P
     const [blood, helpline, notices, events] = await Promise.all([
       getActiveBloodRequestsSummary(),
       getEmergencyHelpline(),
-      getRecentNoticesSummary(3),
+      getRecentNoticesSummary(4),
       getUpcomingEventsSummary(4),
     ]);
 
@@ -1013,7 +1105,7 @@ export async function buildTrustedLiveContext(intent: string, query?: string): P
     );
 
     if (notices.length > 0) {
-      parts.push(`- Recent Notices: ` + notices.map((n) => `"${n.title}" (/notices/${n.slug})`).join("; "));
+      parts.push(`- Recent Notices (/notices): ` + notices.map((n) => `"${n.title}" (${n.category}, ${n.publishedAt}, /notices/${n.slug})`).join("; "));
     }
 
     if (events.length > 0) {

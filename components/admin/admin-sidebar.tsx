@@ -44,6 +44,7 @@ const NAV = [
   { label: "Notifications", href: "/admin/notifications", icon: Bell },
   { label: "Recruitment", href: "/admin/recruitment", icon: UserPlus },
   { label: "Team Members", href: "/admin/team", icon: Users },
+  { label: "Legacy Members", href: "/admin/team?view=legacy", icon: Award },
   { label: "Students", href: "/admin/students", icon: GraduationCap },
 
   { label: "Directors", href: "/admin/founders", icon: Handshake },
@@ -127,11 +128,20 @@ export function AdminSidebar({
         aria-label="Admin navigation"
       >
         {NAV.map((item) => {
-          const active =
-            mounted &&
-            (item.href === "/admin"
-              ? pathname === "/admin"
-              : pathname.startsWith(item.href));
+          let active = false;
+          if (mounted) {
+            const currentSearch = typeof window !== "undefined" ? window.location.search : "";
+            const currentView = new URLSearchParams(currentSearch).get("view");
+            if (item.href === "/admin") {
+              active = pathname === "/admin";
+            } else if (item.href.includes("?view=legacy")) {
+              active = pathname.startsWith("/admin/team") && currentView === "legacy";
+            } else if (item.href === "/admin/team") {
+              active = pathname.startsWith("/admin/team") && currentView !== "legacy";
+            } else {
+              active = pathname.startsWith(item.href);
+            }
+          }
           return (
             <Link
               key={item.href}

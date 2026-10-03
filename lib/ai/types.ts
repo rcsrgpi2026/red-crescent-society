@@ -129,7 +129,11 @@ export interface SanitizedNoticeItem {
   slug: string;
   category: string;
   publishedAt: string;
+  pinned?: boolean;
+  content?: string | null;
   hasAttachment?: boolean;
+  attachmentName?: string | null;
+  attachmentUrl?: string | null;
 }
 
 export interface SanitizedEventItem {

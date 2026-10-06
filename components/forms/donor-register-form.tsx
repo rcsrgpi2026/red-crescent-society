@@ -228,43 +228,45 @@ export function DonorRegisterForm() {
           আপনার মোবাইল ও ইমেইল নম্বর সুরক্ষিত রাখা হয় — জরুরি ক্যাম্পেইন ও প্রয়োজনীয় তথ্যে যোগাযোগ করা হবে।
         </p>
 
-        <div>
-          <Label htmlFor="d-lastDonation" className="font-medium text-foreground text-sm">
-            Last donation date / সর্বশেষ রক্তদানের তারিখ (ঐচ্ছিক)
-          </Label>
-          <div className="relative mt-1.5">
-            <Calendar className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-            <Input
-              id="d-lastDonation"
-              name="lastDonationDate"
-              type="date"
-              className="h-11 rounded-full pl-10 pr-4 bg-slate-50/60 border-slate-200 focus:bg-white focus:border-crescent focus:ring-4 focus:ring-crescent/15 transition-all text-sm"
-            />
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="d-lastDonation" className="font-medium text-foreground text-sm">
+              Last donation date / সর্বশেষ রক্তদানের তারিখ (ঐচ্ছিক)
+            </Label>
+            <div className="relative mt-1.5">
+              <Calendar className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+              <Input
+                id="d-lastDonation"
+                name="lastDonationDate"
+                type="date"
+                className="h-11 rounded-full pl-10 pr-4 bg-slate-50/60 border-slate-200 focus:bg-white focus:border-crescent focus:ring-4 focus:ring-crescent/15 transition-all text-sm"
+              />
+            </div>
           </div>
-        </div>
 
-        <div>
-          <Label htmlFor="d-passcode" className="font-medium text-foreground text-sm">
-            Set a passcode (4–6 digits) / গোপন পাসকোড
-          </Label>
-          <div className="relative mt-1.5">
-            <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-            <Input
-              id="d-passcode"
-              name="passcode"
-              type="password"
-              inputMode="numeric"
-              pattern="[0-9]{4,6}"
-              autoComplete="new-password"
-              placeholder="••••"
-              className="h-11 rounded-full pl-10 pr-4 bg-slate-50/60 border-slate-200 focus:bg-white focus:border-crescent focus:ring-4 focus:ring-crescent/15 transition-all text-sm tracking-widest"
-              required
-            />
+          <div>
+            <Label htmlFor="d-passcode" className="font-medium text-foreground text-sm">
+              Set a passcode (4–6 digits) / গোপন পাসকোড
+            </Label>
+            <div className="relative mt-1.5">
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+              <Input
+                id="d-passcode"
+                name="passcode"
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]{4,6}"
+                autoComplete="new-password"
+                placeholder="••••"
+                className="h-11 rounded-full pl-10 pr-4 bg-slate-50/60 border-slate-200 focus:bg-white focus:border-crescent focus:ring-4 focus:ring-crescent/15 transition-all text-sm tracking-widest"
+                required
+              />
+            </div>
+            <FieldError errors={errors} name="passcode" />
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              স্ট্যাটাস নিজে আপডেট করার জন্য এই ৪-৬ সংখ্যার কোডটি সংরক্ষণ করুন।
+            </p>
           </div>
-          <FieldError errors={errors} name="passcode" />
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            ভবিষ্যতে নিজের তথ্য বা স্ট্যাটাস নিজে আপডেট করার জন্য এই ৪-৬ সংখ্যার কোডটি সংরক্ষণ করুন।
-          </p>
         </div>
 
         <div className="flex items-start gap-3 rounded-2xl border border-line bg-slate-50/60 p-4 transition-all hover:bg-slate-50">

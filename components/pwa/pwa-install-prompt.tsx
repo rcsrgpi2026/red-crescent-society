@@ -3,25 +3,16 @@
 import { useEffect, useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { Download, X, Share, Info } from "lucide-react";
+import { Download, X, Info } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-// Global listener to capture the event as early as possible
-if (typeof window !== "undefined") {
-  window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault();
-    (window as any).__rcyPwaPrompt = e;
-  });
-}
-
 export function PwaInstallPrompt() {
   const pathname = usePathname();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isIOS, setIsIOS] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [showManualGuide, setShowManualGuide] = useState(false);
 
@@ -32,78 +23,74 @@ export function PwaInstallPrompt() {
   }, []);
 
   useEffect(() => {
-    // 0. Only show on home screen (never on sub-pages like /blood-support, /events, etc.)
+    if (typeof window === "undefined") return;
+
+    // 0. Only show on home screen
     if (pathname !== "/") {
       setIsVisible(false);
       return;
     }
 
-    // 1. Wipe any legacy 7-day localStorage blocker from previous version
-    try {
-      localStorage.removeItem("rcy_pwa_install_dismissed");
-    } catch {}
+    // 1. Desktop version only (>= 768px) — mobile uses the sidebar option
+    if (window.innerWidth < 768) {
+      setIsVisible(false);
+      return;
+    }
 
-    // 2. Check if already running in standalone PWA mode (app opened as installed)
+    // 2. Check if already running in standalone PWA mode
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
 
     if (isStandalone) return;
 
-    // 3. Check dismissal timestamp (suppress for 10 minutes if user explicitly dismissed via 'X')
-    const dismissedAt = sessionStorage.getItem("rcy_pwa_dismissed_time");
-    if (dismissedAt) {
-      const minutesPassed = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60);
-      if (minutesPassed < 10) return;
-    }
+    // 3. Check dismissal timestamp
+    const dismissedAt = sessionStorage.getItem("rcy_pwa_desktop_dismissed");
+    if (dismissedAt) return;
 
     // 4. Check for pre-captured prompt
     if ((window as any).__rcyPwaPrompt) {
       setDeferredPrompt((window as any).__rcyPwaPrompt);
     }
 
-    // 5. Detect iOS Safari
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
-    const isSafari = /safari/.test(userAgent) && !/chrome|crios|fxios/.test(userAgent);
-    if (isIosDevice && isSafari) {
-      setIsIOS(true);
-    }
-
-    // 6. Listen for beforeinstallprompt
+    // 5. Listen for beforeinstallprompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       const promptEvent = e as BeforeInstallPromptEvent;
       (window as any).__rcyPwaPrompt = promptEvent;
       setDeferredPrompt(promptEvent);
-      // Do not force show immediately if a modal popup is open
-      if (!hasActivePopup()) {
+      if (!hasActivePopup() && window.innerWidth >= 768) {
         setIsVisible(true);
       }
     };
 
-    // 7. Hide immediately when app is installed
+    // 6. Hide immediately when app is installed
     const handleAppInstalled = () => {
       setIsVisible(false);
       setDeferredPrompt(null);
     };
 
+    const handlePromptReady = () => {
+      if ((window as any).__rcyPwaPrompt) {
+        setDeferredPrompt((window as any).__rcyPwaPrompt);
+      }
+    };
+
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
+    window.addEventListener("rcy_pwa_prompt_ready", handlePromptReady);
 
     let timer: NodeJS.Timeout | null = null;
 
     const showPromptSafely = () => {
-      if (hasActivePopup()) return;
+      if (hasActivePopup() || window.innerWidth < 768) return;
       setIsVisible(true);
     };
 
-    // 8. Event listeners for when popups/announcements are closed by the user
     const handlePopupClosed = () => {
       if (timer) clearTimeout(timer);
-      // Wait 700ms after user closes the popup so it transitions smoothly
       timer = setTimeout(() => {
-        if (!hasActivePopup()) {
+        if (!hasActivePopup() && window.innerWidth >= 768) {
           showPromptSafely();
         }
       }, 700);
@@ -112,60 +99,39 @@ export function PwaInstallPrompt() {
     window.addEventListener("rcy_announcement_closed", handlePopupClosed);
     window.addEventListener("rcy_popup_closed", handlePopupClosed);
 
-    // 9. Observer to monitor if popups appear or disappear dynamically
-    const observer = new MutationObserver(() => {
-      if (hasActivePopup()) {
-        // If a popup appears, ensure install prompt stays hidden
-        setIsVisible(false);
-      }
-    });
-
-    try {
-      observer.observe(document.body, { childList: true, subtree: true });
-    } catch {}
-
-    // 10. If no popup appears within 3.5s (giving time for announcements to mount), display prompt
     timer = setTimeout(() => {
-      if (!hasActivePopup()) {
+      if (!hasActivePopup() && window.innerWidth >= 768) {
         showPromptSafely();
       }
     }, 3500);
 
     return () => {
       if (timer) clearTimeout(timer);
-      observer.disconnect();
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
+      window.removeEventListener("rcy_pwa_prompt_ready", handlePromptReady);
       window.removeEventListener("rcy_announcement_closed", handlePopupClosed);
       window.removeEventListener("rcy_popup_closed", handlePopupClosed);
     };
   }, [pathname, hasActivePopup]);
 
   const handleInstallClick = async () => {
-    // If iOS Safari, show guide
-    if (isIOS) {
-      setShowManualGuide((prev) => !prev);
-      return;
-    }
-
-    // Check current state or global window reference
     const promptEvent = deferredPrompt || (window as any).__rcyPwaPrompt;
 
     if (promptEvent && typeof promptEvent.prompt === "function") {
       try {
         await promptEvent.prompt();
         const choice = await promptEvent.userChoice;
-        if (choice.outcome === "accepted") {
+        if (choice?.outcome === "accepted") {
           setIsVisible(false);
         }
         setDeferredPrompt(null);
         (window as any).__rcyPwaPrompt = null;
       } catch (err) {
-        console.error("PWA install error:", err);
+        console.error("Desktop PWA install error:", err);
         setShowManualGuide(true);
       }
     } else {
-      // Browser didn't provide beforeinstallprompt (e.g. desktop Chrome already showing address bar icon or Firefox)
       setShowManualGuide((prev) => !prev);
     }
   };
@@ -173,7 +139,7 @@ export function PwaInstallPrompt() {
   const handleDismiss = () => {
     setIsVisible(false);
     setShowManualGuide(false);
-    sessionStorage.setItem("rcy_pwa_dismissed_time", Date.now().toString());
+    sessionStorage.setItem("rcy_pwa_desktop_dismissed", Date.now().toString());
   };
 
   if (!isVisible || pathname !== "/") return null;
@@ -181,8 +147,8 @@ export function PwaInstallPrompt() {
   return (
     <aside
       role="region"
-      aria-label="App installation banner"
-      className="fixed bottom-20 left-4 right-4 z-40 mx-auto max-w-md animate-in fade-in slide-in-from-bottom-5 duration-300 sm:bottom-6 sm:left-6 sm:right-auto sm:max-w-sm"
+      aria-label="Desktop App installation banner"
+      className="hidden md:block fixed bottom-6 left-6 z-40 max-w-sm animate-in fade-in slide-in-from-bottom-5 duration-300"
     >
       <div className="relative overflow-hidden rounded-2xl border border-poly/20 bg-white/95 p-4 shadow-xl shadow-poly/10 backdrop-blur-md dark:border-poly/30 dark:bg-slate-900/95">
         <div className="flex items-center gap-3.5">
@@ -203,13 +169,14 @@ export function PwaInstallPrompt() {
               Red Crescent Youth App
             </h4>
             <p className="line-clamp-1 text-xs text-muted-foreground">
-              সহজ ব্যবহারে হোমস্ক্রিনে অ্যাপটি যোগ করুন
+              সহজ ব্যবহারে অ্যাপটি ইনস্টল করুন
             </p>
           </div>
 
           {/* Action Buttons */}
           <div className="flex shrink-0 items-center gap-1.5">
             <button
+              type="button"
               onClick={handleInstallClick}
               className="inline-flex items-center gap-1.5 rounded-full bg-poly px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs transition-all hover:bg-poly-dark hover:shadow-md active:scale-95 cursor-pointer"
             >
@@ -217,6 +184,7 @@ export function PwaInstallPrompt() {
               ইনস্টল
             </button>
             <button
+              type="button"
               onClick={handleDismiss}
               className="rounded-full p-1.5 text-muted-foreground hover:bg-mist hover:text-foreground cursor-pointer"
               aria-label="Dismiss banner"
@@ -226,30 +194,16 @@ export function PwaInstallPrompt() {
           </div>
         </div>
 
-        {/* Installation guide helper (if iOS or browser didn't auto-prompt) */}
+        {/* Installation guide helper (if browser didn't auto-prompt) */}
         {showManualGuide && (
           <div className="mt-3 rounded-xl border border-poly/20 bg-poly-soft/70 p-3 text-xs text-foreground animate-in fade-in duration-200">
-            {isIOS ? (
-              <>
-                <p className="flex items-center gap-1.5 font-semibold text-brand">
-                  <Share className="h-3.5 w-3.5 text-brand" aria-hidden />
-                  Safari থেকে ইনস্টল করার নিয়ম:
-                </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                  নিচের <strong>Share (শেয়ার)</strong> বাটন চাপুন ➔ তারপর <strong>&quot;Add to Home Screen&quot; (হোম স্ক্রিনে যোগ করুন)</strong> সিলেক্ট করুন।
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="flex items-center gap-1.5 font-semibold text-poly-dark">
-                  <Info className="h-3.5 w-3.5 text-poly" aria-hidden />
-                  ব্রাউজার থেকে সরাসরি ইনস্টল করুন:
-                </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                  ব্রাউজারের অ্যাড্রেস বারের ডানপাশে থাকা <strong>Install (⊕)</strong> আইকনে ক্লিক করুন অথবা মেনু (⋮) থেকে <strong>&quot;Install Red Crescent Youth...&quot;</strong> সিলেক্ট করুন।
-                </p>
-              </>
-            )}
+            <p className="flex items-center gap-1.5 font-semibold text-poly-dark">
+              <Info className="h-3.5 w-3.5 text-poly" aria-hidden />
+              ব্রাউজার থেকে সরাসরি ইনস্টল করুন:
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+              ব্রাউজারের অ্যাড্রেস বারের ডানপাশে থাকা <strong>Install (⊕)</strong> আইকনে ক্লিক করুন অথবা মেনু (⋮) থেকে <strong>&quot;Install Red Crescent Youth...&quot;</strong> সিলেক্ট করুন।
+            </p>
           </div>
         )}
       </div>

@@ -244,10 +244,8 @@ export async function getLegacyMembersSummary(limit = 6): Promise<SanitizedLegac
       if (!supabase) return [];
 
       const { data } = await supabase
-        .from("team_members")
+        .from("public_legacy_members")
         .select("id, name, position, legacy_designation, session, department")
-        .eq("is_legacy", true)
-        .eq("status", "APPROVED")
         .limit(limit);
 
       if (!data) return [];
@@ -755,28 +753,36 @@ export async function searchHistoricalEntities(query: string): Promise<string[]>
         }
       }
 
-      // 5. Search team members
-      const { data: matchedMembers } = await supabase
-        .from("team_members")
-        .select("name, position, rcy_department, is_legacy, legacy_designation, session")
-        .or(`name.ilike.%${term}%,position.ilike.%${term}%,legacy_designation.ilike.%${term}%`)
-        .eq("status", "APPROVED")
-        .limit(4);
+      // 5. Search team members (active and legacy)
+      const [{ data: matchedActive }, { data: matchedLegacy }] = await Promise.all([
+        supabase
+          .from("public_team_members")
+          .select("name, position, rcy_department")
+          .or(`name.ilike.%${term}%,position.ilike.%${term}%`)
+          .limit(3),
+        supabase
+          .from("public_legacy_members")
+          .select("name, position, legacy_designation, session")
+          .or(`name.ilike.%${term}%,position.ilike.%${term}%,legacy_designation.ilike.%${term}%`)
+          .limit(3),
+      ]);
 
-      if (matchedMembers && matchedMembers.length > 0) {
-        for (const m of matchedMembers) {
-          if (m.is_legacy) {
-            const desig = m.legacy_designation || m.position || "সাবেক কার্যনির্বাহী সদস্য";
-            const sess = m.session ? ` (সেশন: ${m.session})` : "";
-            results.push(
-              `Matched Legacy Member (সাবেক/প্রাক্তন সদস্য - পূর্বে দায়িত্ব পালন করেছেন): "${m.name}" - ${desig}${sess} [Archive: /legacy-members]`
-            );
-          } else {
-            const dept = m.rcy_department ? ` [উইং: ${m.rcy_department}]` : "";
-            results.push(
-              `Matched Active Team Member (বর্তমান সক্রিয় সদস্য): "${m.name}" - ${m.position}${dept}`
-            );
-          }
+      if (matchedLegacy && matchedLegacy.length > 0) {
+        for (const m of matchedLegacy) {
+          const desig = m.legacy_designation || m.position || "সাবেক কার্যনির্বাহী সদস্য";
+          const sess = m.session ? ` (সেশন: ${m.session})` : "";
+          results.push(
+            `Matched Legacy Member (সাবেক/প্রাক্তন সদস্য - পূর্বে দায়িত্ব পালন করেছেন): "${m.name}" - ${desig}${sess} [Archive: /legacy-members]`
+          );
+        }
+      }
+
+      if (matchedActive && matchedActive.length > 0) {
+        for (const m of matchedActive) {
+          const dept = m.rcy_department ? ` [উইং: ${m.rcy_department}]` : "";
+          results.push(
+            `Matched Active Team Member (বর্তমান সক্রিয় সদস্য): "${m.name}" - ${m.position}${dept}`
+          );
         }
       }
       // 6. Search trainings

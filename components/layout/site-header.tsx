@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Phone, ChevronDown, HeartPulse, LogIn, LayoutDashboard, User } from "lucide-react";
+import { Menu, Phone, ChevronDown, HeartPulse, CircleUserRound, LayoutDashboard, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,7 @@ import { SiteLogo } from "@/components/layout/site-logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { AssistantTrigger } from "@/components/ai/assistant-trigger";
+import { SidebarPwaInstall } from "@/components/pwa/sidebar-pwa-install";
 import { useLocale } from "@/components/providers/locale-provider";
 import { stripLocalePrefix } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
@@ -237,7 +238,7 @@ export function SiteHeader({
                       className="rounded-lg border-line"
                       aria-label={t.nav.login}
                     >
-                      <LogIn className="h-4.5 w-4.5" aria-hidden />
+                      <CircleUserRound className="h-5 w-5" aria-hidden />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-44">
@@ -325,6 +326,7 @@ export function SiteHeader({
 
                       <Button asChild size="lg" variant="outline" className="w-full">
                         <Link href="/student/login" onClick={() => setMenuOpen(false)}>
+                          <CircleUserRound className="mr-2 h-4.5 w-4.5" />
                           {t.nav.studentPortal}
                         </Link>
                       </Button>
@@ -336,6 +338,10 @@ export function SiteHeader({
                       {t.nav.emergencySupport}
                     </Link>
                   </Button>
+
+                  <div className="mt-2">
+                    <SidebarPwaInstall onInstalled={() => setMenuOpen(false)} />
+                  </div>
                 </nav>
               </SheetContent>
             </Sheet>

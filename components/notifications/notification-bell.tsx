@@ -30,6 +30,7 @@ import {
 } from "@/lib/notifications/actions";
 import {
   subscribeUserToPush,
+  syncPushSubscription,
   getNotificationPermissionState,
   isPushSupported,
 } from "@/lib/notifications/client";
@@ -104,7 +105,7 @@ export function NotificationBell({ userId }: { userId?: string | null }) {
 
     // Auto-sync push subscription in the background if browser permission is already granted
     if (isPushSupported() && getNotificationPermissionState() === "granted") {
-      subscribeUserToPush().catch(() => {});
+      syncPushSubscription().catch(() => {});
     }
 
     // Poll every 45s for fresh notifications

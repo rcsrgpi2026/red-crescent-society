@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, LogIn } from "lucide-react";
+import { Loader2, CircleUserRound } from "lucide-react";
 import { adminLogin } from "@/lib/actions";
 import { Label, Input, Button } from "@/components/ui";
 import type { ActionResult } from "@/lib/actions";
@@ -74,7 +74,7 @@ export function LoginForm() {
         {busy ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
         ) : (
-          <LogIn className="mr-2 h-4 w-4" aria-hidden />
+          <CircleUserRound className="mr-2 h-4 w-4" aria-hidden />
         )}
         {busy ? "Signing in…" : "Sign in to Dashboard"}
       </Button>

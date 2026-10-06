@@ -165,15 +165,25 @@ export async function subscribeUserToPush(): Promise<{
 
       // Only subscribe if not already subscribed
       if (!subscription) {
-        const appServerKey = urlBase64ToUint8Array(vapidKey);
-        subscription = await withTimeout(
-          swReady.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: appServerKey as unknown as BufferSource,
-          }),
-          10000,
-          "Push service subscription timeout."
-        );
+        try {
+          const appServerKey = urlBase64ToUint8Array(vapidKey);
+          subscription = await withTimeout(
+            swReady.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: appServerKey as unknown as BufferSource,
+            }),
+            10000,
+            "Push service subscription timeout."
+          );
+        } catch (subErr: any) {
+          // Push service might fail in local dev, offline, VPN, or if browser blocks FCM (e.g. Brave, ad-blocker)
+          console.warn("Browser push service registration failed:", subErr?.message || subErr);
+          return {
+            success: false,
+            message: subErr?.message || "Push service error. Please check your browser connection or settings.",
+            permission: typeof Notification !== "undefined" ? Notification.permission : "default",
+          };
+        }
       }
 
       const subJson = subscription?.toJSON();
@@ -203,11 +213,11 @@ export async function subscribeUserToPush(): Promise<{
       permission: "granted",
     };
   } catch (err: any) {
-    console.error("subscribeUserToPush error:", err);
+    console.warn("subscribeUserToPush notice:", err?.message || err);
     return {
       success: false,
       message: err.message || "Failed to enable notifications.",
-      permission: Notification.permission,
+      permission: typeof Notification !== "undefined" ? Notification.permission : "default",
     };
   }
 }

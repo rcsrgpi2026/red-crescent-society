@@ -810,33 +810,45 @@ export async function getLegacyMembers(params?: {
   department?: string;
   session?: string;
 }): Promise<PublicLegacyMember[]> {
-  const supabase = await db();
+  const supabase = getPublicClient();
   if (!supabase) return [];
   let query = supabase
-    .from("team_members")
+    .from("public_legacy_members")
     .select(
       "id, member_id, name, department, session, area, photo_url, position, legacy_designation, legacy_tenure, legacy_note, joined_at, points"
-    )
-    .eq("is_legacy", true)
-    .eq("status", "APPROVED")
-    .eq("public_profile", true);
+    );
 
   if (params?.search) query = query.ilike("name", `%${params.search}%`);
   if (params?.department) query = query.eq("department", params.department);
   if (params?.session) query = query.eq("session", params.session);
 
-  const { data } = await query.order("created_at", { ascending: false });
-  return (data as PublicLegacyMember[]) ?? [];
+  const { data } = await query
+    .order("session", { ascending: false, nullsFirst: false })
+    .order("joined_at", { ascending: false, nullsFirst: false });
+
+  const members = (data as PublicLegacyMember[]) ?? [];
+  const positionOrder = new Map<string, number>(TEAM_POSITIONS.map((p, i) => [p, i]));
+  return members.sort((a, b) => {
+    const sessionA = a.session || "";
+    const sessionB = b.session || "";
+    if (sessionA !== sessionB) {
+      if (!sessionA) return 1;
+      if (!sessionB) return -1;
+      return sessionB.localeCompare(sessionA);
+    }
+    const posA = positionOrder.get(a.position as any) ?? TEAM_POSITIONS.length;
+    const posB = positionOrder.get(b.position as any) ?? TEAM_POSITIONS.length;
+    if (posA !== posB) return posA - posB;
+    return a.name.localeCompare(b.name);
+  });
 }
 
 export async function getLegacySessions(): Promise<string[]> {
-  const supabase = await db();
+  const supabase = getPublicClient();
   if (!supabase) return [...SESSIONS];
   const { data } = await supabase
-    .from("team_members")
+    .from("public_legacy_members")
     .select("session")
-    .eq("is_legacy", true)
-    .eq("status", "APPROVED")
     .not("session", "is", null);
 
   const set = new Set<string>();
@@ -853,21 +865,18 @@ export async function getPublicActiveTeamMembers(params?: {
   department?: string;
   search?: string;
 }): Promise<PublicLegacyMember[]> {
-  const supabase = await db();
+  const supabase = getPublicClient();
   if (!supabase) return [];
   let query = supabase
-    .from("team_members")
+    .from("public_team_members")
     .select(
-      "id, member_id, name, department, session, area, photo_url, position, legacy_designation, legacy_tenure, legacy_note, joined_at, points"
-    )
-    .eq("is_legacy", false)
-    .eq("status", "APPROVED")
-    .eq("public_profile", true);
+      "id, member_id, name, department, session, area, photo_url, position, joined_at, points"
+    );
 
   if (params?.search) query = query.ilike("name", `%${params.search}%`);
   if (params?.department) query = query.eq("department", params.department);
 
-  const { data } = await query.order("created_at", { ascending: false });
+  const { data } = await query.order("points", { ascending: false, nullsFirst: false });
   const members = (data as PublicLegacyMember[]) ?? [];
 
   const positionOrder = new Map<string, number>(TEAM_POSITIONS.map((p, i) => [p, i]));

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, LogIn, Mail, Lock } from "lucide-react";
+import { Loader2, CircleUserRound, Mail, Lock } from "lucide-react";
 import { portalLogin, type LoginResult } from "@/lib/auth-actions";
 import { Label, Input, Button } from "@/components/ui";
 
@@ -90,7 +90,7 @@ export function PortalLoginForm() {
         {busy ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
         ) : (
-          <LogIn className="mr-2 h-4 w-4" aria-hidden />
+          <CircleUserRound className="mr-2 h-4 w-4" aria-hidden />
         )}
         {busy ? "Signing in…" : "Sign in"}
       </Button>

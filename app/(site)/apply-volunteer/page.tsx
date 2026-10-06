@@ -8,7 +8,7 @@ import {
   Clock,
   XCircle,
   AlertCircle,
-  LogIn,
+  CircleUserRound,
   GraduationCap,
   HeartHandshake,
   UserCheck,
@@ -81,7 +81,7 @@ export default async function ApplyVolunteerPage() {
           <div className="mt-8 space-y-3">
             <Button asChild size="lg" className="w-full gap-2 bg-brand hover:bg-brand-dark">
               <Link href="/student/login?redirect=/apply-volunteer">
-                <LogIn className="h-4 w-4" />
+                <CircleUserRound className="h-4 w-4" />
                 Sign in with Student Account
               </Link>
             </Button>

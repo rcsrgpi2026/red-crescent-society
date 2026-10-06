@@ -139,91 +139,97 @@ export function DonorSelfService() {
     <div>
       {!listing ? (
         <div>
-          <form onSubmit={handleFind} className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
+          <form onSubmit={handleFind} className="space-y-3">
             <div>
-              <Label htmlFor="ds-name" className="font-medium text-foreground text-sm">Full name</Label>
-              <div className="relative mt-1.5">
+              <Label htmlFor="ds-name" className="text-xs font-semibold text-foreground">
+                Full name (পূর্ণ নাম)
+              </Label>
+              <div className="relative mt-1">
                 <User className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
                 <Input
                   id="ds-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Name used at registration"
-                  className="h-11 rounded-full pl-10 pr-4 bg-slate-50/60 border-slate-200 focus:bg-white focus:border-crescent focus:ring-4 focus:ring-crescent/15 transition-all text-sm"
+                  className="h-10 rounded-xl pl-10 pr-4 bg-slate-50 border-line text-sm"
                   required
                 />
               </div>
             </div>
-            <div>
-              <Label htmlFor="ds-phone" className="font-medium text-foreground text-sm">Mobile number</Label>
-              <div className="relative mt-1.5">
-                <Phone className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-                <Input
-                  id="ds-phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="017XXXXXXXX"
-                  className="h-11 rounded-full pl-10 pr-4 bg-slate-50/60 border-slate-200 focus:bg-white focus:border-crescent focus:ring-4 focus:ring-crescent/15 transition-all text-sm"
-                  required
-                />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="ds-phone" className="text-xs font-semibold text-foreground">
+                  Mobile number (মোবাইল নম্বর)
+                </Label>
+                <div className="relative mt-1">
+                  <Phone className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                  <Input
+                    id="ds-phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="017XXXXXXXX"
+                    className="h-10 rounded-xl pl-10 pr-4 bg-slate-50 border-line text-sm"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="ds-passcode" className="text-xs font-semibold text-foreground">
+                  Passcode (পিন কোড)
+                </Label>
+                <div className="relative mt-1">
+                  <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                  <Input
+                    id="ds-passcode"
+                    type="password"
+                    inputMode="numeric"
+                    value={passcode}
+                    onChange={(e) => setPasscode(e.target.value)}
+                    placeholder="4–6 digit code"
+                    className="h-10 rounded-xl pl-10 pr-4 bg-slate-50 border-line text-sm tracking-widest"
+                  />
+                </div>
               </div>
             </div>
-            <div>
-              <Label htmlFor="ds-passcode" className="font-medium text-foreground text-sm">Passcode</Label>
-              <div className="relative mt-1.5">
-                <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-                <Input
-                  id="ds-passcode"
-                  type="password"
-                  inputMode="numeric"
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  placeholder="Your 4–6 digit code"
-                  className="h-11 rounded-full pl-10 pr-4 bg-slate-50/60 border-slate-200 focus:bg-white focus:border-crescent focus:ring-4 focus:ring-crescent/15 transition-all text-sm tracking-widest"
-                />
-              </div>
-            </div>
+
             <button
               type="submit"
               disabled={busy}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-crescent px-6 text-sm font-semibold text-white transition-all shadow-md shadow-crescent/20 hover:bg-crescent-dark active:scale-[0.98] disabled:opacity-50"
+              className="w-full inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-crescent px-4 text-sm font-bold text-white transition-all shadow-sm hover:bg-crescent-dark active:scale-[0.98] disabled:opacity-50 cursor-pointer"
             >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Search className="h-4 w-4" aria-hidden />}
-              Find listing
+              Find listing (লিস্টিং খুঁজুন)
             </button>
           </form>
 
-          {/* Forgotten passcode helper options */}
-          <div className="mt-4 rounded-2xl border border-line/70 bg-mist/30 p-3.5 sm:p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-xs text-muted-foreground leading-relaxed">
-                <span className="font-semibold text-foreground flex items-center gap-1.5 mb-0.5">
-                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-crescent/10 text-crescent text-[10px] font-bold">
-                    ?
-                  </span>
-                  পাসকোড ভুলে গেছেন? / Forgot your passcode?
-                </span>
-                অ্যাডমিন প্যানেল থেকে আপনার স্ট্যাটাস পরিবর্তন বা পুরনো লিস্টিং রিসেট করে নতুন পাসকোড সেট করতে আমাদের সাথে যোগাযোগ করুন:
-              </div>
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <a
-                  href="tel:01614424259"
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs transition-colors hover:border-crescent/40 hover:bg-crescent-soft hover:text-crescent"
-                >
-                  <Phone className="h-3.5 w-3.5 text-crescent" />
-                  <span>হটলাইন: ০১৬১৪-৪২৪২৫৯</span>
-                </a>
-                <a
-                  href="https://wa.me/8801614424259?text=Hello%2C%20I%20am%20a%20registered%20blood%20donor%20and%20forgot%20my%20passcode.%20Please%20help%20me%20update%20or%20reset%20my%20listing."
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-xs transition-colors hover:bg-emerald-50"
-                >
-                  <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>WhatsApp সাহায্য</span>
-                </a>
-              </div>
+          {/* Forgotten passcode helper */}
+          <div className="mt-3.5 rounded-xl border border-line/70 bg-slate-50/70 p-3">
+            <p className="text-xs font-semibold text-foreground flex items-center gap-1.5 mb-2">
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-crescent/10 text-crescent text-[10px] font-bold">
+                ?
+              </span>
+              পাসকোড ভুলে গেছেন? অ্যাডমিন সহায়তা:
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href="tel:01614424259"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-foreground shadow-2xs hover:border-crescent/40 hover:text-crescent"
+              >
+                <Phone className="h-3.5 w-3.5 text-crescent" />
+                <span>০১৬১৪-৪২৪২৫৯</span>
+              </a>
+              <a
+                href="https://wa.me/8801614424259?text=Hello%2C%20I%20am%20a%20registered%20blood%20donor%20and%20forgot%20my%20passcode.%20Please%20help%20me%20update%20or%20reset%20my%20listing."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-emerald-800 shadow-2xs hover:bg-emerald-50"
+              >
+                <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+                <span>WhatsApp Help</span>
+              </a>
             </div>
           </div>
         </div>
@@ -322,11 +328,6 @@ export function DonorSelfService() {
         </div>
       )}
 
-      <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground">
-        <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand" aria-hidden />
-        Only the name, phone number and passcode you registered with can manage this listing. Your
-        number and passcode are never shown publicly — the passcode is stored only as a secure hash.
-      </p>
 
       {message && (
         <div

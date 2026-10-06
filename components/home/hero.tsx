@@ -4,7 +4,17 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, useReducedMotion } from "motion/react";
-import { Droplets, ArrowRight, PhoneCall, HeartPulse, GraduationCap } from "lucide-react";
+import {
+  Droplets,
+  ArrowRight,
+  PhoneCall,
+  HeartPulse,
+  GraduationCap,
+  Calendar,
+  Camera,
+  Megaphone,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/components/providers/locale-provider";
 import { cn } from "@/lib/utils";
@@ -47,7 +57,7 @@ export function Hero({
 }: HeroProps) {
   const reduced = useReducedMotion();
   const anim = reduced ? {} : { initial: "hidden", animate: "show" } as const;
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
 
   const images = (backgroundImages ?? []).filter(Boolean);
   const [index, setIndex] = useState(0);
@@ -187,7 +197,8 @@ export function Hero({
             </Button>
           </motion.div>
 
-          <motion.div {...anim} custom={4} variants={fadeUp} className="mt-10 flex flex-wrap gap-x-6 gap-y-3">
+          {/* Desktop/Tablet features (sm+) */}
+          <motion.div {...anim} custom={4} variants={fadeUp} className="mt-10 hidden flex-wrap gap-x-6 gap-y-3 sm:flex">
             {[
               { icon: Droplets, label: t.home.heroFeatureBlood, sub: t.home.heroFeatureBloodSub },
               { icon: HeartPulse, label: t.home.heroFeatureFirstAid, sub: t.home.heroFeatureFirstAidSub },
@@ -203,6 +214,82 @@ export function Hero({
                 </span>
               </div>
             ))}
+          </motion.div>
+
+          {/* Mobile phone version (< sm): quick-access transparent navigation buttons for sidebar pages */}
+          <motion.div
+            {...anim}
+            custom={4}
+            variants={fadeUp}
+            className="mt-8 grid grid-cols-2 gap-2 sm:hidden"
+          >
+            {[
+              {
+                href: "/blood-support",
+                icon: Droplets,
+                label: t.nav.bloodSupport,
+                sub: locale === "bn" ? "রক্তদাতা ও আবেদন" : "Donors & Request",
+              },
+              {
+                href: "/emergency",
+                icon: HeartPulse,
+                label: t.nav.emergency,
+                sub: locale === "bn" ? "জরুরি সহায়তা" : "24/7 Rapid Help",
+              },
+              {
+                href: "/events",
+                icon: Calendar,
+                label: t.nav.events,
+                sub: locale === "bn" ? "কার্যক্রম ও ক্যাম্প" : "Camps & Programs",
+              },
+              {
+                href: "/training",
+                icon: GraduationCap,
+                label: t.nav.training,
+                sub: locale === "bn" ? "ফার্স্ট এইড স্কিল" : "First Aid & CPR",
+              },
+              {
+                href: "/gallery",
+                icon: Camera,
+                label: t.nav.activitiesGallery,
+                sub: locale === "bn" ? "ছবি ও ডকুমেন্টেশন" : "Photos & Stories",
+              },
+              {
+                href: "/notices",
+                icon: Megaphone,
+                label: t.nav.notices,
+                sub: locale === "bn" ? "অফিসিয়াল বিজ্ঞপ্তি" : "Official Updates",
+              },
+              {
+                href: "/legacy-members",
+                icon: Users,
+                label: t.nav.legacyMembers,
+                sub: locale === "bn" ? "কমিটি ও সদস্য" : "Executive Team",
+              },
+              {
+                href: "/contact",
+                icon: PhoneCall,
+                label: t.nav.contact,
+                sub: locale === "bn" ? "যোগাযোগ করুন" : "Get in Touch",
+              },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="group flex items-center gap-2.5 rounded-xl border border-crescent/40 bg-black/35 p-2.5 shadow-xs shadow-black/20 backdrop-blur-md transition-all duration-200 hover:border-crescent/80 hover:bg-black/50 active:scale-[0.98]"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-crescent/20 ring-1 ring-crescent/40 transition-transform group-hover:scale-105">
+                    <Icon className="h-4.5 w-4.5 text-white" aria-hidden />
+                  </span>
+                  <span className="min-w-0 text-left leading-tight text-white">
+                    <span className="block truncate text-xs font-semibold text-white">{item.label}</span>
+                    <span className="block truncate text-[10px] font-medium text-white/80">{item.sub}</span>
+                  </span>
+                </Link>
+              );
+            })}
           </motion.div>
         </div>
 

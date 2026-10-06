@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Droplets, ArrowRight, Megaphone, Siren, HeartPulse } from "lucide-react";
+import { ArrowRight, Megaphone, HeartPulse } from "lucide-react";
 import { Hero } from "@/components/home/hero";
 import { Stats } from "@/components/home/stats";
 import { AboutSection } from "@/components/home/about-section";
@@ -147,53 +147,7 @@ export default async function HomePage() {
       />
 
 
-      {/* Respond — emergency strip */}
-      <section className="border-b border-line bg-crescent">
-        <div className="container-site flex flex-col items-start justify-between gap-4 py-5 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15">
-              <Siren className="h-5.5 w-5.5 text-white" aria-hidden />
-            </span>
-            <div>
-              <p className="font-bold text-white">{t.home.bloodEmergency}</p>
-              <p className="text-sm text-white/80">{t.home.bloodEmergencySub}</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              asChild
-              size="sm"
-              className="bg-white text-crescent hover:bg-white/90"
-            >
-              <Link href="/blood-support/request">
-                <Droplets className="mr-1 h-4 w-4" aria-hidden />
-                {t.footer.requestBlood}
-              </Link>
-            </Button>
-            <Button
-              asChild
-              size="sm"
-              variant="outline"
-              className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
-            >
-              <Link href="/blood-support">{t.footer.findDonor}</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Serve — impact in numbers */}
-      <section className="border-b border-line bg-white">
-        <div className="container-site py-16 lg:py-24">
-          <Reveal>
-            <SectionHeader
-              eyebrow={t.home.impactEyebrow}
-              title={t.home.impactTitle}
-              description={t.home.impactDescription}
-            />
-          </Reveal>
-        </div>
-      </section>
+      {/* Serve — impact in numbers stats */}
       <Stats stats={stats} isAdmin={isAdmin} />
 
       {/* Who we are — introduction, mission, history, founders */}

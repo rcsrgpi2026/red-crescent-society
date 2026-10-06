@@ -2,6 +2,15 @@
 
 import { useEffect } from "react";
 
+// Capture beforeinstallprompt as early as possible on window for sidebar install action
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    (window as any).__rcyPwaPrompt = e;
+    window.dispatchEvent(new Event("rcy_pwa_prompt_ready"));
+  });
+}
+
 export function PwaRegister() {
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;

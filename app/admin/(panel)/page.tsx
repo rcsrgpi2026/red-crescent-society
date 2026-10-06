@@ -26,6 +26,7 @@ import { Reveal } from "@/components/shared/reveal";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
 import { deleteBloodRequest } from "@/lib/admin-actions";
+import { AdminPushAlertsBanner } from "@/components/admin/admin-push-alerts";
 
 export default async function AdminDashboardPage() {
   const [volunteers, requests, events, messages, recruitmentStats] = await Promise.all([
@@ -89,6 +90,9 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
       </Reveal>
+
+      {/* Real-time Admin Push Alerts Status & Prompt */}
+      <AdminPushAlertsBanner />
 
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">

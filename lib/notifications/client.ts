@@ -55,6 +55,52 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: str
   }
 }
 
+function detectPlatformAndBrowser(): { platform: string; browser: string; userAgent: string } {
+  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  let platform = "Desktop";
+  if (/Android/i.test(userAgent)) platform = "Android";
+  else if (/iPhone|iPad|iPod/i.test(userAgent)) platform = "iOS";
+
+  let browser = "Unknown";
+  if (/Edg/i.test(userAgent)) browser = "Edge";
+  else if (/Chrome/i.test(userAgent)) browser = "Chrome";
+  else if (/Firefox/i.test(userAgent)) browser = "Firefox";
+  else if (/Safari/i.test(userAgent)) browser = "Safari";
+
+  return { platform, browser, userAgent };
+}
+
+export async function getCurrentPushSubscriptionData(): Promise<{
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  platform: string;
+  browser: string;
+  userAgent: string;
+} | null> {
+  if (!isPushSupported()) return null;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg?.pushManager) return null;
+    const sub = await reg.pushManager.getSubscription();
+    const json = sub?.toJSON();
+    if (json?.endpoint && json?.keys?.p256dh && json?.keys?.auth) {
+      const { platform, browser, userAgent } = detectPlatformAndBrowser();
+      return {
+        endpoint: json.endpoint,
+        p256dh: json.keys.p256dh,
+        auth: json.keys.auth,
+        platform,
+        browser,
+        userAgent,
+      };
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 export async function subscribeUserToPush(): Promise<{
   success: boolean;
   message?: string;
@@ -96,7 +142,7 @@ export async function subscribeUserToPush(): Promise<{
       reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
     }
 
-    // Wait for SW ready with a 6-second timeout safeguard (prevents infinite hanging in Edge/Private mode)
+    // Wait for SW ready with a 6-second safeguard
     const swReady = await withTimeout(
       navigator.serviceWorker.ready,
       6000,
@@ -113,65 +159,42 @@ export async function subscribeUserToPush(): Promise<{
       };
     }
 
-    // 4. Try browser push service subscription (with 8-second timeout)
-    try {
-      if (swReady?.pushManager) {
-        let subscription = await swReady.pushManager.getSubscription().catch(() => null);
-        if (subscription) {
-          try {
-            await subscription.unsubscribe();
-          } catch {
-            // ignore
-          }
-        }
+    // 4. Try browser push service subscription (REUSE existing subscription if valid!)
+    if (swReady?.pushManager) {
+      let subscription = await swReady.pushManager.getSubscription().catch(() => null);
 
+      // Only subscribe if not already subscribed
+      if (!subscription) {
         const appServerKey = urlBase64ToUint8Array(vapidKey);
-
         subscription = await withTimeout(
           swReady.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: appServerKey as unknown as BufferSource,
           }),
-          8000,
+          10000,
           "Push service subscription timeout."
         );
-
-        const subJson = subscription?.toJSON();
-        if (subJson?.endpoint && subJson?.keys?.p256dh && subJson?.keys?.auth) {
-          const userAgent = navigator.userAgent;
-          let platform = "Desktop";
-          if (/Android/i.test(userAgent)) platform = "Android";
-          else if (/iPhone|iPad|iPod/i.test(userAgent)) platform = "iOS";
-
-          let browser = "Unknown";
-          if (/Edg/i.test(userAgent)) browser = "Edge";
-          else if (/Chrome/i.test(userAgent)) browser = "Chrome";
-          else if (/Firefox/i.test(userAgent)) browser = "Firefox";
-          else if (/Safari/i.test(userAgent)) browser = "Safari";
-
-          await registerPushSubscription({
-            endpoint: subJson.endpoint,
-            p256dh: subJson.keys.p256dh,
-            auth: subJson.keys.auth,
-            platform,
-            browser,
-            userAgent,
-          });
-
-          return {
-            success: true,
-            message: "Push alerts enabled on this device!",
-            permission: "granted",
-          };
-        }
       }
-    } catch (pushErr: any) {
-      console.warn("Push subscription note:", pushErr);
-      return {
-        success: true,
-        message: "Alerts enabled on this device!",
-        permission: "granted",
-      };
+
+      const subJson = subscription?.toJSON();
+      if (subJson?.endpoint && subJson?.keys?.p256dh && subJson?.keys?.auth) {
+        const { platform, browser, userAgent } = detectPlatformAndBrowser();
+
+        await registerPushSubscription({
+          endpoint: subJson.endpoint,
+          p256dh: subJson.keys.p256dh,
+          auth: subJson.keys.auth,
+          platform,
+          browser,
+          userAgent,
+        });
+
+        return {
+          success: true,
+          message: "Push alerts enabled on this device!",
+          permission: "granted",
+        };
+      }
     }
 
     return {
@@ -187,4 +210,54 @@ export async function subscribeUserToPush(): Promise<{
       permission: Notification.permission,
     };
   }
+}
+
+/**
+ * Syncs the browser's active push subscription with the backend.
+ * Called automatically when logged in (Admin, Volunteer, Student).
+ * Ensures the subscription endpoint is linked to the current user ID in the database.
+ */
+export async function syncPushSubscription(): Promise<boolean> {
+  if (!isPushSupported() || getNotificationPermissionState() !== "granted") {
+    return false;
+  }
+
+  try {
+    const reg = (await navigator.serviceWorker.getRegistration()) || (await navigator.serviceWorker.register("/sw.js", { scope: "/" }));
+    const swReady = await withTimeout(navigator.serviceWorker.ready, 5000, "SW ready timeout").catch(() => reg);
+    if (!swReady?.pushManager) return false;
+
+    let subscription = await swReady.pushManager.getSubscription().catch(() => null);
+
+    // If permission is granted but subscription is missing, re-subscribe
+    if (!subscription) {
+      const vapidKey = await getVapidPublicKey();
+      if (vapidKey) {
+        const appServerKey = urlBase64ToUint8Array(vapidKey);
+        subscription = await swReady.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: appServerKey as unknown as BufferSource,
+        }).catch(() => null);
+      }
+    }
+
+    if (subscription) {
+      const subJson = subscription.toJSON();
+      if (subJson?.endpoint && subJson?.keys?.p256dh && subJson?.keys?.auth) {
+        const { platform, browser, userAgent } = detectPlatformAndBrowser();
+        const res = await registerPushSubscription({
+          endpoint: subJson.endpoint,
+          p256dh: subJson.keys.p256dh,
+          auth: subJson.keys.auth,
+          platform,
+          browser,
+          userAgent,
+        });
+        return res.success;
+      }
+    }
+  } catch (err) {
+    console.warn("syncPushSubscription notice:", err);
+  }
+  return false;
 }

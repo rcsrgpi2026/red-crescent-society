@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FormShell, FieldError, SubmitButton } from "@/components/forms/form";
 import { volunteerSignUp } from "@/lib/auth-actions";
 import { BLOOD_GROUPS, DEPARTMENTS, SESSIONS } from "@/lib/constants";
@@ -13,8 +13,17 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Button,
 } from "@/components/ui";
 import { MandatoryContactStep } from "@/components/forms/mandatory-contact-step";
+import {
+  isPushSupported,
+  getNotificationPermissionState,
+  subscribeUserToPush,
+  getCurrentPushSubscriptionData,
+} from "@/lib/notifications/client";
+import { Bell, CheckCircle2, Loader2, Smartphone } from "lucide-react";
+import { toast } from "sonner";
 
 export function VolunteerRegisterForm() {
   const [formData, setFormData] = useState({
@@ -34,6 +43,49 @@ export function VolunteerRegisterForm() {
     experience: "",
     motivation: "",
   });
+
+  const [pushSubData, setPushSubData] = useState<{
+    endpoint: string;
+    p256dh: string;
+    auth: string;
+    platform: string;
+    browser: string;
+    userAgent: string;
+  } | null>(null);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermission>("default");
+
+  useEffect(() => {
+    if (!isPushSupported()) return;
+    const perm = getNotificationPermissionState();
+    setPermission(perm);
+    if (perm === "granted") {
+      getCurrentPushSubscriptionData().then((data) => {
+        if (data) setPushSubData(data);
+      });
+    }
+  }, []);
+
+  const handleEnablePush = async () => {
+    setPushLoading(true);
+    try {
+      const res = await subscribeUserToPush();
+      setPermission(res.permission);
+      if (res.success) {
+        const subData = await getCurrentPushSubscriptionData();
+        if (subData) setPushSubData(subData);
+        toast.success("পুশ নোটিফিকেশন সফলভাবে চালু হয়েছে!", {
+          description: "আবেদন জমা দেওয়ার পর কনফার্মেশন ও অ্যাডমিন অনুমোদনের সাথে সাথে ফোনে পুশ অ্যালার্ট আসবে।",
+        });
+      } else if (res.permission === "denied") {
+        toast.error("নোটিফিকেশন পারমিশন ব্লক করা রয়েছে। ব্রাউজার সেটিংসে গিয়ে পারমিশন Allow করুন।");
+      }
+    } catch {
+      toast.error("পুশ নোটিফিকেশন চালু করা যায়নি।");
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -290,6 +342,67 @@ export function VolunteerRegisterForm() {
           </div>
 
           <MandatoryContactStep className="my-2" />
+
+          {/* Real-time Push Notification Opt-in Card */}
+          <div className="rounded-2xl border border-poly/25 bg-poly-soft/40 p-4 transition-all">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-poly text-white shadow-xs">
+                  <Bell className="h-4 w-4 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-foreground">
+                      অনুমোদন ও কনফার্মেশন পুশ নোটিফিকেশন
+                    </p>
+                    {permission === "granted" && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="h-3 w-3" /> সক্রিয়
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
+                    আবেদন সাবমিট হওয়া মাত্র কনফার্মেশন এবং অ্যাডমিন অনুমোদন করার সাথে সাথে আপনার ফোনে ইনস্ট্যান্ট পুশ অ্যালার্ট পান।
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex shrink-0 items-center">
+                {permission === "granted" ? (
+                  <span className="text-xs font-medium text-emerald-600 flex items-center gap-1">
+                    <Smartphone className="h-3.5 w-3.5" /> এই ডিভাইসে চালু আছে
+                  </span>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEnablePush}
+                    disabled={pushLoading || permission === "denied"}
+                    className="border-poly/40 bg-white hover:bg-poly-soft text-poly text-xs font-semibold"
+                  >
+                    {pushLoading ? (
+                      <>
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        চালু হচ্ছে...
+                      </>
+                    ) : permission === "denied" ? (
+                      "পারমিশন ব্লকড"
+                    ) : (
+                      "🔔 পুশ অ্যালার্ট চালু করুন"
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Hidden inputs to pass subscription data to volunteerSignUp server action */}
+          <input type="hidden" name="pushEndpoint" value={pushSubData?.endpoint || ""} />
+          <input type="hidden" name="pushP256dh" value={pushSubData?.p256dh || ""} />
+          <input type="hidden" name="pushAuth" value={pushSubData?.auth || ""} />
+          <input type="hidden" name="pushPlatform" value={pushSubData?.platform || ""} />
+          <input type="hidden" name="pushBrowser" value={pushSubData?.browser || ""} />
 
           <SubmitButton className="w-full">Submit Volunteer Application</SubmitButton>
           <p className="text-xs text-muted-foreground">

@@ -18,6 +18,7 @@ import {
 } from "@/lib/validation";
 import { isSemesterEligible } from "@/lib/constants";
 import { createAndDispatchNotification } from "@/lib/notifications/notification-service";
+import { sendVolunteerApprovalEmail } from "@/lib/email/mailer";
 import type { ActionResult } from "@/lib/actions";
 
 function zodErrors(error: import("zod").ZodError): Record<string, string[]> {
@@ -231,6 +232,33 @@ export async function submitVolunteerApplication(
     };
   }
 
+  // Capture and register push subscription if provided
+  const pushEndpoint = String(formData.get("pushEndpoint") || "").trim();
+  const pushP256dh = String(formData.get("pushP256dh") || "").trim();
+  const pushAuth = String(formData.get("pushAuth") || "").trim();
+  const pushPlatform = String(formData.get("pushPlatform") || "").trim();
+  const pushBrowser = String(formData.get("pushBrowser") || "").trim();
+
+  if (pushEndpoint && pushP256dh && pushAuth) {
+    try {
+      await admin.from("push_subscriptions").upsert(
+        {
+          user_id: user.id,
+          endpoint: pushEndpoint,
+          p256dh: pushP256dh,
+          auth: pushAuth,
+          platform: pushPlatform || null,
+          browser: pushBrowser || null,
+          is_active: true,
+          last_used_at: new Date().toISOString(),
+        },
+        { onConflict: "endpoint" }
+      );
+    } catch (pushErr) {
+      console.warn("Could not save initial push subscription for recruitment applicant:", pushErr);
+    }
+  }
+
   // Send smart notification to applicant
   try {
     await createAndDispatchNotification(
@@ -238,7 +266,7 @@ export async function submitVolunteerApplication(
         title: "📋 Volunteer Application Submitted",
         body: `Thank you ${student.name}! Your application for ${campaign.title} has been received and is currently under review by the society leadership.`,
         type: "system",
-        priority: "normal",
+        priority: "high",
         actionUrl: "/student",
       },
       {
@@ -543,12 +571,12 @@ export async function adminApproveVolunteerApplication(
     });
   }
 
-  // 6. Dispatch celebration notification to student user
+  // 6. Dispatch celebration push & in-app notification to approved user
   try {
     await createAndDispatchNotification(
       {
-        title: "🎉 Volunteer Application Approved!",
-        body: `Congratulations ${application.name}! Your volunteer application has been approved. Welcome to the RGPI Red Crescent Youth volunteer team! Member ID: ${memberId}. You can now access the volunteer portal.`,
+        title: "🎉 অভিনন্দন! RCY সদস্যপদ অনুমোদিত হয়েছে",
+        body: `Congratulations ${application.name}! আপনার রেড ক্রিসেন্ট যুব সদস্যপদ অনুমোদিত হয়েছে (Member ID: ${memberId})। সদস্য পোর্টাল থেকে আপনার ডিজিটাল মেম্বার আইডি কার্ড দেখুন।`,
         type: "system",
         priority: "high",
         actionUrl: "/volunteer",
@@ -559,6 +587,31 @@ export async function adminApproveVolunteerApplication(
     );
   } catch (notifErr) {
     console.warn("Notification error after volunteer approval:", notifErr);
+  }
+
+  // 7. Dispatch official membership approval email to applicant's email address
+  let applicantEmail = application.email;
+  if (!applicantEmail && application.user_id) {
+    const { data: prof } = await admin
+      .from("profiles")
+      .select("email")
+      .eq("id", application.user_id)
+      .maybeSingle();
+    if (prof?.email) applicantEmail = prof.email;
+  }
+
+  if (applicantEmail) {
+    try {
+      await sendVolunteerApprovalEmail({
+        name: application.name,
+        email: applicantEmail,
+        memberId: memberId,
+        department: application.department,
+        position: "General Member",
+      });
+    } catch (emailErr) {
+      console.warn("Could not dispatch volunteer approval email:", emailErr);
+    }
   }
 
   await logAudit("volunteer_application_approved", "volunteer_application", applicationId, {

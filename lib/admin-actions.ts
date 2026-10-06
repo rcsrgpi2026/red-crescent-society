@@ -87,7 +87,7 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
     return { success: false, message: "Could not update the team member." };
   }
 
-  // Trigger system notification if approved or rejected
+  // Trigger system notification & email if approved or rejected
   if (status === "APPROVED") {
     try {
       const { data: member } = await supabase
@@ -99,8 +99,8 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
       if (member?.user_id) {
         await createAndDispatchNotification(
           {
-            title: "🎉 Membership Application Approved!",
-            body: `Congratulations ${member.name}! Your Red Crescent Youth team membership has been approved (${patch.member_id}). You can now access your member ID card and join trainings.`,
+            title: "🎉 অভিনন্দন! RCY সদস্যপদ অনুমোদিত হয়েছে",
+            body: `Congratulations ${member.name}! আপনার রেড ক্রিসেন্ট যুব সদস্যপদ অনুমোদিত হয়েছে (Member ID: ${patch.member_id})। সদস্য পোর্টাল থেকে আপনার ডিজিটাল মেম্বার আইডি কার্ড দেখুন।`,
             type: "system",
             priority: "high",
             actionUrl: "/volunteer",
@@ -111,15 +111,26 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
         );
       }
 
+      // Resolve recipient email (team_members.email or profiles.email fallback)
+      let recipientEmail = member?.email;
+      if (!recipientEmail && member?.user_id) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("id", member.user_id)
+          .maybeSingle();
+        if (prof?.email) recipientEmail = prof.email;
+      }
+
       // Dispatch official membership approval email
-      if (member?.email) {
+      if (recipientEmail) {
         try {
-          void sendVolunteerApprovalEmail({
-            name: member.name,
-            email: member.email,
+          await sendVolunteerApprovalEmail({
+            name: member?.name || "Member",
+            email: recipientEmail,
             memberId: String(patch.member_id),
-            department: member.department,
-            position: member.position,
+            department: member?.department,
+            position: member?.position,
           });
         } catch (emailErr) {
           console.warn("Could not dispatch volunteer approval email:", emailErr);

@@ -37,6 +37,8 @@ import { MyCertificates } from "@/components/team/my-certificates";
 import { NotificationPreferencesForm } from "@/components/notifications/preference-form";
 import { getMyNotificationPreferences } from "@/lib/notifications/actions";
 import { SiteAnnouncementModal } from "@/components/announcement/site-announcement-modal";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { MemberPushOptInCard } from "@/components/notifications/member-push-opt-in";
 
 export const metadata: Metadata = {
   title: "Team Member Portal & Profile",
@@ -109,6 +111,7 @@ export default async function TeamMemberPortalPage() {
               recruitmentCampaign={activeCampaign}
               storageKey="rcy_volunteer_announcement_seen"
             />
+            <NotificationBell userId={teamMember.user_id} />
             <Link
               href="/"
               className="text-xs font-semibold text-brand hover:underline hidden sm:inline-block"
@@ -198,6 +201,7 @@ export default async function TeamMemberPortalPage() {
             tone={statusTone(teamMember.status)}
           />
         </div>
+        <MemberPushOptInCard applicantName={teamMember.name} userId={teamMember.user_id} />
       </div>
     );
   }

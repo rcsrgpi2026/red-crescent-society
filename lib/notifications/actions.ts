@@ -261,6 +261,29 @@ export async function registerPushSubscription(
     return { success: false, message: error.message };
   }
 
+  // If user is authenticated, keep database tidy: if this user has more than 5 active subs,
+  // deactivate the oldest ones to prevent stale token flooding
+  if (userId) {
+    try {
+      const { data: userSubs } = await admin
+        .from("push_subscriptions")
+        .select("id, created_at, endpoint")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      if (userSubs && userSubs.length > 5) {
+        const staleIds = userSubs.slice(5).map((s) => s.id);
+        await admin
+          .from("push_subscriptions")
+          .update({ is_active: false })
+          .in("id", staleIds);
+      }
+    } catch {
+      // Non-blocking cleanup
+    }
+  }
+
   return { success: true };
 }
 
@@ -279,6 +302,38 @@ export async function unregisterPushSubscription(
     .eq("endpoint", endpoint);
 
   return { success: true };
+}
+
+/**
+ * Admin Self-Test Action: Dispatches an immediate test push alert to the logged-in admin's device.
+ */
+export async function adminSendTestPushToMe(): Promise<ActionResult> {
+  const profile = await requireAdmin();
+  if (!profile) return { success: false, message: "Unauthorized. Admin access required." };
+
+  try {
+    const result = await createAndDispatchNotification(
+      {
+        title: "🔔 [অ্যাডমিন টেস্ট] পুশ অ্যালার্ট সফল!",
+        body: `অভিনন্দন ${profile.full_name || "অ্যাডমিন"}! আপনার এই ডিভাইসে পুশ নোটিফিকেশন সিস্টেম সফলভাবে কাজ করছে। নতুন RCY মেম্বার আবেদন আসলে ইনস্ট্যান্ট নোটিফিকেশন আসবে।`,
+        type: "system",
+        priority: "high",
+        actionUrl: "/admin",
+      },
+      {
+        specificUserIds: [profile.id],
+      },
+      profile.id
+    );
+
+    return {
+      success: true,
+      message: `টেস্ট পুশ পাঠানো হয়েছে (${result.totalPushSent} টি ডিভাইসে ডেলিভার হয়েছে)!`,
+    };
+  } catch (err: any) {
+    console.error("adminSendTestPushToMe error:", err);
+    return { success: false, message: err.message || "Failed to send test push." };
+  }
 }
 
 // ------------------------------------------------------------

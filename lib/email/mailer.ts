@@ -1688,7 +1688,7 @@ export async function sendVolunteerApprovalEmail(params: VolunteerApprovalEmailP
   if (!params.email || !params.email.includes("@")) return;
 
   const appUrl = getAppUrl();
-  const portalUrl = `${appUrl}/portal`;
+  const portalUrl = `${appUrl}/volunteer`;
 
   const html = buildBrandedEmailShell({
     preheader: `অভিনন্দন! আপনার রেড ক্রিসেন্ট যুব দল সদস্যপদ অনুমোদিত হয়েছে — Member ID: ${params.memberId}`,

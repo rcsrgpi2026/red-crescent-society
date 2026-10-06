@@ -34,6 +34,7 @@ import { BLOOD_GROUPS, SEMESTERS } from "@/lib/constants";
 import { submitVolunteerApplication } from "@/lib/recruitment-actions";
 import { AddToContactsCard } from "@/components/shared/add-to-contacts-card";
 import { MandatoryContactStep } from "@/components/forms/mandatory-contact-step";
+import { getCurrentPushSubscriptionData } from "@/lib/notifications/client";
 import type { RecruitmentCampaign, Student } from "@/types/database";
 
 interface VolunteerApplicationFormProps {
@@ -87,6 +88,19 @@ export function VolunteerApplicationForm({
     fd.append("motivation", formData.motivation);
     fd.append("skills", formData.skills);
     fd.append("agreement", formData.agreement ? "true" : "false");
+
+    try {
+      const pushData = await getCurrentPushSubscriptionData();
+      if (pushData) {
+        fd.append("pushEndpoint", pushData.endpoint);
+        fd.append("pushP256dh", pushData.p256dh);
+        fd.append("pushAuth", pushData.auth);
+        fd.append("pushPlatform", pushData.platform);
+        fd.append("pushBrowser", pushData.browser);
+      }
+    } catch {
+      // non-blocking
+    }
 
     try {
       const result = await submitVolunteerApplication({ success: false }, fd);

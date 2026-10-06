@@ -259,7 +259,52 @@ export async function volunteerSignUp(
     };
   }
 
-  // Instant push & in-app notification to Admins for approval
+  // If client provided push subscription credentials during signup, bind them immediately
+  const pushEndpoint = String(formData.get("pushEndpoint") || "").trim();
+  const pushP256dh = String(formData.get("pushP256dh") || "").trim();
+  const pushAuth = String(formData.get("pushAuth") || "").trim();
+  const pushPlatform = String(formData.get("pushPlatform") || "").trim();
+  const pushBrowser = String(formData.get("pushBrowser") || "").trim();
+
+  if (pushEndpoint && pushP256dh && pushAuth) {
+    try {
+      await admin.from("push_subscriptions").upsert(
+        {
+          user_id: userId,
+          endpoint: pushEndpoint,
+          p256dh: pushP256dh,
+          auth: pushAuth,
+          platform: pushPlatform || null,
+          browser: pushBrowser || null,
+          is_active: true,
+          last_used_at: new Date().toISOString(),
+        },
+        { onConflict: "endpoint" }
+      );
+    } catch (pushErr) {
+      console.warn("Could not save initial push subscription for volunteer applicant:", pushErr);
+    }
+  }
+
+  // 1. Instant confirmation push & in-app notification to the Applicant
+  try {
+    await createAndDispatchNotification(
+      {
+        title: "📋 RCY মেম্বারশিপ আবেদন সফলভাবে জমা হয়েছে",
+        body: `ধন্যবাদ ${v.name}! আপনার রেড ক্রিসেন্ট যুব সদস্যপদ আবেদনটি গৃহীত হয়েছে এবং পর্যালোচনায় রয়েছে। প্রশাসন অনুমোদন করার সাথে সাথে এই ডিভাইসে নোটিফিকেশন পাবেন।`,
+        type: "system",
+        priority: "high",
+        actionUrl: "/volunteer",
+      },
+      {
+        specificUserIds: [userId],
+      }
+    );
+  } catch (userNotifErr) {
+    console.warn("Could not dispatch applicant confirmation notification:", userNotifErr);
+  }
+
+  // 2. Instant push & in-app notification to Admins for approval
   try {
     await createAndDispatchNotification(
       {

@@ -18,6 +18,7 @@
   "/legacy-members",
   "/notices",
   "/notices/[slug]",
+  "/promo",
   "/reset-password",
   "/student",
   "/student/login",

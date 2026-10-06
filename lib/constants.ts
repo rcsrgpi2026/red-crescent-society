@@ -14,6 +14,8 @@ export const DEPARTMENTS = [
   "Power Technology",
   "Food Technology",
   "Automobile Technology",
+  "Electro-Medical Technology",
+  "Mechatronics Technology",
   "Architecture & Interior Design",
   "Refrigeration & Air Conditioning",
   "Other",

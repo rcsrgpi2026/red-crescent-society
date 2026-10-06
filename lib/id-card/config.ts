@@ -180,8 +180,14 @@ const DEPARTMENT_SHORT_NAMES: Record<string, string> = {
   "Power Technology": "PT",
   "Food Technology": "FT",
   "Automobile Technology": "AUT",
+  "Electro-Medical Technology": "EMT",
+  "Mechatronics Technology": "MCT",
   "Architecture & Interior Design": "AID",
   "Refrigeration & Air Conditioning": "RAC",
+  "Electro-Medical": "EMT",
+  "Electromedical Technology": "EMT",
+  "Electromedical": "EMT",
+  "Mechatronics": "MCT",
   Other: "Other",
 };
 

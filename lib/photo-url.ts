@@ -16,7 +16,7 @@ export function resolvePhotoUrl(photoUrl: string | null | undefined): string | n
   if (!photoUrl) return null;
   const value = photoUrl.trim();
   if (!value) return null;
-  if (/^https?:\/\//i.test(value)) return value;
+  if (/^(https?:\/\/|data:)/i.test(value)) return value;
 
   const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/+$/, "");
   if (!supabaseUrl) return value;

@@ -34,7 +34,10 @@ const BLOOD_LINKS = [
   { key: "emergency", href: "/emergency" },
 ] as const;
 
-const SOCIAL_ICONS: Record<string, React.ElementType> = {
+const SOCIAL_ICONS: Record<
+  string,
+  React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>
+> = {
   facebook: FacebookIcon,
   youtube: YoutubeIcon,
   instagram: InstagramIcon,

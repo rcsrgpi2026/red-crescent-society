@@ -1,3 +1,5 @@
+import { DEPARTMENTS } from "@/lib/constants";
+
 export type FieldType = "text" | "number" | "email" | "tel" | "textarea" | "select" | "checkbox";
 
 export interface FormFieldConfig {
@@ -60,7 +62,7 @@ export const DEFAULT_FORM_CONFIGS: Record<FormKey, FormConfig> = {
         required: false,
         enabled: true,
         isCore: true,
-        options: ["Civil", "Electrical", "Mechanical", "Computer", "Electronics", "Power", "Electromedical", "Mechatronics", "Other"],
+        options: [...DEPARTMENTS],
         order: 3,
       },
       {
@@ -105,7 +107,7 @@ export const DEFAULT_FORM_CONFIGS: Record<FormKey, FormConfig> = {
     fields: [
       { id: "name", name: "name", label: "Full Name (পূর্ণ নাম)", placeholder: "e.g. MD. Hasan Ali", type: "text", required: true, enabled: true, isCore: true, order: 1 },
       { id: "studentId", name: "studentId", label: "Student ID / Roll (রোল)", placeholder: "e.g. 612345", type: "text", required: true, enabled: true, isCore: true, order: 2 },
-      { id: "department", name: "department", label: "Department (বিভাগ)", placeholder: "Select department", type: "select", required: true, enabled: true, isCore: true, options: ["Civil", "Electrical", "Mechanical", "Computer", "Electronics", "Power", "Electromedical", "Mechatronics", "Other"], order: 3 },
+      { id: "department", name: "department", label: "Department (বিভাগ)", placeholder: "Select department", type: "select", required: true, enabled: true, isCore: true, options: [...DEPARTMENTS], order: 3 },
       { id: "phone", name: "phone", label: "Phone Number (ফোন নম্বর)", placeholder: "017XXXXXXXX", type: "tel", required: true, enabled: true, isCore: true, order: 4 },
       { id: "email", name: "email", label: "Email (ইমেইল)", placeholder: "your.name@rgpi.edu.bd", type: "email", required: false, enabled: true, isCore: true, order: 5 },
       { id: "bloodGroup", name: "bloodGroup", label: "Blood Group (রক্তের গ্রুপ)", placeholder: "Select blood group", type: "select", required: true, enabled: true, isCore: true, options: ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-", "UNKNOWN"], order: 6 },

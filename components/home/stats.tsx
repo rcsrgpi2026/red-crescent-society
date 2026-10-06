@@ -14,7 +14,11 @@ export function Stats({
   isAdmin?: boolean;
 }) {
   const { t } = useLocale();
-  const ALL_STAT_ITEMS: { key: keyof HomeStats; label: string; icon: React.ElementType }[] = [
+  const ALL_STAT_ITEMS: {
+    key: keyof HomeStats;
+    label: string;
+    icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  }[] = [
     { key: "totalVolunteers", label: t.home.stats.activeVolunteers, icon: Users },
     { key: "activeDonors", label: t.home.stats.activeBloodDonors, icon: Droplets },
     { key: "eventsCompleted", label: t.home.stats.eventsCompleted, icon: CalendarCheck },

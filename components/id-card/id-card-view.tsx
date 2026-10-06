@@ -145,7 +145,6 @@ export function IDCardView({
                 alt="Institute Logo"
                 className="h-[74px] w-[74px] object-contain"
                 style={{ opacity: logos.instituteLogo.opacity }}
-                crossOrigin="anonymous"
                 draggable={false}
               />
             )}
@@ -156,7 +155,6 @@ export function IDCardView({
                 alt="Red Crescent Logo"
                 className="h-[74px] w-[74px] object-contain"
                 style={{ opacity: logos.redCrescentLogo.opacity }}
-                crossOrigin="anonymous"
                 draggable={false}
               />
             )}
@@ -236,7 +234,6 @@ export function IDCardView({
                     objectFit: photo.objectFit,
                   }}
                   className="pointer-events-none block h-full w-full select-none"
-                  crossOrigin="anonymous"
                   draggable={false}
                 />
               ) : (
@@ -338,7 +335,6 @@ export function IDCardView({
                     src={logos.footerLogoLeft.src}
                     alt="Footer RCY Logo"
                     className="h-full w-full object-contain"
-                    crossOrigin="anonymous"
                     draggable={false}
                   />
                 </div>
@@ -374,7 +370,6 @@ export function IDCardView({
                   src={logos.footerLogoRight.src}
                   alt="Footer RPI Logo"
                   className="h-full w-full object-contain"
-                  crossOrigin="anonymous"
                   draggable={false}
                 />
               </div>
@@ -398,7 +393,6 @@ export function IDCardView({
               src={logos.redCrescentLogo.src}
               alt="Logo"
               className="h-9 w-9 object-contain"
-              crossOrigin="anonymous"
             />
             <div>
               <h3 className="text-sm font-bold uppercase tracking-wide text-red-600">
@@ -463,7 +457,6 @@ export function IDCardView({
                   <img
                     src={backSide.signatureImage}
                     alt="President / Unit Leader Signature"
-                    crossOrigin="anonymous"
                     className="max-h-7 max-w-full object-contain"
                     style={{
                       transform: `translate(${backSide.signatureX ?? 0}px, ${backSide.signatureY ?? 0}px) rotate(${backSide.signatureRotation ?? 0}deg) scale(${backSide.signatureScale ?? 1})`,
@@ -483,7 +476,6 @@ export function IDCardView({
                   <img
                     src={backSide.authorizedSignatureImage}
                     alt="Authorized Signature"
-                    crossOrigin="anonymous"
                     className="max-h-7 max-w-full object-contain"
                     style={{
                       transform: `translate(${backSide.authorizedSignatureX ?? 0}px, ${backSide.authorizedSignatureY ?? 0}px) rotate(${backSide.authorizedSignatureRotation ?? 0}deg) scale(${backSide.authorizedSignatureScale ?? 1})`,
@@ -553,7 +545,6 @@ export function IDCardView({
                   src={watermark.src}
                   alt=""
                   className="h-[540px] w-[540px] max-w-none object-contain"
-                  crossOrigin="anonymous"
                   draggable={false}
                 />
               </div>
@@ -599,7 +590,6 @@ export function IDCardView({
                       src={logos.instituteLogo.src}
                       alt="Institute Logo"
                       className="h-full w-full object-contain"
-                      crossOrigin="anonymous"
                       draggable={false}
                     />
                   </div>
@@ -655,7 +645,6 @@ export function IDCardView({
                       src={logos.redCrescentLogo.src}
                       alt="Red Crescent Logo"
                       className="h-full w-full object-contain"
-                      crossOrigin="anonymous"
                       draggable={false}
                     />
                   </div>
@@ -706,7 +695,6 @@ export function IDCardView({
                             objectFit: photo.objectFit,
                           }}
                           className="pointer-events-none block h-full w-full select-none"
-                          crossOrigin="anonymous"
                           draggable={false}
                         />
                       ) : (
@@ -999,7 +987,6 @@ export function IDCardView({
                           src={logos.footerLogoLeft.src}
                           alt="Footer RCY Logo"
                           className="h-full w-full object-contain"
-                          crossOrigin="anonymous"
                           draggable={false}
                         />
                       </div>
@@ -1060,7 +1047,6 @@ export function IDCardView({
                         src={logos.footerLogoRight.src}
                         alt="Footer RPI Logo"
                         className="h-full w-full object-contain"
-                        crossOrigin="anonymous"
                         draggable={false}
                       />
                     </div>
@@ -1088,7 +1074,6 @@ export function IDCardView({
                   src={logos.redCrescentLogo.src}
                   alt="Logo"
                   className="h-12 w-12 object-contain"
-                  crossOrigin="anonymous"
                 />
                 <div>
                   <h3 className="text-lg font-bold uppercase tracking-wide text-red-600">
@@ -1158,7 +1143,6 @@ export function IDCardView({
                       <img
                         src={backSide.signatureImage}
                         alt="President / Unit Leader Signature"
-                        crossOrigin="anonymous"
                         className="max-h-8 max-w-full object-contain"
                         style={{
                           transform: `translate(${backSide.signatureX ?? 0}px, ${backSide.signatureY ?? 0}px) rotate(${backSide.signatureRotation ?? 0}deg) scale(${backSide.signatureScale ?? 1})`,
@@ -1178,7 +1162,6 @@ export function IDCardView({
                       <img
                         src={backSide.authorizedSignatureImage}
                         alt="Authorized Signature"
-                        crossOrigin="anonymous"
                         className="max-h-8 max-w-full object-contain"
                         style={{
                           transform: `translate(${backSide.authorizedSignatureX ?? 0}px, ${backSide.authorizedSignatureY ?? 0}px) rotate(${backSide.authorizedSignatureRotation ?? 0}deg) scale(${backSide.authorizedSignatureScale ?? 1})`,

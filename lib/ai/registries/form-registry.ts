@@ -183,7 +183,7 @@ export const RCY_FORMS: FormDefinition[] = [
         type: "select",
         required: true,
         description: "Polytechnic engineering technology.",
-        descriptionBn: "আপনার পড়ার টেকনোলজি নির্বাচন করুন (যেমন: Computer, Civil, Electrical ইত্যাদি)।",
+        descriptionBn: "আপনার পড়ার টেকনোলজি নির্বাচন করুন (যেমন: Computer, Civil, Electrical, Electro-Medical, Mechatronics ইত্যাদি)।",
       },
       {
         name: "session",

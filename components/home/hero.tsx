@@ -216,13 +216,8 @@ export function Hero({
             ))}
           </motion.div>
 
-          {/* Mobile phone version (< sm): quick-access transparent navigation buttons for sidebar pages */}
-          <motion.div
-            {...anim}
-            custom={4}
-            variants={fadeUp}
-            className="mt-8 grid grid-cols-2 gap-2 sm:hidden"
-          >
+          {/* Mobile phone version (< sm): lightweight quick-access buttons without heavy blur/transitions */}
+          <div className="mt-8 grid grid-cols-2 gap-2 sm:hidden">
             {[
               {
                 href: "/blood-support",
@@ -278,9 +273,9 @@ export function Hero({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group flex items-center gap-2.5 rounded-xl border border-crescent/40 bg-black/35 p-2.5 shadow-xs shadow-black/20 backdrop-blur-md transition-all duration-200 hover:border-crescent/80 hover:bg-black/50 active:scale-[0.98]"
+                  className="group flex items-center gap-2.5 rounded-xl border border-crescent/35 bg-[#0b1c14]/90 p-2.5 shadow-2xs transition-colors hover:border-crescent/80 hover:bg-[#0b1c14]"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-crescent/20 ring-1 ring-crescent/40 transition-transform group-hover:scale-105">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-crescent/20 ring-1 ring-crescent/40">
                     <Icon className="h-4.5 w-4.5 text-white" aria-hidden />
                   </span>
                   <span className="min-w-0 text-left leading-tight text-white">
@@ -290,7 +285,7 @@ export function Hero({
                 </Link>
               );
             })}
-          </motion.div>
+          </div>
         </div>
 
         {/* Live need + helpline */}

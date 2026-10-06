@@ -47,7 +47,7 @@ export function Stats({
             return (
               <div
                 key={item.key}
-                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 backdrop-blur-xs select-none"
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/15 px-3.5 py-1.5 select-none"
               >
                 <Icon className="h-3.5 w-3.5 text-white/90 shrink-0" aria-hidden />
                 <span className="text-sm font-bold tabular-nums text-white">

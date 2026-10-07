@@ -398,13 +398,17 @@ export async function dispatchCampaignBatch({
         const newSent = (curr.sent_count || 0) + result.successCount;
         const newFailed = (curr.failed_count || 0) + result.failedCount;
         const isDone = newSent + newFailed >= (curr.total_recipients || 0);
+        let status: "COMPLETED" | "SENDING" | "FAILED" = "SENDING";
+        if (isDone) {
+          status = newSent > 0 ? "COMPLETED" : "FAILED";
+        }
 
         await admin
           .from("email_campaigns")
           .update({
             sent_count: newSent,
             failed_count: newFailed,
-            status: isDone ? "COMPLETED" : "SENDING",
+            status,
           })
           .eq("id", campaignId);
       }

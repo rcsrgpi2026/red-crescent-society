@@ -20,7 +20,7 @@ export interface EmailResult {
 export function getSmtpConfig() {
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
   const port = Number(process.env.SMTP_PORT) || 465;
-  const secure = process.env.SMTP_SECURE !== "false";
+  const secure = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === "true" : port === 465;
   const user = process.env.SMTP_USER || "redcrescentyouthrgpi@gmail.com";
   const pass = process.env.SMTP_PASS?.replace(/\s+/g, "");
   const fromName = (process.env.SMTP_FROM_NAME || "Red Crescent Youth").replace(/^["']|["']$/g, "").trim();
@@ -461,10 +461,15 @@ export interface BatchSendResult {
 }
 
 /**
- * Sends a batch of campaign emails to a list of recipients with strict anti-spam compliance:
- * - Omits custom forged messageId so Gmail SMTP automatically assigns authentic cryptographic Google Message-IDs.
- * - Standard RFC List-Unsubscribe, List-Unsubscribe-Post, and Auto-Submitted headers.
- * - Controlled sequential dispatch with gentle delay to avoid Gmail outbound burst spam detection.
+ * Sends a batch of campaign emails utilizing the exact same reliable transactional
+ * delivery engine (sendSystemEmail) that routes Blood Support & Volunteer Registration
+ * emails directly into recipient Inboxes.
+ *
+ * Deliverability optimizations:
+ * - Direct 1-to-1 authenticated transactional dispatch (sendSystemEmail)
+ * - Clean personal "To" envelope formatting ("Recipient Name" <email@gmail.com>)
+ * - Dual multipart/alternative (HTML + clean plain text alternative)
+ * - 1.2s human-like spacing between recipients to eliminate automated bulk spam flags
  */
 export async function sendCampaignEmailBatch({
   recipients,
@@ -523,40 +528,48 @@ export async function sendCampaignEmailBatch({
         .filter((line) => line !== undefined && line !== null)
         .join("\n");
 
-      // Clean notification headers (identical to successful transactional system emails)
-      // Removing "Precedence: bulk" and raw List-Unsubscribe headers that trigger Gmail spam classification on personal/SMTP senders
-      const headers: Record<string, string> = {
-        "X-Mailer": "Red Crescent Youth Notification Engine",
-        "X-Priority": "3",
-        "Auto-Submitted": "auto-generated",
-      };
+      // Format recipient to personal name matching registration/blood emails: "Mehedi Hasan <email@gmail.com>"
+      const targetRecipient =
+        recipient.name && recipient.name.trim()
+          ? `"${recipient.name.replace(/["\r\n]/g, "").trim()}" <${cleanEmail}>`
+          : cleanEmail;
 
+      // Send through the exact same reliable transactional engine as Blood Support & Volunteer Registration
       const sendRes = await sendSystemEmail({
-        to: cleanEmail,
+        to: targetRecipient,
         subject: campaign.subject,
         html,
         text: textVersion,
         replyTo: config.user,
+        priority: "normal",
       });
 
       if (sendRes.success) {
         result.successCount++;
-        console.log(`[Batch Send Success]: ${cleanEmail}`);
+        console.log(`[Campaign Send Success]: Delivered to ${cleanEmail} via ${sendRes.provider}`);
       } else {
         result.failedCount++;
         result.errors.push({
           email: cleanEmail,
-          error: sendRes.error || "Failed to deliver email through configured providers.",
+          error: sendRes.error || "Failed to deliver email through configured SMTP/Resend provider.",
         });
+        console.error(`[Campaign Send Failed] ${cleanEmail}:`, sendRes.error);
       }
 
-      // Polite 200ms inter-mail interval inside batch to prevent Gmail SMTP burst flags
+      // Natural 1.2-second pause between recipients to prevent Google outbound burst classification
       if (i < recipients.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 1200));
       }
     }
-  } catch (batchErr: any) {
+  } catch (batchErr: unknown) {
     console.error("[sendCampaignEmailBatch critical error]:", batchErr);
+    const msg = batchErr instanceof Error ? batchErr.message : "Batch process failure";
+    for (const r of recipients) {
+      if (!result.errors.some((e) => e.email === r.email)) {
+        result.failedCount++;
+        result.errors.push({ email: r.email, error: msg });
+      }
+    }
   }
 
   return result;
@@ -591,16 +604,21 @@ export async function sendSystemEmail({
 }: SendSystemEmailOptions): Promise<EmailResult> {
   const config = getSmtpConfig();
   const resendClient = config.resendApiKey ? new Resend(config.resendApiKey) : null;
-  const cleanTo = to.trim().toLowerCase();
+
+  // Extract email address and optional display name: e.g. "Mehedi Hasan <iamehedihsn@gmail.com>"
+  const emailMatch = to.match(/<([^>]+)>/);
+  const rawEmail = emailMatch ? emailMatch[1].trim().toLowerCase() : to.trim().toLowerCase();
+  const displayNameMatch = to.match(/^"?([^"<]+)"?\s*</);
+  const displayName = displayNameMatch ? displayNameMatch[1].trim() : "";
+  const recipientTarget = displayName ? `"${displayName}" <${rawEmail}>` : rawEmail;
 
   const priorityHeader = priority === "high" ? "1" : priority === "low" ? "5" : "3";
   const headers = {
     "X-Mailer": "Red Crescent Youth Notification Engine",
     "X-Priority": priorityHeader,
-    "Auto-Submitted": "auto-generated",
   };
 
-  console.log(`[System Email] Attempting to send "${subject}" to ${cleanTo}...`);
+  console.log(`[System Email] Attempting to send "${subject}" to ${rawEmail}...`);
 
   // 1. Try Gmail SMTP if configured (Primary)
   if (config.pass) {
@@ -609,14 +627,14 @@ export async function sendSystemEmail({
       if (transporter) {
         const info = await transporter.sendMail({
           from: config.defaultFrom,
-          to: cleanTo,
+          to: recipientTarget,
           replyTo: replyTo || config.user,
           subject,
           text,
           html,
           headers,
         });
-        console.log(`[System Email Sent]: "${subject}" delivered to ${cleanTo} via SMTP (${info.messageId})`);
+        console.log(`[System Email Sent]: "${subject}" delivered to ${rawEmail} via SMTP (${info.messageId})`);
         return { success: true, provider: "smtp" };
       }
     } catch (smtpErr: unknown) {
@@ -633,7 +651,7 @@ export async function sendSystemEmail({
     try {
       const { data, error } = await resendClient.emails.send({
         from: config.resendFrom,
-        to: [cleanTo],
+        to: [rawEmail],
         replyTo: replyTo || undefined,
         subject,
         html,
@@ -644,7 +662,7 @@ export async function sendSystemEmail({
         console.error("[System Email Resend Error]:", error);
         return { success: false, error: error.message, provider: "resend" };
       }
-      console.log(`[System Email Sent]: "${subject}" delivered to ${cleanTo} via Resend (${data?.id})`);
+      console.log(`[System Email Sent]: "${subject}" delivered to ${rawEmail} via Resend (${data?.id})`);
       return { success: true, provider: "resend" };
     } catch (resendErr: unknown) {
       const msg = resendErr instanceof Error ? resendErr.message : "Resend sending failed";

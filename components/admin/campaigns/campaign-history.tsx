@@ -133,21 +133,29 @@ export function CampaignHistory({ campaigns }: CampaignHistoryProps) {
                     </td>
 
                     <td className="px-4 py-3.5 text-center">
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase",
-                          camp.status === "COMPLETED"
-                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                            : camp.status === "SENDING"
-                            ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-                            : "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
-                        )}
-                      >
-                        {camp.status === "COMPLETED" && <CheckCircle2 className="h-3 w-3" />}
-                        {camp.status === "SENDING" && <Clock className="h-3 w-3 animate-spin" />}
-                        {camp.status === "FAILED" && <AlertCircle className="h-3 w-3" />}
-                        {camp.status}
-                      </span>
+                      {(() => {
+                        const isActuallyFailed = camp.status === "FAILED" || (camp.status === "COMPLETED" && camp.sent_count === 0 && camp.failed_count > 0);
+                        const isSending = camp.status === "SENDING";
+                        const isSuccess = camp.status === "COMPLETED" && camp.sent_count > 0;
+
+                        return (
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase",
+                              isActuallyFailed
+                                ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                                : isSending
+                                ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+                                : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                            )}
+                          >
+                            {isSuccess && <CheckCircle2 className="h-3 w-3" />}
+                            {isSending && <Clock className="h-3 w-3 animate-spin" />}
+                            {isActuallyFailed && <AlertCircle className="h-3 w-3" />}
+                            {isActuallyFailed ? "FAILED" : isSending ? "SENDING" : "COMPLETED"}
+                          </span>
+                        );
+                      })()}
                     </td>
 
                     <td

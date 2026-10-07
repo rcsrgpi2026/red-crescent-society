@@ -38,6 +38,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { sanitizeCampaignUrl } from "@/lib/campaign-utils";
 import { FacebookIcon, InstagramIcon } from "@/components/shared/social-icons";
 import {
@@ -518,9 +519,13 @@ export function CampaignComposer({
     setIsPaused(false);
     setDispatchLogs([]);
 
+    let currentSent = 0;
+    let currentFailed = 0;
+    let totalRecipients = 0;
+
     try {
       const contacts = activeContacts;
-      const totalRecipients = contacts.length;
+      totalRecipients = contacts.length;
       const numBatches = Math.ceil(totalRecipients / batchSize);
       const safeButtonUrl = sanitizeCampaignUrl(buttonUrl);
 
@@ -551,9 +556,6 @@ export function CampaignComposer({
         totalRecipients,
         isFinished: false,
       });
-
-      let currentSent = 0;
-      let currentFailed = 0;
 
       for (let i = 0; i < numBatches; i++) {
         if (abortDispatchRef.current) {
@@ -640,6 +642,13 @@ export function CampaignComposer({
     } finally {
       setIsDispatching(false);
       if (onCampaignCreated) onCampaignCreated();
+      if (currentSent > 0 && currentFailed === 0) {
+        toast.success(`Campaign broadcast completed: All ${currentSent} recipient(s) delivered!`);
+      } else if (currentSent > 0 && currentFailed > 0) {
+        toast.warning(`Campaign finished with warnings: ${currentSent} delivered, ${currentFailed} failed.`);
+      } else if (currentFailed > 0 && currentSent === 0) {
+        toast.error(`Campaign delivery failed: 0 of ${totalRecipients} emails delivered. Check dispatch console for details.`);
+      }
     }
   }
 
@@ -1441,16 +1450,36 @@ export function CampaignComposer({
 
         {/* Live Batch Dispatch Console */}
         {isDispatching || progress.totalBatches > 0 ? (
-          <div className="rounded-2xl border border-slate-300 bg-white p-5 text-black shadow-md dark:border-slate-300 dark:bg-white dark:text-black">
+          <div className={cn(
+            "rounded-2xl border p-5 shadow-md transition-all",
+            progress.isFinished && progress.sentCount === 0 && progress.failedCount > 0
+              ? "border-red-300 bg-red-50/20 text-black dark:border-red-900/40 dark:bg-red-950/20"
+              : "border-slate-300 bg-white text-black dark:border-slate-300 dark:bg-white dark:text-black"
+          )}>
             <div className="mb-3 flex items-center justify-between">
-              <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-700">
-                {progress.isFinished ? (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-700" />
+              {progress.isFinished ? (
+                progress.sentCount === 0 && progress.failedCount > 0 ? (
+                  <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-500">
+                    <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-500" />
+                    Campaign Broadcast Failed (0 Delivered, {progress.failedCount} Failed)
+                  </span>
+                ) : progress.failedCount > 0 ? (
+                  <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-600">
+                    <AlertCircle className="h-4 w-4 text-amber-700 dark:text-amber-600" />
+                    Completed with Issues ({progress.sentCount} Delivered, {progress.failedCount} Failed)
+                  </span>
                 ) : (
+                  <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-700">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-700" />
+                    Campaign Broadcast Completed ({progress.sentCount} Delivered)
+                  </span>
+                )
+              ) : (
+                <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-700">
                   <Loader2 className="h-4 w-4 animate-spin text-emerald-700" />
-                )}
-                {progress.isFinished ? "Campaign Broadcast Completed" : "Batch Dispatch in Progress"}
-              </span>
+                  Batch Dispatch in Progress
+                </span>
+              )}
               <span className="text-xs font-black text-black dark:text-black">
                 Batch {progress.currentBatch} of {progress.totalBatches}
               </span>
@@ -1459,7 +1488,14 @@ export function CampaignComposer({
             {/* Progress Bar */}
             <div className="mb-3.5 h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-200">
               <div
-                className="h-full bg-emerald-600 transition-all duration-300"
+                className={cn(
+                  "h-full transition-all duration-300",
+                  progress.isFinished && progress.sentCount === 0 && progress.failedCount > 0
+                    ? "bg-red-500"
+                    : progress.failedCount > 0
+                    ? "bg-amber-500"
+                    : "bg-emerald-600"
+                )}
                 style={{
                   width: `${
                     progress.totalBatches > 0
@@ -1470,19 +1506,54 @@ export function CampaignComposer({
               />
             </div>
 
+            {/* Completion Feedback Alert */}
+            {progress.isFinished && progress.sentCount === 0 && progress.failedCount > 0 && (
+              <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+                <p className="font-bold flex items-center gap-1.5">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  Delivery Failed: 0 of {progress.totalRecipients} emails delivered.
+                </p>
+                <p className="mt-1 text-[11px] text-red-700 dark:text-red-400">
+                  Please check the error logs below. If running on Vercel, ensure <strong>SMTP_USER</strong> and <strong>SMTP_PASS</strong> (Google App Password) are set in Vercel Environment Variables.
+                </p>
+              </div>
+            )}
+
+            {progress.isFinished && progress.sentCount > 0 && (
+              <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <p className="font-bold flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  {progress.sentCount} email(s) successfully accepted by mail server!
+                </p>
+                <p className="mt-1 text-[11px] text-emerald-700 dark:text-emerald-400">
+                  Please remind recipients to check their <strong>Spam / Junk</strong> folder if not seen in Primary Inbox.
+                </p>
+              </div>
+            )}
+
             {/* Stat Counters */}
             <div className="mb-4 grid grid-cols-3 gap-2.5 text-center text-xs">
-              <div className="rounded-xl bg-slate-100 p-2.5 border border-slate-300 dark:bg-slate-100 dark:border-slate-300">
-                <span className="block text-[11px] font-extrabold uppercase tracking-wider text-black dark:text-black">Delivered</span>
-                <span className="text-xl font-black text-black dark:text-black">{progress.sentCount}</span>
+              <div className={cn(
+                "rounded-xl p-2.5 border transition-all",
+                progress.sentCount > 0
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-950 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-200"
+                  : "bg-slate-100 border-slate-300 text-black dark:bg-slate-100 dark:border-slate-300 dark:text-black"
+              )}>
+                <span className="block text-[11px] font-extrabold uppercase tracking-wider">Delivered</span>
+                <span className="text-xl font-black">{progress.sentCount}</span>
               </div>
-              <div className="rounded-xl bg-slate-100 p-2.5 border border-slate-300 dark:bg-slate-100 dark:border-slate-300">
-                <span className="block text-[11px] font-extrabold uppercase tracking-wider text-black dark:text-black">Failed</span>
-                <span className="text-xl font-black text-black dark:text-black">{progress.failedCount}</span>
+              <div className={cn(
+                "rounded-xl p-2.5 border transition-all",
+                progress.failedCount > 0
+                  ? "bg-red-50 border-red-200 text-red-950 dark:bg-red-950/30 dark:border-red-800 dark:text-red-200"
+                  : "bg-slate-100 border-slate-300 text-black dark:bg-slate-100 dark:border-slate-300 dark:text-black"
+              )}>
+                <span className="block text-[11px] font-extrabold uppercase tracking-wider">Failed</span>
+                <span className="text-xl font-black">{progress.failedCount}</span>
               </div>
-              <div className="rounded-xl bg-slate-100 p-2.5 border border-slate-300 dark:bg-slate-100 dark:border-slate-300">
-                <span className="block text-[11px] font-extrabold uppercase tracking-wider text-black dark:text-black">Total</span>
-                <span className="text-xl font-black text-black dark:text-black">{progress.totalRecipients}</span>
+              <div className="rounded-xl bg-slate-100 p-2.5 border border-slate-300 dark:bg-slate-100 dark:border-slate-300 text-black dark:text-black">
+                <span className="block text-[11px] font-extrabold uppercase tracking-wider">Total</span>
+                <span className="text-xl font-black">{progress.totalRecipients}</span>
               </div>
             </div>
 

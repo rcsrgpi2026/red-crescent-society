@@ -542,6 +542,8 @@ export async function sendCampaignEmailBatch({
         text: textVersion,
         replyTo: config.user,
         priority: "normal",
+        isBulk: true,
+        unsubscribeEmail: cleanEmail,
       });
 
       if (sendRes.success) {
@@ -556,9 +558,9 @@ export async function sendCampaignEmailBatch({
         console.error(`[Campaign Send Failed] ${cleanEmail}:`, sendRes.error);
       }
 
-      // Natural 1.2-second pause between recipients to prevent Google outbound burst classification
+      // 2-second safe interval between recipients to comply with Google outbound burst heuristics
       if (i < recipients.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 1200));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
     }
   } catch (batchErr: unknown) {
@@ -586,6 +588,9 @@ export interface SendSystemEmailOptions {
   text: string;
   replyTo?: string;
   priority?: "high" | "normal" | "low";
+  isBulk?: boolean;
+  unsubscribeEmail?: string;
+  extraHeaders?: Record<string, string>;
 }
 
 /**
@@ -601,6 +606,9 @@ export async function sendSystemEmail({
   text,
   replyTo,
   priority = "normal",
+  isBulk = false,
+  unsubscribeEmail,
+  extraHeaders,
 }: SendSystemEmailOptions): Promise<EmailResult> {
   const config = getSmtpConfig();
   const resendClient = config.resendApiKey ? new Resend(config.resendApiKey) : null;
@@ -612,11 +620,25 @@ export async function sendSystemEmail({
   const displayName = displayNameMatch ? displayNameMatch[1].trim() : "";
   const recipientTarget = displayName ? `"${displayName}" <${rawEmail}>` : rawEmail;
 
-  const priorityHeader = priority === "high" ? "1" : priority === "low" ? "5" : "3";
-  const headers = {
-    "X-Mailer": "Red Crescent Youth Notification Engine",
-    "X-Priority": priorityHeader,
+  const appUrl = getEmailPublicUrl();
+  const headers: Record<string, string> = {
+    ...extraHeaders,
   };
+
+  // Only assign priority header if specifically non-normal (prevents automated bulk flagging)
+  if (priority === "high") {
+    headers["X-Priority"] = "1";
+    headers["Importance"] = "high";
+  }
+
+  // RFC 8058 standard for Google & Yahoo 2024 Sender Requirements
+  if (isBulk) {
+    const unsubTarget = unsubscribeEmail || rawEmail;
+    headers["List-Unsubscribe"] = `<mailto:${config.user}?subject=Unsubscribe%20${encodeURIComponent(unsubTarget)}>, <${appUrl}/student>`;
+    headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
+    headers["List-ID"] = `"Red Crescent Youth Bulletins" <bulletin.rgpircy.vercel.app>`;
+    headers["Precedence"] = "bulk";
+  }
 
   console.log(`[System Email] Attempting to send "${subject}" to ${rawEmail}...`);
 

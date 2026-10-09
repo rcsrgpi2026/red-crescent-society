@@ -272,6 +272,357 @@ export async function deleteStudent(id: string): Promise<ActionResult> {
 }
 
 /**
+ * Enrolls an existing registered polytechnic student as an official RCY
+ * (Red Crescent Youth) member / team member. Creates or activates their
+ * team_members record, updates their role to VOLUNTEER, syncs to community
+ * if applicable, and dispatches celebration notifications & emails.
+ */
+export async function makeStudentRcyMember(
+  input:
+    | FormData
+    | {
+        studentId: string;
+        position?: string;
+        rcyDepartment?: string | null;
+        memberId?: string | null;
+        sendNotification?: boolean;
+      }
+): Promise<ActionResult> {
+  const profile = await guard();
+  const admin = createAdminClient();
+
+  let studentId = "";
+  let position = "General Member";
+  let rcyDepartment: string | null = null;
+  let customMemberId: string | null = null;
+  let sendNotification = true;
+
+  if (input instanceof FormData) {
+    studentId = String(input.get("studentId") ?? input.get("id") ?? "");
+    position = String(input.get("position") || "General Member").trim();
+    rcyDepartment = input.get("rcyDepartment") ? String(input.get("rcyDepartment")).trim() : null;
+    customMemberId = input.get("memberId") ? String(input.get("memberId")).trim() : null;
+    if (input.has("sendNotification")) {
+      const val = input.get("sendNotification");
+      sendNotification = val === "true" || val === "on" || val === "1";
+    }
+  } else {
+    studentId = input.studentId;
+    position = (input.position || "General Member").trim();
+    rcyDepartment = input.rcyDepartment ? input.rcyDepartment.trim() : null;
+    customMemberId = input.memberId ? input.memberId.trim() : null;
+    if (input.sendNotification !== undefined) {
+      sendNotification = input.sendNotification;
+    }
+  }
+
+  if (!studentId) {
+    return { success: false, message: "Student ID is required." };
+  }
+
+  // 1. Fetch student record
+  const { data: student, error: studentErr } = await admin
+    .from("students")
+    .select("*")
+    .eq("id", studentId)
+    .maybeSingle();
+
+  if (studentErr || !student) {
+    return { success: false, message: "Student not found." };
+  }
+
+  // 2. Check if student already has a team_members entry (strictly by student_id, user_id, or email)
+  const orFilters = [`student_id.eq.${student.id}`];
+  if (student.user_id) orFilters.push(`user_id.eq.${student.user_id}`);
+  if (student.email?.trim()) orFilters.push(`email.eq.${student.email.trim()}`);
+
+  const { data: existingMembers } = await admin
+    .from("team_members")
+    .select("*")
+    .or(orFilters.join(","));
+
+  const existingMember = existingMembers && existingMembers.length > 0 ? existingMembers[0] : null;
+
+  if (existingMember && existingMember.status === "APPROVED") {
+    return {
+      success: false,
+      message: `${student.name} is already an active RCY member (${existingMember.member_id || "ID assigned"}).`,
+    };
+  }
+
+  // 3. Determine Member ID
+  let finalMemberId: string = customMemberId ?? "";
+  const year = new Date().getFullYear();
+  if (!finalMemberId) {
+    if (existingMember?.member_id) {
+      finalMemberId = existingMember.member_id;
+    } else {
+      const { count } = await admin
+        .from("team_members")
+        .select("id", { count: "exact", head: true })
+        .ilike("member_id", `RCR-${year}-%`);
+      const next = (count ?? 0) + 1;
+      finalMemberId = `RCR-${year}-${String(next).padStart(4, "0")}`;
+    }
+  }
+
+  // Guard against duplicate member_id
+  if (!existingMember || existingMember.member_id !== finalMemberId) {
+    const { data: dup } = await admin
+      .from("team_members")
+      .select("id")
+      .eq("member_id", finalMemberId)
+      .maybeSingle();
+
+    if (dup && dup.id !== existingMember?.id) {
+      const { data: allYearMembers } = await admin
+        .from("team_members")
+        .select("member_id")
+        .ilike("member_id", `RCR-${year}-%`);
+
+      let maxNum = 0;
+      for (const m of allYearMembers ?? []) {
+        const parts = m.member_id?.split("-");
+        if (parts && parts.length === 3) {
+          const num = parseInt(parts[2], 10);
+          if (!isNaN(num) && num > maxNum) maxNum = num;
+        }
+      }
+      finalMemberId = `RCR-${year}-${String(maxNum + 1).padStart(4, "0")}`;
+    }
+  }
+
+  const now = new Date().toISOString();
+  let teamMemberId: string;
+
+  // 4. Update or Insert team_members record
+  if (existingMember) {
+    teamMemberId = existingMember.id;
+    const { error: updateErr } = await admin
+      .from("team_members")
+      .update({
+        student_id: student.id,
+        user_id: student.user_id || existingMember.user_id,
+        name: student.name,
+        member_id: finalMemberId,
+        roll: student.roll,
+        session: student.session,
+        department: student.department,
+        semester: student.semester || existingMember.semester,
+        phone: student.phone || existingMember.phone,
+        email: student.email || existingMember.email,
+        blood_group: student.blood_group || existingMember.blood_group,
+        photo_url: student.photo_url || existingMember.photo_url,
+        position: position || existingMember.position || "General Member",
+        rcy_department: rcyDepartment || existingMember.rcy_department,
+        status: "APPROVED",
+        joined_at: existingMember.joined_at || now,
+        public_profile: true,
+      })
+      .eq("id", existingMember.id);
+
+    if (updateErr) {
+      console.error("makeStudentRcyMember update error:", updateErr);
+      return { success: false, message: `Could not update team member: ${updateErr.message}` };
+    }
+  } else {
+    const { data: inserted, error: insertErr } = await admin
+      .from("team_members")
+      .insert({
+        student_id: student.id,
+        user_id: student.user_id,
+        name: student.name,
+        member_id: finalMemberId,
+        roll: student.roll,
+        session: student.session,
+        department: student.department,
+        semester: student.semester,
+        phone: student.phone,
+        email: student.email,
+        blood_group: student.blood_group,
+        photo_url: student.photo_url,
+        position: position || "General Member",
+        rcy_department: rcyDepartment || null,
+        status: "APPROVED",
+        joined_at: now,
+        points: 0,
+        public_profile: true,
+      })
+      .select("id")
+      .single();
+
+    if (insertErr || !inserted) {
+      console.error("makeStudentRcyMember insert error:", insertErr);
+      return { success: false, message: `Could not create team member: ${insertErr?.message}` };
+    }
+    teamMemberId = inserted.id;
+  }
+
+  // 5. Upgrade user's role to VOLUNTEER in profiles
+  if (student.user_id) {
+    const { error: roleErr } = await admin
+      .from("profiles")
+      .update({ role: "VOLUNTEER" })
+      .eq("id", student.user_id);
+    if (roleErr) {
+      console.warn("makeStudentRcyMember profile role update warning:", roleErr);
+    }
+  }
+
+  // 6. Automatically approve any pending recruitment application for this student
+  const appFilters = [`student_id.eq.${student.id}`];
+  if (student.user_id) appFilters.push(`user_id.eq.${student.user_id}`);
+  await admin
+    .from("volunteer_applications")
+    .update({
+      status: "APPROVED",
+      reviewed_by: profile.id,
+      reviewed_at: now,
+    })
+    .or(appFilters.join(","))
+    .eq("status", "PENDING");
+
+  // 7. Dispatch celebrations (In-App notification, Push & Email)
+  if (sendNotification) {
+    if (student.user_id) {
+      try {
+        await createAndDispatchNotification(
+          {
+            title: "🎉 অভিনন্দন! RCY সদস্যপদ অনুমোদন",
+            body: `Congratulations ${student.name}! আপনাকে অফিসিয়াল রেড ক্রিসেন্ট যুব সদস্য (RCY Member) হিসেবে অন্তর্ভুক্ত করা হয়েছে (Member ID: ${finalMemberId})। সদস্য পোর্টাল থেকে আপনার ডিজিটাল মেম্বার কার্ড দেখতে পারবেন।`,
+            type: "system",
+            priority: "high",
+            actionUrl: "/volunteer",
+          },
+          {
+            specificUserIds: [student.user_id],
+          }
+        );
+      } catch (notifErr) {
+        console.warn("makeStudentRcyMember notification warning:", notifErr);
+      }
+    }
+
+    if (student.email) {
+      try {
+        await sendVolunteerApprovalEmail({
+          name: student.name,
+          email: student.email,
+          memberId: finalMemberId,
+          department: student.department,
+          position: position || "General Member",
+        });
+      } catch (emailErr) {
+        console.warn("makeStudentRcyMember email warning:", emailErr);
+      }
+    }
+  }
+
+  // 8. Sync to Community executive committee tree if appropriate
+  try {
+    await syncTeamMemberToCommunity(admin, teamMemberId);
+  } catch (syncErr) {
+    console.warn("makeStudentRcyMember community sync warning:", syncErr);
+  }
+
+  // 9. Audit log
+  await logAudit("student_made_rcy_member", "student", student.id, {
+    team_member_id: teamMemberId,
+    member_id: finalMemberId,
+    position,
+    rcy_department: rcyDepartment,
+  });
+
+  // 10. Revalidate all relevant paths and tags
+  revalidatePath("/admin/students");
+  revalidatePath("/admin/team");
+  revalidatePath("/admin/community");
+  revalidatePath("/team");
+  revalidatePath("/community");
+  revalidatePath("/volunteer");
+  revalidatePath("/student");
+  revalidatePath("/");
+  updateTag("volunteers");
+  updateTag("community");
+  invalidateLeadershipCache();
+  clearResponseCache();
+
+  return {
+    success: true,
+    message: `Successfully enrolled ${student.name} as an RCY Member (${finalMemberId}).`,
+  };
+}
+
+/**
+ * Revokes RCY membership for a student, reverting their account back to
+ * standard Student status without deleting their student login or academic record.
+ */
+export async function revokeStudentRcyMembership(studentId: string): Promise<ActionResult> {
+  await guard();
+  const admin = createAdminClient();
+
+  const { data: student } = await admin
+    .from("students")
+    .select("id, user_id, name, roll, email")
+    .eq("id", studentId)
+    .maybeSingle();
+
+  if (!student) {
+    return { success: false, message: "Student not found." };
+  }
+
+  // Find linked team member strictly by student_id, user_id, or email
+  const orFilters = [`student_id.eq.${student.id}`];
+  if (student.user_id) orFilters.push(`user_id.eq.${student.user_id}`);
+  if (student.email?.trim()) orFilters.push(`email.eq.${student.email.trim()}`);
+
+  const { data: members } = await admin
+    .from("team_members")
+    .select("id")
+    .or(orFilters.join(","));
+
+  const member = members && members.length > 0 ? members[0] : null;
+
+  if (!member) {
+    return { success: false, message: "No RCY membership record found for this student." };
+  }
+
+  // Remove community tree link if exists
+  await deleteCommunityMemberByTeamId(admin, member.id);
+
+  // Remove from team_members (does NOT delete auth user or student profile!)
+  const { error: delErr } = await admin.from("team_members").delete().eq("id", member.id);
+  if (delErr) {
+    return { success: false, message: `Could not remove team member record: ${delErr.message}` };
+  }
+
+  // Revert role in profiles to STUDENT
+  if (student.user_id) {
+    await admin.from("profiles").update({ role: "STUDENT" }).eq("id", student.user_id);
+  }
+
+  await logAudit("rcy_membership_revoked", "student", student.id);
+
+  revalidatePath("/admin/students");
+  revalidatePath("/admin/team");
+  revalidatePath("/admin/community");
+  revalidatePath("/team");
+  revalidatePath("/community");
+  revalidatePath("/volunteer");
+  revalidatePath("/student");
+  revalidatePath("/");
+  updateTag("volunteers");
+  updateTag("community");
+  invalidateLeadershipCache();
+  clearResponseCache();
+
+  return {
+    success: true,
+    message: `RCY membership revoked for ${student.name}. Account reverted to student status.`,
+  };
+}
+
+/**
  * Declares a member's leadership position from the admin team list. Used by
  * the inline position select — the member sees it on their profile and on
  * the ID-style membership card.

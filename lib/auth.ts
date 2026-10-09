@@ -117,7 +117,7 @@ export async function requireAnyRole(roles: UserRole[]) {
 /** Redirects to the student login when there is no student session. */
 export async function requireStudent() {
   const profile = await getProfile();
-  if (!profile || profile.role !== "STUDENT") {
+  if (!profile || (profile.role !== "STUDENT" && profile.role !== "VOLUNTEER")) {
     redirect("/student/login");
   }
   const student = await getCurrentStudent();

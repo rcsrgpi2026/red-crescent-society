@@ -9,15 +9,16 @@ import { InlineStatus } from "@/components/admin/inline-status";
 import { PositionDepartment } from "@/components/admin/position-department";
 import { LegacyMemberDialog } from "@/components/admin/legacy-member-dialog";
 import { AddToCommunityDialog } from "@/components/admin/add-to-community-dialog";
+import { AddStudentToTeamDialog } from "@/components/admin/add-student-to-team-dialog";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import {
   ResponsiveTable,
   type Column,
 } from "@/components/admin/responsive-table";
 import { Reveal } from "@/components/shared/reveal";
-import { adminGetTeamMembers, adminGetCommunityMembers } from "@/lib/queries";
+import { adminGetTeamMembers, adminGetCommunityMembers, adminGetStudents } from "@/lib/queries";
 import { updateTeamMemberStatus } from "@/lib/admin-actions";
-import { formatDate, formatDateTime, TEAM_POSITIONS, RCY_DEPARTMENTS } from "@/lib/constants";
+import { formatDate, TEAM_POSITIONS, RCY_DEPARTMENTS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const STATUS_TABS = [
@@ -48,12 +49,13 @@ export default async function AdminTeamMembersPage({
   const isLegacy =
     params.view === "legacy" ? true : params.view === "active" ? false : undefined;
 
-  const [allMembers, communityMembers] = await Promise.all([
+  const [allMembers, communityMembers, allStudents] = await Promise.all([
     adminGetTeamMembers({
       status: params.status || undefined,
       search: params.search,
     }),
     adminGetCommunityMembers(),
+    adminGetStudents(),
   ]);
 
   const activeCount = allMembers.filter((m) => !m.is_legacy).length;
@@ -213,12 +215,18 @@ export default async function AdminTeamMembersPage({
         title="Team Members"
         description="Review registrations, approve members and manage the team member directory."
         actions={
-          <Button asChild variant="outline" size="sm">
-            <a href="/admin/team/export" download>
-              <Download className="mr-1.5 h-4 w-4" aria-hidden />
-              Download PDF
-            </a>
-          </Button>
+          <div className="flex items-center gap-2">
+            <AddStudentToTeamDialog
+              students={allStudents}
+              teamMembers={allMembers}
+            />
+            <Button asChild variant="outline" size="sm">
+              <a href="/admin/team/export" download>
+                <Download className="mr-1.5 h-4 w-4" aria-hidden />
+                Download PDF
+              </a>
+            </Button>
+          </div>
         }
       />
 

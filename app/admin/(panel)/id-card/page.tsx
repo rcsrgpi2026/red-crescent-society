@@ -37,6 +37,15 @@ export default async function AdminIdCardPage() {
       ],
     };
   }
+  if (!previewMember.address) {
+    previewMember.address = "Rajshahi, Bangladesh";
+  }
+  if (!previewMember.phone) {
+    previewMember.phone = "+8801700-000000";
+  }
+  if (!previewMember.email) {
+    previewMember.email = "member@rgpi.gov.bd";
+  }
   const previewPhoto = members[0]?.photo_url ?? null;
 
   return (

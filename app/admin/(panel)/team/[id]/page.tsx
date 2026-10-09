@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, BadgeCheck, Camera, PhoneCall, UserRound, Sparkles, GraduationCap } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Camera, PhoneCall, UserRound, Sparkles, GraduationCap, UserCog } from "lucide-react";
 import { adminGetTeamMember, adminGetPoints, getSettings } from "@/lib/queries";
-import { submitTeamMemberStatus, deleteTeamMember, updateTeamMemberPhoto } from "@/lib/admin-actions";
+import { submitTeamMemberStatus, deleteTeamMember, updateTeamMemberPhoto, updateTeamMemberDetails } from "@/lib/admin-actions";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { ConfirmDelete } from "@/components/admin/confirm-delete";
 import { AdminFormDialog } from "@/components/admin/admin-form-dialog";
@@ -11,7 +11,7 @@ import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { PointsForm } from "@/components/admin/points-form";
 import { LegacyMemberDialog } from "@/components/admin/legacy-member-dialog";
 import { Reveal } from "@/components/shared/reveal";
-import { POINT_CATEGORIES, formatDateTime } from "@/lib/constants";
+import { POINT_CATEGORIES, formatDateTime, BLOOD_GROUPS, TEAM_POSITIONS, RCY_DEPARTMENTS } from "@/lib/constants";
 
 export default async function AdminTeamMemberDetailPage({
   params,
@@ -135,6 +135,162 @@ export default async function AdminTeamMemberDetailPage({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <LegacyMemberDialog member={volunteer} />
+          <AdminFormDialog
+            trigger={
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3.5 py-2 text-xs font-semibold text-foreground shadow-xs transition-colors hover:bg-mist"
+              >
+                <UserCog className="h-3.5 w-3.5 text-brand" />
+                Edit Profile
+              </button>
+            }
+            title="Edit Team Member Profile"
+            description="Update full record details: position, RCY department, blood group, contact, skills, and background."
+            action={updateTeamMemberDetails}
+            submitLabel="Save changes"
+            size="2xl"
+          >
+            <>
+              <input type="hidden" name="id" value={volunteer.id} />
+              <div className="space-y-4 max-h-[72vh] overflow-y-auto px-1 py-1">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-semibold text-foreground">Position / Designation</label>
+                    <select
+                      name="position"
+                      defaultValue={volunteer.position}
+                      className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                    >
+                      {TEAM_POSITIONS.map((pos) => (
+                        <option key={pos} value={pos}>
+                          {pos}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-foreground">RCY Department</label>
+                    <select
+                      name="rcyDepartment"
+                      defaultValue={volunteer.rcy_department ?? "__none"}
+                      className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                    >
+                      <option value="__none">None / Society-wide</option>
+                      {RCY_DEPARTMENTS.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-semibold text-foreground">Blood Group</label>
+                    <select
+                      name="bloodGroup"
+                      defaultValue={volunteer.blood_group ?? ""}
+                      className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs font-medium"
+                    >
+                      <option value="">Not specified</option>
+                      {BLOOD_GROUPS.map((bg) => (
+                        <option key={bg} value={bg}>
+                          {bg}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-foreground">Area / Residential Address</label>
+                    <input
+                      name="area"
+                      defaultValue={volunteer.area ?? ""}
+                      placeholder="e.g. Boalia, Rajshahi"
+                      className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-semibold text-foreground">Phone number</label>
+                    <input
+                      name="phone"
+                      defaultValue={volunteer.phone ?? ""}
+                      placeholder="+8801XXXXXXXXX"
+                      className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-foreground">Email address</label>
+                    <input
+                      name="email"
+                      type="email"
+                      defaultValue={volunteer.email ?? ""}
+                      placeholder="member@example.com"
+                      className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-semibold text-foreground">Emergency Contact Name</label>
+                    <input
+                      name="emergencyContactName"
+                      defaultValue={volunteer.emergency_contact_name ?? ""}
+                      placeholder="Name of parent / guardian"
+                      className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-foreground">Emergency Contact Phone</label>
+                    <input
+                      name="emergencyContactPhone"
+                      defaultValue={volunteer.emergency_contact_phone ?? ""}
+                      placeholder="Emergency contact mobile"
+                      className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-foreground">Skills (comma-separated)</label>
+                  <input
+                    name="skills"
+                    defaultValue={(volunteer.skills || []).join(", ")}
+                    placeholder="First Aid, Communication, Disaster Management"
+                    className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">e.g. First Aid, Search & Rescue, Photography, Communication</p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-foreground">Motivation for joining</label>
+                  <textarea
+                    name="motivation"
+                    rows={3}
+                    defaultValue={volunteer.motivation ?? ""}
+                    placeholder="Why this member wants to volunteer..."
+                    className="mt-1 w-full rounded-md border border-input bg-transparent p-2.5 text-xs leading-relaxed shadow-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-foreground">Previous experience</label>
+                  <textarea
+                    name="experience"
+                    rows={2}
+                    defaultValue={volunteer.experience ?? ""}
+                    placeholder="Any previous volunteer or leadership experience..."
+                    className="mt-1 w-full rounded-md border border-input bg-transparent p-2.5 text-xs leading-relaxed shadow-xs"
+                  />
+                </div>
+              </div>
+            </>
+          </AdminFormDialog>
           {volunteer.status !== "APPROVED" && (
             <form action={submitTeamMemberStatus}>
               <input type="hidden" name="id" value={volunteer.id} />

@@ -15,6 +15,7 @@ import type { CustomPopupConfig } from "@/types/database";
 import { invalidateLeadershipCache, invalidateNoticesCache } from "@/lib/ai/resolvers/live-data";
 import { clearResponseCache } from "@/lib/ai/cache";
 import { syncTeamMemberToCommunity, deleteCommunityMemberByTeamId, syncAllTeamMembersToCommunity } from "@/lib/community-sync";
+import { generateNextMemberId } from "@/lib/member-id";
 
 function guardConfig() {
   if (!isSupabaseConfigured) {
@@ -63,34 +64,35 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
     return { success: false, message: "Invalid status." };
   }
 
-  const supabase = await createClient();
+  const admin = createAdminClient();
   const patch: Record<string, unknown> = { status };
 
   if (status === "APPROVED") {
-    // Generate a sequential member ID: RCR-YYYY-NNNN. Count only team members
-    // that already carry this year's RCR id, so approving several members in
-    // a row hands out unique ids — counting all rows would give the same
-    // number twice (both records already exist) and the second approval
-    // would silently fail on the unique member_id constraint.
-    const year = new Date().getFullYear();
-    const { count } = await supabase
+    // Preserve existing member_id if already assigned; otherwise generate the next unique sequence ID
+    const { data: existing } = await admin
       .from("team_members")
-      .select("id", { count: "exact", head: true })
-      .ilike("member_id", `RCR-${year}-%`);
-    const next = (count ?? 0) + 1;
-    patch.member_id = `RCR-${year}-${String(next).padStart(4, "0")}`;
+      .select("member_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (existing?.member_id) {
+      patch.member_id = existing.member_id;
+    } else {
+      patch.member_id = await generateNextMemberId(admin);
+    }
     patch.joined_at = new Date().toISOString();
   }
 
-  const { error } = await supabase.from("team_members").update(patch).eq("id", id);
+  const { error } = await admin.from("team_members").update(patch).eq("id", id);
   if (error) {
+    console.error("updateTeamMemberStatus update error:", error);
     return { success: false, message: "Could not update the team member." };
   }
 
   // Trigger system notification & email if approved or rejected
   if (status === "APPROVED") {
     try {
-      const { data: member } = await supabase
+      const { data: member } = await admin
         .from("team_members")
         .select("name, email, user_id, department, position")
         .eq("id", id)
@@ -114,7 +116,7 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
       // Resolve recipient email (team_members.email or profiles.email fallback)
       let recipientEmail = member?.email;
       if (!recipientEmail && member?.user_id) {
-        const { data: prof } = await supabase
+        const { data: prof } = await admin
           .from("profiles")
           .select("email")
           .eq("id", member.user_id)
@@ -141,7 +143,7 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
     }
   } else if (status === "REJECTED") {
     try {
-      const { data: member } = await supabase
+      const { data: member } = await admin
         .from("team_members")
         .select("name, user_id")
         .eq("id", id)
@@ -166,7 +168,7 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
     }
   }
 
-  await syncTeamMemberToCommunity(supabase, id);
+  await syncTeamMemberToCommunity(admin, id);
   await logAudit(`volunteer_${status.toLowerCase()}`, "volunteer", id);
   revalidatePath("/admin/team");
   revalidatePath("/admin/community");
@@ -357,17 +359,10 @@ export async function makeStudentRcyMember(
     if (existingMember?.member_id) {
       finalMemberId = existingMember.member_id;
     } else {
-      const { count } = await admin
-        .from("team_members")
-        .select("id", { count: "exact", head: true })
-        .ilike("member_id", `RCR-${year}-%`);
-      const next = (count ?? 0) + 1;
-      finalMemberId = `RCR-${year}-${String(next).padStart(4, "0")}`;
+      finalMemberId = await generateNextMemberId(admin, year);
     }
-  }
-
-  // Guard against duplicate member_id
-  if (!existingMember || existingMember.member_id !== finalMemberId) {
+  } else {
+    // Guard against collision if custom ID is supplied
     const { data: dup } = await admin
       .from("team_members")
       .select("id")
@@ -375,20 +370,7 @@ export async function makeStudentRcyMember(
       .maybeSingle();
 
     if (dup && dup.id !== existingMember?.id) {
-      const { data: allYearMembers } = await admin
-        .from("team_members")
-        .select("member_id")
-        .ilike("member_id", `RCR-${year}-%`);
-
-      let maxNum = 0;
-      for (const m of allYearMembers ?? []) {
-        const parts = m.member_id?.split("-");
-        if (parts && parts.length === 3) {
-          const num = parseInt(parts[2], 10);
-          if (!isNaN(num) && num > maxNum) maxNum = num;
-        }
-      }
-      finalMemberId = `RCR-${year}-${String(maxNum + 1).padStart(4, "0")}`;
+      finalMemberId = await generateNextMemberId(admin, year);
     }
   }
 
@@ -812,6 +794,86 @@ export async function updateTeamMemberPhoto(formData: FormData): Promise<ActionR
   clearResponseCache();
   return { success: true, message: "Photo updated." };
 }
+
+export async function updateTeamMemberDetails(formData: FormData): Promise<ActionResult> {
+  await guard();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { success: false, message: "Team member is required." };
+
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const email = String(formData.get("email") ?? "").trim() || null;
+  const bloodGroup = String(formData.get("bloodGroup") ?? "").trim() || null;
+  const area = String(formData.get("area") ?? "").trim() || null;
+  const emergencyContactName = String(formData.get("emergencyContactName") ?? "").trim() || null;
+  const emergencyContactPhone = String(formData.get("emergencyContactPhone") ?? "").trim() || null;
+  const position = String(formData.get("position") ?? "").trim() || null;
+  const rcyDepartmentRaw = String(formData.get("rcyDepartment") ?? "").trim();
+  const rcyDepartment = rcyDepartmentRaw === "__none" || !rcyDepartmentRaw ? null : rcyDepartmentRaw;
+  const motivation = String(formData.get("motivation") ?? "").trim() || null;
+  const experience = String(formData.get("experience") ?? "").trim() || null;
+
+  const rawSkills = String(formData.get("skills") ?? "").trim();
+  const skills = rawSkills
+    ? rawSkills.split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  const updatePayload: Record<string, unknown> = {
+    phone,
+    email,
+    blood_group: bloodGroup,
+    area,
+    emergency_contact_name: emergencyContactName,
+    emergency_contact_phone: emergencyContactPhone,
+    skills,
+    motivation,
+    experience,
+  };
+
+  if (position) {
+    updatePayload.position = position;
+  }
+  if (formData.has("rcyDepartment")) {
+    updatePayload.rcy_department = rcyDepartment;
+  }
+
+  const admin = await createAdminClient();
+  const { error } = await admin
+    .from("team_members")
+    .update(updatePayload)
+    .eq("id", id);
+
+  if (error) {
+    console.error("updateTeamMemberDetails error:", error);
+    return { success: false, message: `Could not update details: ${error.message}` };
+  }
+
+  // Also sync blood_group and address to linked student record if present
+  const { data: member } = await admin
+    .from("team_members")
+    .select("student_id, user_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (member?.student_id) {
+    await admin.from("students").update({
+      blood_group: bloodGroup,
+      address: area,
+      phone: phone || undefined,
+    }).eq("id", member.student_id);
+  }
+
+  await syncTeamMemberToCommunity(admin, id);
+  await logAudit("team_member_details_updated", "team_member", id, updatePayload);
+  revalidatePath(`/admin/team/${id}`);
+  revalidatePath("/admin/team");
+  revalidatePath("/team");
+  revalidatePath("/community");
+  updateTag("volunteers");
+  clearResponseCache();
+  return { success: true, message: "Member details updated successfully." };
+}
+
+export const updateTeamMemberContact = updateTeamMemberDetails;
 
 // ---------------------------------------------------------------------------
 // Founders & Principal

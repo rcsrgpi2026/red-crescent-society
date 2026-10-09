@@ -387,14 +387,15 @@ export function IdCardDesignEditor({
   const [design, setDesign] = useState<CardDesignConfig>(() => initialDesign);
   const [activeTab, setActiveTab] = useState<TabId>("logos");
   const [saving, setSaving] = useState(false);
+  const [previewMemberData, setPreviewMemberData] = useState<MemberData>(() => previewMember);
 
   const previewConfig = useMemo(
     () => ({
       ...design,
-      member: previewMember,
+      member: previewMemberData,
       photo: { ...design.photo, src: previewPhoto || design.photo.src || "" },
     }),
-    [design, previewMember, previewPhoto]
+    [design, previewMemberData, previewPhoto]
   );
 
   // Only object sections can be patched key-by-key (strings / arrays are replaced wholesale).
@@ -896,6 +897,88 @@ export function IdCardDesignEditor({
                   />
                 </Field>
                 <Toggle label="Show blood group" checked={design.backSide.bloodGroupVisible} onChange={(v) => patch("backSide", { bloodGroupVisible: v })} className="sm:col-span-2" />
+              </SectionCard>
+
+              <SectionCard
+                title="Cardholder contact details (Back side)"
+                description="Configure phone number, email address, and address display on the back of the card, and test with live preview."
+              >
+                <Toggle
+                  label="Show phone number"
+                  checked={design.backSide.showPhone ?? true}
+                  onChange={(v) => patch("backSide", { showPhone: v })}
+                />
+                <Toggle
+                  label="Show email address"
+                  checked={design.backSide.showEmail ?? true}
+                  onChange={(v) => patch("backSide", { showEmail: v })}
+                />
+                <Toggle
+                  label="Show address / area"
+                  checked={design.backSide.showAddress ?? true}
+                  onChange={(v) => patch("backSide", { showAddress: v })}
+                  className="sm:col-span-2"
+                />
+                <TextInput
+                  label="Section / box title"
+                  value={design.backSide.contactTitle ?? "Cardholder Details"}
+                  onChange={(v) => patch("backSide", { contactTitle: v })}
+                  placeholder="Cardholder Details"
+                  className="sm:col-span-2"
+                />
+                <TextInput
+                  label="Phone label"
+                  value={design.backSide.phoneLabel ?? "Phone:"}
+                  onChange={(v) => patch("backSide", { phoneLabel: v })}
+                  placeholder="Phone:"
+                />
+                <TextInput
+                  label="Email label"
+                  value={design.backSide.emailLabel ?? "Email:"}
+                  onChange={(v) => patch("backSide", { emailLabel: v })}
+                  placeholder="Email:"
+                />
+                <TextInput
+                  label="Address label"
+                  value={design.backSide.addressLabel ?? "Address:"}
+                  onChange={(v) => patch("backSide", { addressLabel: v })}
+                  placeholder="Address:"
+                />
+                <TextInput
+                  label="Fallback / default address"
+                  value={design.backSide.customAddress ?? ""}
+                  onChange={(v) => patch("backSide", { customAddress: v })}
+                  placeholder="e.g. Rajshahi, Bangladesh"
+                />
+
+                <div className="rounded-xl border border-line/70 bg-mist/50 p-3.5 sm:col-span-2">
+                  <p className="text-xs font-bold text-foreground">
+                    Live Preview Cardholder Data (Test & Edit)
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Modify phone, email, or address here to preview how different lengths render on the card back in real time.
+                  </p>
+                  <div className="mt-3 grid gap-2.5 sm:grid-cols-3">
+                    <TextInput
+                      label="Preview Phone"
+                      value={previewMemberData.phone ?? ""}
+                      onChange={(v) => setPreviewMemberData((prev) => ({ ...prev, phone: v }))}
+                      placeholder="+8801XXXXXXXXX"
+                    />
+                    <TextInput
+                      label="Preview Email"
+                      value={previewMemberData.email ?? ""}
+                      onChange={(v) => setPreviewMemberData((prev) => ({ ...prev, email: v }))}
+                      placeholder="member@example.com"
+                    />
+                    <TextInput
+                      label="Preview Address"
+                      value={previewMemberData.address ?? ""}
+                      onChange={(v) => setPreviewMemberData((prev) => ({ ...prev, address: v }))}
+                      placeholder="Boalia, Rajshahi"
+                    />
+                  </div>
+                </div>
               </SectionCard>
 
               <SectionCard

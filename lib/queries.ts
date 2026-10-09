@@ -1341,6 +1341,32 @@ export async function getMyVolunteerApplication(userId: string): Promise<Volunte
   return (data as VolunteerApplication) ?? null;
 }
 
+/**
+ * Checks if a student is already an approved RCY Team Member.
+ */
+export async function getStudentTeamMembership(
+  studentId: string,
+  userId?: string | null,
+  email?: string | null
+): Promise<TeamMember | null> {
+  const supabase = await db();
+  if (!supabase) return null;
+
+  const filters = [`student_id.eq.${studentId}`];
+  if (userId) filters.push(`user_id.eq.${userId}`);
+  if (email?.trim()) filters.push(`email.eq.${email.trim()}`);
+
+  const { data } = await supabase
+    .from("team_members")
+    .select("*")
+    .or(filters.join(","))
+    .eq("status", "APPROVED")
+    .limit(1)
+    .maybeSingle();
+
+  return (data as TeamMember) ?? null;
+}
+
 export async function adminGetRecruitmentStats() {
   const supabase = await db();
   if (!supabase) {

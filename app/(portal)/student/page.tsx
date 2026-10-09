@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Sparkles, Clock, CheckCircle2, XCircle, ArrowRight, UserPlus } from "lucide-react";
+import { ArrowLeft, Sparkles, Clock, CheckCircle2, XCircle, ArrowRight, UserPlus, BadgeCheck } from "lucide-react";
 import { requireStudent } from "@/lib/auth";
 import {
   getMyDonorContactRequests,
   getActiveRecruitmentCampaign,
   getMyVolunteerApplication,
+  getStudentTeamMembership,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { SiteLogo } from "@/components/layout/site-logo";
@@ -25,11 +26,12 @@ export const metadata: Metadata = {
 
 export default async function StudentPortalPage() {
   const { profile, student } = await requireStudent();
-  const [notifications, notifPrefs, activeCampaign, myApplication] = await Promise.all([
+  const [notifications, notifPrefs, activeCampaign, myApplication, teamMembership] = await Promise.all([
     getMyDonorContactRequests(),
     getMyNotificationPreferences(),
     getActiveRecruitmentCampaign(),
     getMyVolunteerApplication(student.user_id || profile.id),
+    getStudentTeamMembership(student.id, student.user_id || profile.id, student.email),
   ]);
 
 
@@ -50,6 +52,15 @@ export default async function StudentPortalPage() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
+            {teamMembership && (
+              <Link
+                href="/volunteer"
+                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-colors"
+              >
+                <BadgeCheck className="h-3.5 w-3.5 text-emerald-600" />
+                Volunteer Portal
+              </Link>
+            )}
             <Link
               href="/"
               className="text-xs font-semibold text-brand hover:underline hidden sm:inline-block"
@@ -71,8 +82,45 @@ export default async function StudentPortalPage() {
         </Link>
 
         <div className="mt-6 space-y-6">
-          {/* Volunteer Application Review Status (if submitted) */}
-          {myApplication && myApplication.status === "PENDING" && (
+          {/* Official RCY Team Member Status Card */}
+          {teamMembership && (
+            <div className="relative overflow-hidden rounded-3xl border border-emerald-300 bg-gradient-to-r from-[#033c27] via-brand to-emerald-700 p-6 text-white shadow-md sm:p-7">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3.5">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-emerald-200 shadow-sm border border-white/20">
+                    <BadgeCheck className="h-7 w-7 text-emerald-300" />
+                  </span>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-emerald-400/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-200 uppercase tracking-wide border border-emerald-400/30">
+                        Official RCY Member
+                      </span>
+                      {teamMembership.member_id && (
+                        <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-mono font-semibold text-white">
+                          ID: {teamMembership.member_id}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="mt-1.5 text-base font-bold text-white sm:text-lg">
+                      Active Team Member · {teamMembership.position || "General Member"}
+                    </h3>
+                    <p className="mt-1 text-xs text-white/80 max-w-xl leading-relaxed">
+                      You are an official active member of Rajshahi Polytechnic Institute Red Crescent Youth ({teamMembership.rcy_department || "Society-wide"}). You have full access to your digital ID card, event participation, certificates, and team portal.
+                    </p>
+                  </div>
+                </div>
+                <Button asChild size="sm" className="bg-white hover:bg-white/90 text-brand-dark font-bold shrink-0 gap-1.5 shadow-sm">
+                  <Link href="/volunteer">
+                    Volunteer Portal & ID Card
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Volunteer Application Review Status (if submitted and not yet a team member) */}
+          {!teamMembership && myApplication && myApplication.status === "PENDING" && (
             <div className="rounded-3xl border border-amber-200 bg-amber-50/80 p-6 shadow-sm sm:p-7">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3.5">
@@ -98,7 +146,7 @@ export default async function StudentPortalPage() {
             </div>
           )}
 
-          {myApplication && myApplication.status === "APPROVED" && (
+          {!teamMembership && myApplication && myApplication.status === "APPROVED" && (
             <div className="rounded-3xl border border-emerald-200 bg-emerald-50/80 p-6 shadow-sm sm:p-7">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3.5">
@@ -121,7 +169,7 @@ export default async function StudentPortalPage() {
             </div>
           )}
 
-          {myApplication && myApplication.status === "REJECTED" && (
+          {!teamMembership && myApplication && myApplication.status === "REJECTED" && (
             <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-7">
               <div className="flex items-start gap-3.5">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-crescent-soft text-crescent shadow-sm">
@@ -144,8 +192,8 @@ export default async function StudentPortalPage() {
             </div>
           )}
 
-          {/* Active Recruitment Invitation Banner (if no application yet) */}
-          {!myApplication && activeCampaign && (
+          {/* Active Recruitment Invitation Banner (if no application and not a member) */}
+          {!teamMembership && !myApplication && activeCampaign && (
             <div className="relative overflow-hidden rounded-3xl border border-brand/20 bg-gradient-to-r from-brand-dark via-[#043c28] to-brand p-6 text-white shadow-md sm:p-7">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3.5">

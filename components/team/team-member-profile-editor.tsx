@@ -29,6 +29,7 @@ import {
   formatDate,
   SESSIONS,
   DEPARTMENTS,
+  BLOOD_GROUPS,
 } from "@/lib/constants";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import {
@@ -52,6 +53,7 @@ export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember
     registrationNo: teamMember.registration_no || "",
     session: teamMember.session || "",
     department: teamMember.department || "",
+    bloodGroup: teamMember.blood_group || "",
     email: teamMember.email || "",
     phone: teamMember.phone || "",
     area: teamMember.area || "",
@@ -107,7 +109,7 @@ export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember
     { icon: Building2, label: "College Department", value: formData.department || teamMember.department || "—" },
     { icon: Layers, label: "RCY Department", value: teamMember.rcy_department || "—", note: "Declared by admin" },
     { icon: CalendarDays, label: "Session", value: formData.session || teamMember.session || "—" },
-    { icon: Droplets, label: "Blood Group", value: teamMember.blood_group || "—", note: "Protected (Admin only)" },
+    { icon: Droplets, label: "Blood Group", value: formData.bloodGroup || teamMember.blood_group || "Not specified" },
     { icon: MapPin, label: "Area / Address", value: formData.area || teamMember.area || "—" },
     { icon: Phone, label: "Mobile Number", value: formData.phone || teamMember.phone || "—" },
     { icon: Mail, label: "Email", value: formData.email || teamMember.email || "—" },
@@ -405,6 +407,28 @@ export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember
               )}
             </div>
 
+            <div>
+              <Label htmlFor="vl-bloodGroup">Blood Group</Label>
+              <Select
+                name="bloodGroup"
+                value={formData.bloodGroup || undefined}
+                onValueChange={(val) => handleChange("bloodGroup", val)}
+              >
+                <SelectTrigger id="vl-bloodGroup" className="mt-1.5 font-medium">
+                  <SelectValue placeholder="Select blood group" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BLOOD_GROUPS.map((bg) => (
+                    <SelectItem key={bg} value={bg} className="font-medium">
+                      {bg}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.bloodGroup && (
+                <p className="mt-1 text-xs font-medium text-crescent">{errors.bloodGroup[0]}</p>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">

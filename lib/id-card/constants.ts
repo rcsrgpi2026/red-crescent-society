@@ -36,7 +36,7 @@ export const DEFAULT_MEMBER_DATA: MemberData = {
   roll: "215949",
   register: "1502392940",
   session: "2024-25",
-  department: "Computer Science & Technology",
+  department: "CST",
   designation: "General Member",
   validUntil: "2028",
   phone: "+8801XXX-XXXXXX",
@@ -44,6 +44,7 @@ export const DEFAULT_MEMBER_DATA: MemberData = {
   facebook: "facebook.com/rcsrgpi",
   bloodGroup: "O+",
   idNumber: "RCR-2026-0001",
+  address: "Rajshahi, Bangladesh",
   customFields: [],
 };
 
@@ -283,6 +284,14 @@ export const DEFAULT_CARD_CONFIG: CardConfig = {
     qrCodeData: "{member_id}",
     emergencyContact: "Emergency Hotline: 01614-424259",
     bloodGroupVisible: true,
+    showPhone: true,
+    showEmail: true,
+    showAddress: true,
+    contactTitle: "Cardholder Details",
+    phoneLabel: "Phone:",
+    emailLabel: "Email:",
+    addressLabel: "Address:",
+    customAddress: "",
   },
 };
 

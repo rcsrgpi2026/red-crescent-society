@@ -50,6 +50,7 @@ const volunteerProfileSchema = z.object({
     .optional()
     .or(z.literal("")),
   department: z.string().trim().min(1, "Department is required"),
+  bloodGroup: z.string().trim().optional().or(z.literal("")),
   email: z
     .string()
     .trim()
@@ -139,7 +140,25 @@ export async function updateStudentProfile(
   // Sync profile name
   await supabase.from("profiles").update({ full_name: v.name }).eq("id", user.id);
 
+  // Sync with team_members if this student is an active team member
+  await supabase
+    .from("team_members")
+    .update({
+      name: v.name,
+      session: v.session,
+      semester: v.semester ?? "",
+      roll: v.roll,
+      department: v.department,
+      phone: v.phone,
+      blood_group: v.bloodGroup || null,
+      area: v.address || null,
+    })
+    .eq("user_id", user.id);
+
   revalidatePath("/student");
+  revalidatePath("/volunteer");
+  revalidatePath("/team");
+  updateTag("volunteers");
   return { success: true, message: "Student profile details updated successfully!" };
 }
 
@@ -166,7 +185,16 @@ export async function updateStudentPhoto(photoUrl: string): Promise<ActionResult
   // Sync to profiles avatar
   await supabase.from("profiles").update({ avatar_url: photoUrl }).eq("id", user.id);
 
+  // Sync to team_members if member
+  await supabase
+    .from("team_members")
+    .update({ photo_url: photoUrl })
+    .eq("user_id", user.id);
+
   revalidatePath("/student");
+  revalidatePath("/volunteer");
+  revalidatePath("/team");
+  updateTag("volunteers");
   return { success: true, message: "Profile picture updated successfully!" };
 }
 
@@ -184,6 +212,7 @@ export async function updateTeamMemberProfile(
     registrationNo: formData.get("registrationNo") || undefined,
     session: formData.get("session") || undefined,
     department: formData.get("department"),
+    bloodGroup: formData.get("bloodGroup") || undefined,
     email: formData.get("email") || undefined,
     phone: formData.get("phone"),
     area: formData.get("area"),
@@ -221,6 +250,7 @@ export async function updateTeamMemberProfile(
       registration_no: v.registrationNo || null,
       session: v.session || null,
       department: v.department || null,
+      blood_group: v.bloodGroup || null,
       email: v.email || null,
       phone: v.phone,
       area: v.area,
@@ -241,6 +271,20 @@ export async function updateTeamMemberProfile(
   // Sync profile name
   await supabase.from("profiles").update({ full_name: v.name }).eq("id", user.id);
 
+  // Sync to students table if this volunteer is also a student
+  await supabase
+    .from("students")
+    .update({
+      name: v.name,
+      roll: v.roll || undefined,
+      session: v.session || undefined,
+      department: v.department || undefined,
+      phone: v.phone,
+      blood_group: v.bloodGroup || undefined,
+      address: v.area || undefined,
+    })
+    .eq("user_id", user.id);
+
   // Sync to community tree in real-time
   const { data: memberRecord } = await supabase
     .from("team_members")
@@ -249,9 +293,23 @@ export async function updateTeamMemberProfile(
     .maybeSingle();
   if (memberRecord?.id) {
     await syncTeamMemberToCommunity(supabase, memberRecord.id);
+
+    // Sync to blood_donors if registered as donor
+    if (v.bloodGroup) {
+      await supabase
+        .from("blood_donors")
+        .update({
+          blood_group: v.bloodGroup,
+          name: v.name,
+          phone: v.phone,
+          area: v.area,
+        })
+        .eq("volunteer_id", memberRecord.id);
+    }
   }
 
   revalidatePath("/volunteer");
+  revalidatePath("/student");
   revalidatePath("/team");
   revalidatePath("/community");
   revalidatePath("/");
@@ -283,6 +341,12 @@ export async function updateTeamMemberPhoto(photoUrl: string): Promise<ActionRes
   // Sync to profiles avatar
   await supabase.from("profiles").update({ avatar_url: photoUrl }).eq("id", user.id);
 
+  // Sync to students table if present
+  await supabase
+    .from("students")
+    .update({ photo_url: photoUrl })
+    .eq("user_id", user.id);
+
   // Sync to community tree in real-time
   const { data: memberRecord } = await supabase
     .from("team_members")
@@ -294,6 +358,7 @@ export async function updateTeamMemberPhoto(photoUrl: string): Promise<ActionRes
   }
 
   revalidatePath("/volunteer");
+  revalidatePath("/student");
   revalidatePath("/team");
   revalidatePath("/community");
   revalidatePath("/");

@@ -31,6 +31,7 @@ export interface MemberData {
   facebook?: string;
   bloodGroup?: string;
   idNumber?: string;
+  address?: string;
   customFields?: CustomField[];
 }
 
@@ -230,6 +231,14 @@ export interface BackSideConfig {
   qrCodeData: string;
   emergencyContact: string;
   bloodGroupVisible: boolean;
+  showPhone?: boolean;
+  showEmail?: boolean;
+  showAddress?: boolean;
+  contactTitle?: string;
+  phoneLabel?: string;
+  emailLabel?: string;
+  addressLabel?: string;
+  customAddress?: string;
 }
 
 export interface CardConfig {

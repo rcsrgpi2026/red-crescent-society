@@ -70,12 +70,16 @@ export default async function AdminStudentsPage({
   const rcyCount = studentsWithMembership.filter((s) => Boolean(s.rcyMember)).length;
   const nonRcyCount = totalCount - rcyCount;
 
-  // Filter by status tab
+  // Filter by status tab: default to students awaiting team placement
+  const activeFilter = params.filter ?? "unassigned";
+
   let filtered = studentsWithMembership;
-  if (params.filter === "rcy") {
-    filtered = filtered.filter((s) => Boolean(s.rcyMember));
-  } else if (params.filter === "non_rcy") {
+  if (activeFilter === "unassigned") {
     filtered = filtered.filter((s) => !s.rcyMember);
+  } else if (activeFilter === "promoted") {
+    filtered = filtered.filter((s) => Boolean(s.rcyMember));
+  } else if (activeFilter === "all") {
+    filtered = studentsWithMembership;
   }
 
   // Filter by search query
@@ -98,15 +102,15 @@ export default async function AdminStudentsPage({
   }
 
   const FILTER_TABS = [
-    { value: "", label: "All Students", count: totalCount },
-    { value: "non_rcy", label: "Students Only", count: nonRcyCount },
-    { value: "rcy", label: "RCY Members", count: rcyCount },
+    { value: "unassigned", label: "Students (Not in Team)", count: nonRcyCount },
+    { value: "promoted", label: "Promoted to Team", count: rcyCount },
+    { value: "all", label: "All Registered", count: totalCount },
   ];
 
   const buildUrl = (newFilter?: string) => {
     const q = new URLSearchParams();
-    const f = newFilter !== undefined ? newFilter : params.filter;
-    if (f) q.set("filter", f);
+    const f = newFilter !== undefined ? newFilter : activeFilter;
+    if (f && f !== "unassigned") q.set("filter", f);
     if (params.search) q.set("search", params.search);
     const qs = q.toString();
     return qs ? `/admin/students?${qs}` : "/admin/students";
@@ -242,7 +246,7 @@ export default async function AdminStudentsPage({
             {/* Filter Tabs */}
             <div className="flex flex-wrap gap-2">
               {FILTER_TABS.map((tab) => {
-                const active = (params.filter ?? "") === tab.value;
+                const active = activeFilter === tab.value;
                 return (
                   <Link
                     key={tab.value}
@@ -281,7 +285,9 @@ export default async function AdminStudentsPage({
                 className="pl-9 h-9 text-xs"
                 aria-label="Search students"
               />
-              {params.filter && <input type="hidden" name="filter" value={params.filter} />}
+              {activeFilter && activeFilter !== "unassigned" && (
+                <input type="hidden" name="filter" value={activeFilter} />
+              )}
             </form>
           </div>
         </div>
@@ -298,16 +304,18 @@ export default async function AdminStudentsPage({
             <EmptyState
               icon={GraduationCap}
               title={
-                params.filter === "non_rcy"
-                  ? "No non-RCY students found"
-                  : params.filter === "rcy"
-                    ? "No RCY member students found"
+                activeFilter === "unassigned"
+                  ? "All students are enrolled in Team Members"
+                  : activeFilter === "promoted"
+                    ? "No students have been promoted to Team Members yet"
                     : "No students registered yet"
               }
               description={
                 params.search
                   ? "No students match your search criteria. Try a different query."
-                  : "Students who create an account through the student portal will appear here."
+                  : activeFilter === "unassigned"
+                    ? "Every registered student currently holds an active RCY Team Membership in the Team Members directory."
+                    : "Students who create an account through the student portal will appear here."
               }
             />
           }

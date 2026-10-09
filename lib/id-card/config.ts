@@ -172,29 +172,52 @@ function validUntilFromSession(session: string | null | undefined): string {
  * (e.g. "Computer Science & Technology" → "CST"). Unknown names pass through.
  */
 const DEPARTMENT_SHORT_NAMES: Record<string, string> = {
+  // Real official polytechnic short forms
   "Computer Science & Technology": "CST",
-  "Electronics Technology": "ET",
-  "Electrical Technology": "EET",
-  "Mechanical Technology": "MT",
+  "Computer Technology": "CST",
+  "Computer Science and Technology": "CST",
   "Civil Technology": "CT",
-  "Power Technology": "PT",
-  "Food Technology": "FT",
-  "Automobile Technology": "AUT",
-  "Electro-Medical Technology": "EMT",
-  "Mechatronics Technology": "MCT",
-  "Architecture & Interior Design": "AID",
-  "Refrigeration & Air Conditioning": "RAC",
-  "Electro-Medical": "EMT",
+  "Civil": "CT",
+  "Electrical Technology": "ET",
+  "Electrical": "ET",
+  "Electronics Technology": "ENT",
+  "Electronics": "ENT",
   "Electromedical Technology": "EMT",
+  "Electro-Medical Technology": "EMT",
   "Electromedical": "EMT",
+  "Electro-Medical": "EMT",
+  "Mechanical Technology": "MT",
+  "Mechanical": "MT",
+  "Mechatronics Technology": "MCT",
   "Mechatronics": "MCT",
-  Other: "Other",
+  "Power Technology": "PT",
+  "Power": "PT",
+
+  // Other technologies
+  "Food Technology": "FT",
+  "Food": "FT",
+  "Automobile Technology": "AUT",
+  "Automobile": "AUT",
+  "Architecture & Interior Design": "AID",
+  "Architecture and Interior Design": "AID",
+  "Architecture": "AID",
+  "Refrigeration & Air Conditioning": "RAC",
+  "Refrigeration and Air Conditioning": "RAC",
+  "RAC": "RAC",
+  "Other": "Other",
 };
 
 /** Returns the short form of a college department, or the name as-is when unknown. */
 export function departmentShortName(full: string | null | undefined): string {
   if (!full) return "";
-  return DEPARTMENT_SHORT_NAMES[full] ?? full;
+  const trimmed = full.trim();
+  if (DEPARTMENT_SHORT_NAMES[trimmed]) return DEPARTMENT_SHORT_NAMES[trimmed];
+
+  const lower = trimmed.toLowerCase();
+  for (const [key, val] of Object.entries(DEPARTMENT_SHORT_NAMES)) {
+    if (key.toLowerCase() === lower) return val;
+  }
+  return trimmed;
 }
 
 /**
@@ -214,6 +237,8 @@ export function memberFromTeamMember(tm: {
   email?: string | null;
   blood_group?: string | null;
   member_id?: string | null;
+  area?: string | null;
+  address?: string | null;
 }): MemberData {
   const customFields: CustomField[] = [];
   if (tm.rcy_department) {
@@ -238,6 +263,7 @@ export function memberFromTeamMember(tm: {
     facebook: "",
     bloodGroup: tm.blood_group ?? "",
     idNumber: tm.member_id ?? "",
+    address: tm.address || tm.area || "",
     customFields,
   };
 }

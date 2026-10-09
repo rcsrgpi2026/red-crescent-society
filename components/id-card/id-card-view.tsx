@@ -90,6 +90,15 @@ export function IDCardView({
   const isPortrait = design.orientation === "portrait";
   const portraitScale = cardWidth / CARD_BASE_WIDTH;
 
+  const memberPhone = member.phone || "";
+  const memberEmail = member.email || "";
+  const memberAddress = member.address || backSide.customAddress || "";
+
+  const showPhone = backSide.showPhone !== false && Boolean(memberPhone);
+  const showEmail = backSide.showEmail !== false && Boolean(memberEmail);
+  const showAddress = backSide.showAddress !== false && Boolean(memberAddress);
+  const hasContactInfo = showPhone || showEmail || showAddress;
+
   // ------------------- PORTRAIT / VERTICAL LAYOUTS -------------------
 
   function renderPortraitFront() {
@@ -413,17 +422,75 @@ export function IDCardView({
           )}
         </div>
 
-        <div className="my-auto space-y-2 px-1 py-3">
-          <h4 className="border-l-4 border-red-500 pl-2 text-sm font-bold uppercase tracking-wider text-slate-800">
-            {backSide.title}
-          </h4>
-          <ul className="list-disc space-y-1.5 pl-5 text-xs leading-relaxed text-slate-600">
-            {backSide.instructions.map((inst, idx) => (
-              <li key={idx}>{inst}</li>
-            ))}
-          </ul>
-          {backSide.emergencyContact && (
-            <p className="pt-1 text-xs font-bold text-red-600">📞 {backSide.emergencyContact}</p>
+        <div className="my-auto space-y-3.5 px-1 py-2">
+          <div className="space-y-2">
+            <h4 className="border-l-4 border-red-500 pl-2 text-sm font-bold uppercase tracking-wider text-slate-800">
+              {backSide.title}
+            </h4>
+            <ul className="list-disc space-y-1.5 pl-5 text-xs leading-relaxed text-slate-600">
+              {backSide.instructions.map((inst, idx) => (
+                <li key={idx}>{inst}</li>
+              ))}
+            </ul>
+            {backSide.emergencyContact && (
+              <p className="pt-1 text-xs font-bold text-red-600">📞 {backSide.emergencyContact}</p>
+            )}
+          </div>
+
+          {hasContactInfo && (
+            <div className="rounded-xl border border-slate-200/90 bg-slate-50/90 p-3 shadow-xs">
+              <div className="mb-2 flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-red-100 text-red-600">
+                  <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </span>
+                <h5 className="text-[11px] font-bold uppercase tracking-wider text-slate-800">
+                  {backSide.contactTitle || "Cardholder Details"}
+                </h5>
+              </div>
+              <div className="space-y-1.5 text-xs">
+                {showPhone && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                      <Phone size={11} className="text-emerald-700" />
+                    </div>
+                    <span className="min-w-[48px] text-[11px] font-semibold text-slate-500">
+                      {backSide.phoneLabel || "Phone:"}
+                    </span>
+                    <span className="truncate text-xs font-bold text-slate-800">
+                      {memberPhone}
+                    </span>
+                  </div>
+                )}
+                {showEmail && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+                      <Mail size={11} className="text-blue-700" />
+                    </div>
+                    <span className="min-w-[48px] text-[11px] font-semibold text-slate-500">
+                      {backSide.emailLabel || "Email:"}
+                    </span>
+                    <span className="truncate text-xs font-bold text-slate-800">
+                      {memberEmail}
+                    </span>
+                  </div>
+                )}
+                {showAddress && (
+                  <div className="flex items-start gap-2">
+                    <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                      <MapPin size={11} className="text-amber-700" />
+                    </div>
+                    <span className="min-w-[48px] text-[11px] font-semibold text-slate-500">
+                      {backSide.addressLabel || "Address:"}
+                    </span>
+                    <span className="line-clamp-2 text-xs font-bold text-slate-800">
+                      {memberAddress}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
 
@@ -1096,19 +1163,77 @@ export function IDCardView({
               )}
             </div>
 
-            <div className="my-auto space-y-2 px-2 py-3">
-              <h4 className="border-l-4 border-red-500 pl-2 text-sm font-bold uppercase tracking-wider text-slate-800">
-                {backSide.title}
-              </h4>
-              <ul className="list-disc space-y-1.5 pl-5 text-xs leading-relaxed text-slate-600">
-                {backSide.instructions.map((inst, idx) => (
-                  <li key={idx}>{inst}</li>
-                ))}
-              </ul>
-              {backSide.emergencyContact && (
-                <p className="pt-1 text-xs font-bold text-red-600">
-                  📞 {backSide.emergencyContact}
-                </p>
+            <div className="my-auto grid grid-cols-12 items-start gap-6 px-2 py-3">
+              <div className={hasContactInfo ? "col-span-7 space-y-2" : "col-span-12 space-y-2"}>
+                <h4 className="border-l-4 border-red-500 pl-2 text-sm font-bold uppercase tracking-wider text-slate-800">
+                  {backSide.title}
+                </h4>
+                <ul className="list-disc space-y-1.5 pl-5 text-xs leading-relaxed text-slate-600">
+                  {backSide.instructions.map((inst, idx) => (
+                    <li key={idx}>{inst}</li>
+                  ))}
+                </ul>
+                {backSide.emergencyContact && (
+                  <p className="pt-1 text-xs font-bold text-red-600">
+                    📞 {backSide.emergencyContact}
+                  </p>
+                )}
+              </div>
+
+              {hasContactInfo && (
+                <div className="col-span-5 rounded-xl border border-slate-200/90 bg-slate-50/90 p-3.5 shadow-xs">
+                  <div className="mb-2 flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-red-100 text-red-600">
+                      <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </span>
+                    <h5 className="text-[11px] font-bold uppercase tracking-wider text-slate-800">
+                      {backSide.contactTitle || "Cardholder Details"}
+                    </h5>
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    {showPhone && (
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                          <Phone size={11} className="text-emerald-700" />
+                        </div>
+                        <span className="min-w-[50px] text-[11px] font-semibold text-slate-500">
+                          {backSide.phoneLabel || "Phone:"}
+                        </span>
+                        <span className="truncate text-xs font-bold text-slate-800">
+                          {memberPhone}
+                        </span>
+                      </div>
+                    )}
+                    {showEmail && (
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+                          <Mail size={11} className="text-blue-700" />
+                        </div>
+                        <span className="min-w-[50px] text-[11px] font-semibold text-slate-500">
+                          {backSide.emailLabel || "Email:"}
+                        </span>
+                        <span className="truncate text-xs font-bold text-slate-800">
+                          {memberEmail}
+                        </span>
+                      </div>
+                    )}
+                    {showAddress && (
+                      <div className="flex items-start gap-2">
+                        <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                          <MapPin size={11} className="text-amber-700" />
+                        </div>
+                        <span className="min-w-[50px] text-[11px] font-semibold text-slate-500">
+                          {backSide.addressLabel || "Address:"}
+                        </span>
+                        <span className="line-clamp-2 text-xs font-bold text-slate-800">
+                          {memberAddress}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 

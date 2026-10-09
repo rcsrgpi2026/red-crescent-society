@@ -19,6 +19,7 @@ import {
 import { isSemesterEligible } from "@/lib/constants";
 import { createAndDispatchNotification } from "@/lib/notifications/notification-service";
 import { sendVolunteerApprovalEmail } from "@/lib/email/mailer";
+import { generateNextMemberId } from "@/lib/member-id";
 import type { ActionResult } from "@/lib/actions";
 
 function zodErrors(error: import("zod").ZodError): Record<string, string[]> {
@@ -484,13 +485,7 @@ export async function adminApproveVolunteerApplication(
   }
 
   // 2. Generate sequential Member ID: RCR-YYYY-NNNN
-  const year = new Date().getFullYear();
-  const { count } = await admin
-    .from("team_members")
-    .select("id", { count: "exact", head: true })
-    .ilike("member_id", `RCR-${year}-%`);
-  const nextNumber = (count ?? 0) + 1;
-  const memberId = `RCR-${year}-${String(nextNumber).padStart(4, "0")}`;
+  const memberId = await generateNextMemberId(admin);
   const now = new Date().toISOString();
 
   // 3. Update application status

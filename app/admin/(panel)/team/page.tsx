@@ -99,6 +99,12 @@ export default async function AdminTeamMembersPage({
                   {v.blood_group}
                 </span>
               )}
+              {(v.student_id || v.roll) && !v.is_legacy && (
+                <span className="inline-flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-1.5 py-0.2 text-[10px] font-semibold text-blue-700">
+                  <GraduationCap className="h-2.5 w-2.5" />
+                  RGPI Student
+                </span>
+              )}
               {v.is_legacy && (
                 <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.2 text-[10px] font-semibold text-amber-800">
                   <GraduationCap className="h-2.5 w-2.5" />

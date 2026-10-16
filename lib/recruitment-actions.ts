@@ -704,14 +704,14 @@ export async function adminRejectVolunteerApplication(
 
   // Send polite notification to student user
   try {
-    const reasonText = reason ? ` Note: ${reason}` : "";
+    const reasonText = reason ? ` Feedback: "${reason}".` : "";
     await createAndDispatchNotification(
       {
         title: "Volunteer Application Update",
-        body: `Your volunteer application for ${application.recruitment_campaigns?.title || "RGPI Red Crescent Youth"} has been reviewed. Unfortunately, it was not approved at this time.${reasonText}`,
+        body: `Your volunteer application for ${application.recruitment_campaigns?.title || "RGPI Red Crescent Youth"} was not approved.${reasonText} You are eligible to submit a fresh application with updated details or documents.`,
         type: "system",
         priority: "normal",
-        actionUrl: "/student",
+        actionUrl: "/apply-volunteer",
       },
       {
         specificUserIds: [application.user_id],

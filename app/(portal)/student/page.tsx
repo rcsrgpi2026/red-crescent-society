@@ -171,23 +171,39 @@ export default async function StudentPortalPage() {
 
           {!teamMembership && myApplication && myApplication.status === "REJECTED" && (
             <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-7">
-              <div className="flex items-start gap-3.5">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-crescent-soft text-crescent shadow-sm">
-                  <XCircle className="h-6 w-6" />
-                </span>
-                <div>
-                  <h3 className="text-base font-bold text-foreground">
-                    Volunteer Application Status
-                  </h3>
-                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                    Your volunteer application was reviewed by society leadership and was not approved at this time.
-                  </p>
-                  {myApplication.rejection_reason && (
-                    <p className="mt-2 text-xs font-medium text-foreground bg-mist/50 p-2.5 rounded-xl border border-line">
-                      Note: {myApplication.rejection_reason}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3.5">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-crescent-soft text-crescent shadow-sm">
+                    <XCircle className="h-6 w-6" />
+                  </span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-foreground">
+                        Volunteer Application Status
+                      </h3>
+                      <span className="rounded-full bg-crescent-soft px-2.5 py-0.5 text-[11px] font-bold text-crescent uppercase">
+                        Not Approved
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                      Your volunteer application was reviewed by society leadership and was not approved at this time. You are eligible to submit a fresh application with updated details or documents.
                     </p>
-                  )}
+                    {myApplication.rejection_reason && (
+                      <p className="mt-2 text-xs font-medium text-foreground bg-mist/50 p-2.5 rounded-xl border border-line">
+                        Feedback Note: {myApplication.rejection_reason}
+                      </p>
+                    )}
+                  </div>
                 </div>
+
+                {activeCampaign && (
+                  <Button asChild size="sm" className="bg-brand hover:bg-brand-dark text-white font-bold shrink-0 gap-1.5 shadow-sm">
+                    <Link href="/apply-volunteer">
+                      Apply Again
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
           )}

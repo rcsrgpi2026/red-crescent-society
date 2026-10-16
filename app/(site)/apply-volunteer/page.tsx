@@ -160,38 +160,7 @@ export default async function ApplyVolunteerPage() {
         </div>
       );
     }
-
-    if (existingApp.status === "REJECTED") {
-      return (
-        <div className="container-site min-h-[70vh] py-16 flex items-center justify-center">
-          <div className="mx-auto max-w-lg rounded-3xl border border-line bg-white p-8 text-center shadow-sm sm:p-12">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-crescent-soft text-crescent">
-              <XCircle className="h-7 w-7" />
-            </div>
-            <h1 className="mt-4 text-2xl font-bold text-foreground">
-              Application Reviewed
-            </h1>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Your application for this recruitment campaign was reviewed. Unfortunately, it was not approved at this time.
-            </p>
-            {existingApp.rejection_reason && (
-              <div className="mt-4 rounded-xl border border-line bg-mist/50 p-3 text-xs text-muted-foreground">
-                <p className="font-semibold text-foreground">Note from leadership:</p>
-                <p className="mt-1">{existingApp.rejection_reason}</p>
-              </div>
-            )}
-            <div className="mt-8 flex justify-center gap-3">
-              <Button asChild variant="outline">
-                <Link href="/student">Student Portal</Link>
-              </Button>
-              <Button asChild className="bg-brand hover:bg-brand-dark">
-                <Link href="/">Back to Homepage</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      );
-    }
+    // If status === "REJECTED", fall through so the applicant can submit a fresh application!
   }
 
   // 5. Check Semester Eligibility
@@ -289,8 +258,42 @@ export default async function ApplyVolunteerPage() {
           </div>
         </div>
 
+        {/* Rejection Notification & Re-apply Alert */}
+        {existingApp && existingApp.status === "REJECTED" && (
+          <div className="rounded-3xl border border-amber-200/80 bg-gradient-to-br from-amber-50 to-orange-50/40 p-6 shadow-xs">
+            <div className="flex items-start gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-800 shadow-xs">
+                <AlertCircle className="h-6 w-6" />
+              </span>
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base font-bold text-amber-950">
+                    Previous Application Not Approved — You Can Re-apply
+                  </h2>
+                  <span className="rounded-full bg-amber-200/80 px-2.5 py-0.5 text-[11px] font-bold text-amber-900 uppercase">
+                    Eligible to Re-apply
+                  </span>
+                </div>
+                <p className="text-xs text-amber-900/90 leading-relaxed">
+                  Your earlier volunteer application was not approved. You can now submit a fresh application. Please ensure all your details and verification documents (Passport Photo, NID/Birth Certificate, Student ID) are clear and accurate before submitting.
+                </p>
+                {existingApp.rejection_reason && (
+                  <div className="mt-2.5 rounded-2xl bg-white/95 border border-amber-200 p-3.5 text-xs text-amber-950 shadow-2xs">
+                    <p className="font-semibold text-amber-900">Feedback from Reviewer:</p>
+                    <p className="mt-0.5 text-foreground">{existingApp.rejection_reason}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Application Form */}
-        <VolunteerApplicationForm campaign={campaign} student={student} />
+        <VolunteerApplicationForm
+          campaign={campaign}
+          student={student}
+          previousApplication={existingApp?.status === "REJECTED" ? existingApp : null}
+        />
       </div>
     </div>
   );

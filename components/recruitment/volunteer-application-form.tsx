@@ -47,31 +47,37 @@ import { AddToContactsCard } from "@/components/shared/add-to-contacts-card";
 import { MandatoryContactStep } from "@/components/forms/mandatory-contact-step";
 import { getCurrentPushSubscriptionData } from "@/lib/notifications/client";
 import { uploadImageToStorage } from "@/lib/upload";
-import type { RecruitmentCampaign, Student } from "@/types/database";
+import type { RecruitmentCampaign, Student, VolunteerApplication } from "@/types/database";
 
 interface VolunteerApplicationFormProps {
   campaign: RecruitmentCampaign;
   student: Student;
+  previousApplication?: VolunteerApplication | null;
 }
 
 export function VolunteerApplicationForm({
   campaign,
   student,
+  previousApplication,
 }: VolunteerApplicationFormProps) {
   const [formData, setFormData] = useState({
-    phone: student.phone || "",
-    bloodGroup: student.blood_group || "",
-    semester: student.semester || "",
-    emergencyContactName: "",
-    emergencyContactPhone: "",
-    previousVolunteerExperience: "",
-    motivation: "",
-    skills: "",
-    photoUrl: student.photo_url || "",
-    nidOrBirthCertUrl: "",
-    fatherNidUrl: "",
-    motherNidUrl: "",
-    collegeRegCardUrl: "",
+    phone: previousApplication?.phone || student.phone || "",
+    bloodGroup: previousApplication?.blood_group || student.blood_group || "",
+    semester: previousApplication?.semester || student.semester || "",
+    emergencyContactName: previousApplication?.emergency_contact_name || "",
+    emergencyContactPhone: previousApplication?.emergency_contact_phone || "",
+    previousVolunteerExperience: previousApplication?.previous_volunteer_experience || "",
+    motivation: previousApplication?.motivation || "",
+    skills: Array.isArray(previousApplication?.skills)
+      ? previousApplication.skills.join(", ")
+      : typeof previousApplication?.skills === "string"
+      ? (previousApplication.skills as string)
+      : "",
+    photoUrl: previousApplication?.photo_url || student.photo_url || "",
+    nidOrBirthCertUrl: previousApplication?.nid_or_birth_cert_url || "",
+    fatherNidUrl: previousApplication?.father_nid_url || "",
+    motherNidUrl: previousApplication?.mother_nid_url || "",
+    collegeRegCardUrl: previousApplication?.college_reg_card_url || "",
     agreement: false,
   });
 

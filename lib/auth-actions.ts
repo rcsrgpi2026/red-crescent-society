@@ -367,7 +367,19 @@ export async function requestPasswordReset(email: string): Promise<ActionResult>
         },
       });
 
-      if (!error && (data?.properties?.email_otp || data?.properties?.action_link)) {
+      if (error) {
+        if (
+          error.code === "user_not_found" ||
+          (error as any).status === 404 ||
+          /not found/i.test(error.message)
+        ) {
+          return {
+            success: false,
+            message: "No account was found with this email address. Please make sure you are using your registered email (e.g. your Gmail address).",
+          };
+        }
+        console.warn("[requestPasswordReset] Admin generateLink error, falling back to Supabase auth:", error);
+      } else if (data?.properties?.email_otp || data?.properties?.action_link) {
         const otpCode = data?.properties?.email_otp;
         const actionLink = data?.properties?.action_link;
 
@@ -393,7 +405,17 @@ export async function requestPasswordReset(email: string): Promise<ActionResult>
           console.warn("[requestPasswordReset] Email delivery failed, falling back to Supabase auth:", emailResult.error);
         }
       }
-    } catch (adminErr) {
+    } catch (adminErr: any) {
+      if (
+        adminErr?.code === "user_not_found" ||
+        adminErr?.status === 404 ||
+        /not found/i.test(adminErr?.message || "")
+      ) {
+        return {
+          success: false,
+          message: "No account was found with this email address. Please make sure you are using your registered email (e.g. your Gmail address).",
+        };
+      }
       console.warn("[requestPasswordReset] Admin generateLink error, falling back to Supabase auth:", adminErr);
     }
   }

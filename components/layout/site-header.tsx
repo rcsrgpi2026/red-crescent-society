@@ -166,24 +166,30 @@ export function SiteHeader({
       >
         <div className="container-site flex h-16 items-center justify-between gap-4 lg:h-[4.5rem]">
           {/* Identity */}
-          <Link href="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label={t.nav.home}>
+          <Link
+            href="/"
+            className="flex shrink-0 items-center gap-2.5 sm:gap-3"
+            aria-label={t.nav.home}
+          >
             <SiteLogo variant="institute" className="hidden w-8 shrink-0 sm:block sm:w-10" />
             <span className="hidden h-9 w-px bg-line sm:block" aria-hidden />
-            <span className="flex min-w-0 items-center gap-2">
+            <span className="flex shrink-0 items-center gap-2">
               <SiteLogo variant="society" className="w-8 shrink-0 sm:w-9" />
-              <span className="min-w-0 leading-tight">
-                <span className="block truncate text-[13px] font-bold text-brand-dark sm:text-base">
-                  {societyName ?? t.nav.redCrescentSociety}
+              <span className="shrink-0 leading-tight">
+                <span className="block whitespace-nowrap text-sm font-bold text-brand-dark sm:text-base">
+                  {societyName && !societyName.toLowerCase().includes("rgpi")
+                    ? societyName
+                    : t.nav.redCrescentSociety}
                 </span>
-                <span className="hidden truncate text-[11px] font-medium text-muted-foreground sm:block">
+                <span className="hidden whitespace-nowrap text-[11px] font-medium text-muted-foreground sm:block">
                   {collegeName ?? t.nav.rajshahiPolytechnic}
                 </span>
               </span>
             </span>
           </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden items-center gap-0.5 xl:flex" aria-label="Main navigation">
+          {/* Desktop nav - Centered with equal left and right whitespace */}
+          <nav className="hidden items-center gap-1.5 xl:gap-2.5 xl:flex mx-auto px-4" aria-label="Main navigation">
             {navLinks.map((item) => (
               <Link
                 key={item.href}
@@ -200,7 +206,7 @@ export function SiteHeader({
               </Link>
             ))}
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-0.5 whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-mist hover:text-brand-dark">
+              <DropdownMenuTrigger className="flex items-center gap-1 whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-mist hover:text-brand-dark">
                 {t.nav.more}
                 <ChevronDown className="h-4 w-4" aria-hidden />
               </DropdownMenuTrigger>
@@ -214,7 +220,7 @@ export function SiteHeader({
             </DropdownMenu>
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <AssistantTrigger className="hidden sm:inline-flex" />
             <NotificationBell userId={currentUser?.id} />
 
@@ -232,14 +238,18 @@ export function SiteHeader({
               <>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="rounded-lg border-line"
+                    <button
+                      type="button"
+                      className="inline-flex shrink-0 items-center justify-center rounded-full p-1.5 text-foreground/80 transition-colors hover:bg-mist hover:text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                       aria-label={t.nav.login}
                     >
-                      <CircleUserRound className="h-5 w-5" aria-hidden />
-                    </Button>
+                      <CircleUserRound
+                        size={24}
+                        className="size-6 h-6 w-6 shrink-0"
+                        strokeWidth={2}
+                        aria-hidden
+                      />
+                    </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-44">
                     <DropdownMenuItem asChild>
@@ -273,7 +283,9 @@ export function SiteHeader({
                   <SheetTitle className="flex items-center gap-2 text-left">
                     <SiteLogo variant="society" className="w-8" />
                     <span className="whitespace-nowrap text-sm leading-tight text-brand-dark">
-                      {societyName ?? t.nav.redCrescentSociety}
+                      {societyName && !societyName.toLowerCase().includes("rgpi")
+                        ? societyName
+                        : t.nav.redCrescentSociety}
                       <span className="block whitespace-nowrap text-[11px] font-normal text-muted-foreground">
                         {collegeName ?? t.nav.rajshahiPolytechnic}
                       </span>

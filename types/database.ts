@@ -502,6 +502,16 @@ export interface VolunteerApplication {
   previous_volunteer_experience: string | null;
   motivation: string;
   skills: string[];
+  /** Passport size photo of applicant */
+  photo_url?: string | null;
+  /** NID or Birth Certificate of applicant */
+  nid_or_birth_cert_url?: string | null;
+  /** Father's NID copy */
+  father_nid_url?: string | null;
+  /** Mother's NID copy */
+  mother_nid_url?: string | null;
+  /** College registration card or Student ID */
+  college_reg_card_url?: string | null;
   status: VolunteerApplicationStatus;
   rejection_reason: string | null;
   reviewed_by: string | null;

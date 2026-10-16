@@ -7,14 +7,28 @@ import type { TeamMember } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   // Admin-only: the middleware checks for a session, and this enforces the role.
   const profile = await requireAdmin();
   if (!profile) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  const volunteers = await adminGetTeamMembers();
+  const { searchParams } = new URL(request.url);
+  const status = searchParams.get("status") || undefined;
+  const search = searchParams.get("search") || undefined;
+  const department = searchParams.get("department") || undefined;
+
+  const rawMembers = await adminGetTeamMembers({
+    status,
+    search,
+    department,
+    isLegacy: false,
+    limit: 1000,
+  });
+
+  // Strictly exclude legacy members so their details never appear in the team members PDF export
+  const volunteers = rawMembers.filter((v) => !v.is_legacy);
 
   const columns: PdfColumn<TeamMember>[] = [
     { header: "#", width: 0.8, getValue: (_v, i) => String(i + 1) },
@@ -28,13 +42,15 @@ export async function GET() {
     { header: "Phone", width: 2.4, getValue: (v) => v.phone ?? "—" },
     { header: "Email", width: 2.8, getValue: (v) => v.email ?? "—" },
     { header: "Blood", width: 1.4, getValue: (v) => v.blood_group ?? "—" },
-    { header: "Status", width: 1.9, getValue: (v) => TEAM_MEMBER_STATUS_LABELS[v.status] ?? v.status },
+    { header: "Status", width: 1.9, getValue: (v) => TEAM_MEMBER_STATUS_LABELS[v.status as keyof typeof TEAM_MEMBER_STATUS_LABELS] ?? v.status },
     { header: "Registered", width: 2.4, getValue: (v) => formatDateTime(v.created_at) },
   ];
 
   const pdf = await buildTablePdf({
     title: "Registered Team Members",
-    subtitle: `Team members list — generated ${formatDateTime(new Date().toISOString())}`,
+    subtitle: `Team members list${status ? ` (${TEAM_MEMBER_STATUS_LABELS[status as keyof typeof TEAM_MEMBER_STATUS_LABELS] ?? status})` : ""} (${volunteers.length} members) — generated ${formatDateTime(
+      new Date().toISOString()
+    )}`,
     columns,
     rows: volunteers,
   });

@@ -214,6 +214,13 @@ export default async function AdminTeamMembersPage({
     return qs ? `/admin/team?${qs}` : "/admin/team";
   };
 
+  const exportQuery = new URLSearchParams();
+  if (params.status) exportQuery.set("status", params.status);
+  if (params.search) exportQuery.set("search", params.search);
+  const exportHref = exportQuery.toString()
+    ? `/admin/team/export?${exportQuery.toString()}`
+    : "/admin/team/export";
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -227,7 +234,7 @@ export default async function AdminTeamMembersPage({
               teamMembers={allMembers}
             />
             <Button asChild variant="outline" size="sm">
-              <a href="/admin/team/export" download>
+              <a href={exportHref} download>
                 <Download className="mr-1.5 h-4 w-4" aria-hidden />
                 Download PDF
               </a>

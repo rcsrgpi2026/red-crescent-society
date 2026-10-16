@@ -169,6 +169,11 @@ export const volunteerApplicationSchema = z.object({
   previousVolunteerExperience: z.string().max(2000).optional().or(z.literal("")),
   motivation: z.string().min(20, "Tell us why you want to join RGPI Red Crescent Youth (min 20 characters)").max(2000),
   skills: z.array(z.string()).max(15).default([]),
+  photoUrl: z.string().url("Please provide a valid photo URL").optional().or(z.literal("")),
+  nidOrBirthCertUrl: z.string().url("Please provide a valid document URL").optional().or(z.literal("")),
+  fatherNidUrl: z.string().url("Please provide a valid document URL").optional().or(z.literal("")),
+  motherNidUrl: z.string().url("Please provide a valid document URL").optional().or(z.literal("")),
+  collegeRegCardUrl: z.string().url("Please provide a valid document URL").optional().or(z.literal("")),
   agreement: z.boolean().refine((val) => val === true, {
     message: "You must confirm that the information provided is correct",
   }),

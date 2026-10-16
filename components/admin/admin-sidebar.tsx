@@ -109,7 +109,7 @@ export function AdminSidebar({
         <SiteLogo variant="society" className="w-9 shrink-0" />
         <div className="min-w-0 flex-1 leading-tight">
           <p className="truncate text-sm font-bold text-white">Society Admin</p>
-          <p className="truncate text-[11px] text-white/60">RPI Red Crescent</p>
+          <p className="truncate text-[11px] text-white/60">RGPI Red Crescent Youth</p>
         </div>
         {onClose && (
           <button

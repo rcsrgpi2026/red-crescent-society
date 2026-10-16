@@ -99,7 +99,7 @@ export default async function TeamMemberPortalPage() {
                 Team Member Portal
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                RPI Red Crescent Youth
+                RGPI Red Crescent Youth
               </p>
             </div>
           </div>

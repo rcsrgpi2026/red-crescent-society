@@ -202,7 +202,7 @@ export function TeamMemberProfileEditor({ teamMember }: { teamMember: TeamMember
               <div>
                 <h2 className="text-lg font-bold text-foreground">Team Member Details</h2>
                 <p className="text-xs text-muted-foreground">
-                  Official membership information and records at RPI Red Crescent Society.
+                  Official membership information and records at RGPI Red Crescent Youth.
                 </p>
               </div>
               <Button

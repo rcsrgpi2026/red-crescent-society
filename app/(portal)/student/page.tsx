@@ -47,7 +47,7 @@ export default async function StudentPortalPage() {
                 Student Account Portal
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                RPI Red Crescent Youth
+                RGPI Red Crescent Youth
               </p>
             </div>
           </div>

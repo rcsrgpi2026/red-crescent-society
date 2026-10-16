@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
@@ -18,12 +19,15 @@ import {
   XCircle,
   Shield,
   Layers,
+  Camera,
+  FileCheck,
 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
 import { Reveal } from "@/components/shared/reveal";
 import { Button } from "@/components/ui/button";
 import { ApplicationReviewActions } from "@/components/admin/application-review-actions";
+import { ApplicationDocumentsViewer } from "@/components/admin/application-documents-viewer";
 import { adminGetVolunteerApplication } from "@/lib/queries";
 import { formatDateTime, VOLUNTEER_APPLICATION_STATUS_LABELS } from "@/lib/constants";
 
@@ -76,9 +80,21 @@ export default async function AdminApplicationDetailPage({
       <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand to-brand-dark text-xl font-bold text-white shadow-md shadow-brand/20">
-              {application.name.charAt(0)}
-            </span>
+            {application.photo_url ? (
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border-2 border-emerald-500/30 bg-mist shadow-md">
+                <Image
+                  src={application.photo_url}
+                  alt={application.name}
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand to-brand-dark text-xl font-bold text-white shadow-md shadow-brand/20">
+                {application.name.charAt(0)}
+              </span>
+            )}
             <div>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-xl font-bold text-foreground sm:text-2xl">
@@ -137,8 +153,13 @@ export default async function AdminApplicationDetailPage({
             </div>
           </Reveal>
 
-          {/* 2. Motivation & Volunteer Experience */}
-          <Reveal delay={0.05}>
+          {/* 2. Submitted Verification Documents */}
+          <Reveal delay={0.03}>
+            <ApplicationDocumentsViewer application={application} />
+          </Reveal>
+
+          {/* 3. Motivation & Volunteer Experience */}
+          <Reveal delay={0.06}>
             <div className="rounded-3xl border border-line bg-white p-6 shadow-sm space-y-6">
               <div className="flex items-center gap-2 border-b border-line pb-3">
                 <HeartHandshake className="h-4 w-4 text-brand" />

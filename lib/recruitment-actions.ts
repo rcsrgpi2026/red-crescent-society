@@ -113,6 +113,11 @@ export async function submitVolunteerApplication(
     previousVolunteerExperience: formData.get("previousVolunteerExperience"),
     motivation: formData.get("motivation"),
     skills,
+    photoUrl: formData.get("photoUrl") ? String(formData.get("photoUrl")) : "",
+    nidOrBirthCertUrl: formData.get("nidOrBirthCertUrl") ? String(formData.get("nidOrBirthCertUrl")) : "",
+    fatherNidUrl: formData.get("fatherNidUrl") ? String(formData.get("fatherNidUrl")) : "",
+    motherNidUrl: formData.get("motherNidUrl") ? String(formData.get("motherNidUrl")) : "",
+    collegeRegCardUrl: formData.get("collegeRegCardUrl") ? String(formData.get("collegeRegCardUrl")) : "",
     agreement: formData.get("agreement") === "true" || formData.get("agreement") === "on",
   });
 
@@ -220,6 +225,11 @@ export async function submitVolunteerApplication(
       previous_volunteer_experience: v.previousVolunteerExperience || null,
       motivation: v.motivation,
       skills: v.skills,
+      photo_url: v.photoUrl || null,
+      nid_or_birth_cert_url: v.nidOrBirthCertUrl || null,
+      father_nid_url: v.fatherNidUrl || null,
+      mother_nid_url: v.motherNidUrl || null,
+      college_reg_card_url: v.collegeRegCardUrl || null,
       status: "PENDING",
     })
     .select("id")
@@ -527,6 +537,7 @@ export async function adminApproveVolunteerApplication(
         status: "APPROVED",
         member_id: existingMember.member_id || memberId,
         joined_at: now,
+        photo_url: application.photo_url || (existingMember as any).photo_url || null,
         roll: application.roll,
         registration_no: application.registration_no,
         session: application.session,
@@ -547,6 +558,7 @@ export async function adminApproveVolunteerApplication(
       user_id: application.user_id,
       name: application.name,
       member_id: memberId,
+      photo_url: application.photo_url || null,
       roll: application.roll,
       registration_no: application.registration_no,
       session: application.session,
@@ -564,6 +576,20 @@ export async function adminApproveVolunteerApplication(
       status: "APPROVED",
       joined_at: now,
     });
+  }
+
+  // Sync verified passport photo with student & profile avatar if available
+  if (application.photo_url) {
+    if (application.student_id) {
+      await admin
+        .from("students")
+        .update({ photo_url: application.photo_url })
+        .eq("id", application.student_id);
+    }
+    await admin
+      .from("profiles")
+      .update({ avatar_url: application.photo_url })
+      .eq("id", application.user_id);
   }
 
   // 6. Dispatch celebration push & in-app notification to approved user

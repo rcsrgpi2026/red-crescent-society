@@ -160,19 +160,23 @@ export function NotificationBell({ userId }: { userId?: string | null }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative h-9 w-9 rounded-full text-foreground/80 hover:bg-muted hover:text-foreground"
+        <button
+          type="button"
+          className="relative inline-flex shrink-0 items-center justify-center rounded-full p-1.5 text-foreground/80 transition-colors hover:bg-mist hover:text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           aria-label="Notifications"
         >
-          <Bell className="h-4 w-4" />
+          <Bell
+            size={24}
+            className="size-6 h-6 w-6 shrink-0"
+            strokeWidth={2}
+            aria-hidden
+          />
           {unreadCount > 0 && (
-            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-crescent px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-background animate-in zoom-in">
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-crescent px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-background animate-in zoom-in">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
-        </Button>
+        </button>
       </PopoverTrigger>
       <PopoverContent
         align="end"

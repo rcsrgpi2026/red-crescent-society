@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { toast } from "sonner";
 import {
   User,
   Hash,
@@ -18,6 +20,15 @@ import {
   Send,
   Sparkles,
   Layers,
+  Camera,
+  FileCheck,
+  FileText,
+  UploadCloud,
+  Trash2,
+  Eye,
+  ExternalLink,
+  FileUp,
+  FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,13 +46,13 @@ import { submitVolunteerApplication } from "@/lib/recruitment-actions";
 import { AddToContactsCard } from "@/components/shared/add-to-contacts-card";
 import { MandatoryContactStep } from "@/components/forms/mandatory-contact-step";
 import { getCurrentPushSubscriptionData } from "@/lib/notifications/client";
+import { uploadImageToStorage } from "@/lib/upload";
 import type { RecruitmentCampaign, Student } from "@/types/database";
 
 interface VolunteerApplicationFormProps {
   campaign: RecruitmentCampaign;
   student: Student;
 }
-
 
 export function VolunteerApplicationForm({
   campaign,
@@ -56,9 +67,15 @@ export function VolunteerApplicationForm({
     previousVolunteerExperience: "",
     motivation: "",
     skills: "",
+    photoUrl: student.photo_url || "",
+    nidOrBirthCertUrl: "",
+    fatherNidUrl: "",
+    motherNidUrl: "",
+    collegeRegCardUrl: "",
     agreement: false,
   });
 
+  const [uploadingDocs, setUploadingDocs] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [message, setMessage] = useState<{
@@ -71,11 +88,65 @@ export function VolunteerApplicationForm({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleDocumentUpload = async (
+    field: "photoUrl" | "nidOrBirthCertUrl" | "fatherNidUrl" | "motherNidUrl" | "collegeRegCardUrl",
+    file: File
+  ) => {
+    if (!file) return;
+    setUploadingDocs((prev) => ({ ...prev, [field]: true }));
+    try {
+      const url = await uploadImageToStorage(file, "recruitment_docs", {
+        maxDimension: field === "photoUrl" ? 1000 : 2000,
+      });
+      setFormData((prev) => ({ ...prev, [field]: url }));
+      // Clear error for this field if any
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+      toast.success("Document uploaded successfully!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload document");
+    } finally {
+      setUploadingDocs((prev) => ({ ...prev, [field]: false }));
+    }
+  };
+
+  const handleDocumentRemove = (
+    field: "photoUrl" | "nidOrBirthCertUrl" | "fatherNidUrl" | "motherNidUrl" | "collegeRegCardUrl"
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: "" }));
+    toast.info("Document removed.");
+  };
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitting(true);
     setErrors({});
     setMessage(null);
+
+    // Validate mandatory verification documents
+    const validationErrors: Record<string, string[]> = {};
+    if (!formData.photoUrl) {
+      validationErrors.photoUrl = ["Passport size photo is required for your official membership card."];
+    }
+    if (!formData.nidOrBirthCertUrl) {
+      validationErrors.nidOrBirthCertUrl = ["Applicant's NID or Birth Certificate is required."];
+    }
+    if (!formData.collegeRegCardUrl) {
+      validationErrors.collegeRegCardUrl = ["College registration card or student ID is required."];
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      setMessage({
+        type: "error",
+        text: "Please upload the required verification documents (Passport Photo, NID/Birth Certificate, and College Registration Card).",
+      });
+      setSubmitting(false);
+      return;
+    }
 
     const fd = new FormData();
     fd.append("campaignId", campaign.id);
@@ -87,6 +158,11 @@ export function VolunteerApplicationForm({
     fd.append("previousVolunteerExperience", formData.previousVolunteerExperience);
     fd.append("motivation", formData.motivation);
     fd.append("skills", formData.skills);
+    fd.append("photoUrl", formData.photoUrl);
+    fd.append("nidOrBirthCertUrl", formData.nidOrBirthCertUrl);
+    fd.append("fatherNidUrl", formData.fatherNidUrl);
+    fd.append("motherNidUrl", formData.motherNidUrl);
+    fd.append("collegeRegCardUrl", formData.collegeRegCardUrl);
     fd.append("agreement", formData.agreement ? "true" : "false");
 
     try {
@@ -365,11 +441,109 @@ export function VolunteerApplicationForm({
         </div>
       </div>
 
-      {/* 3. Motivation, Experience & Skills */}
+      {/* 3. Identity Verification Documents */}
+      <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-6">
+        <div className="border-b border-line pb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <FileCheck className="h-5 w-5 text-brand" />
+              <h2 className="text-base font-bold text-foreground sm:text-lg">
+                3. Identity Verification Documents
+              </h2>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              প্রয়োজনীয় প্রমাণীকরণ কাগজপত্র ও পাসপোর্ট ছবি আপলোড করুন (Upload clear scans or photos in PNG, JPG, WebP, or PDF up to 10MB).
+            </p>
+          </div>
+          <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand-dark">
+            Physical Form Equivalent
+          </span>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2">
+          {/* 1. Passport Size Photo */}
+          <DocumentUploadCard
+            id="va-doc-photo"
+            title="Passport Size Photo"
+            banglaTitle="পাসপোর্ট সাইজ ছবি"
+            description="Clear recent portrait photo on neutral background. This photo will be officially printed on your digital volunteer ID card."
+            accept="image/png,image/jpeg,image/webp"
+            required
+            isPhoto
+            value={formData.photoUrl}
+            isUploading={Boolean(uploadingDocs.photoUrl)}
+            error={errors.photoUrl?.[0]}
+            onUpload={(file) => handleDocumentUpload("photoUrl", file)}
+            onRemove={() => handleDocumentRemove("photoUrl")}
+          />
+
+          {/* 2. Applicant's NID or Birth Certificate */}
+          <DocumentUploadCard
+            id="va-doc-nid"
+            title="Applicant's NID or Birth Certificate"
+            banglaTitle="আবেদনকারীর জাতীয় পরিচয়পত্র বা জন্ম নিবন্ধন সনদ"
+            description="Clear photo or PDF copy of your Smart National ID card or verified Online Birth Certificate."
+            accept="image/png,image/jpeg,image/webp,application/pdf"
+            required
+            value={formData.nidOrBirthCertUrl}
+            isUploading={Boolean(uploadingDocs.nidOrBirthCertUrl)}
+            error={errors.nidOrBirthCertUrl?.[0]}
+            onUpload={(file) => handleDocumentUpload("nidOrBirthCertUrl", file)}
+            onRemove={() => handleDocumentRemove("nidOrBirthCertUrl")}
+          />
+
+          {/* 3. College Registration Card / Student ID */}
+          <DocumentUploadCard
+            id="va-doc-college-card"
+            title="College Registration Card / Student ID"
+            banglaTitle="কলেজ রেজিস্ট্রেশন কার্ড বা স্টুডেন্ট আইডি"
+            description="Clear photo or PDF scan of your Polytechnic Registration Card or current semester Student ID card."
+            accept="image/png,image/jpeg,image/webp,application/pdf"
+            required
+            value={formData.collegeRegCardUrl}
+            isUploading={Boolean(uploadingDocs.collegeRegCardUrl)}
+            error={errors.collegeRegCardUrl?.[0]}
+            onUpload={(file) => handleDocumentUpload("collegeRegCardUrl", file)}
+            onRemove={() => handleDocumentRemove("collegeRegCardUrl")}
+          />
+
+          {/* 4. Father's NID */}
+          <DocumentUploadCard
+            id="va-doc-father-nid"
+            title="Father's NID"
+            banglaTitle="পিতার জাতীয় পরিচয়পত্র"
+            description="Photo or PDF copy of Father's National ID card (recommended for physical verification records)."
+            accept="image/png,image/jpeg,image/webp,application/pdf"
+            value={formData.fatherNidUrl}
+            isUploading={Boolean(uploadingDocs.fatherNidUrl)}
+            error={errors.fatherNidUrl?.[0]}
+            onUpload={(file) => handleDocumentUpload("fatherNidUrl", file)}
+            onRemove={() => handleDocumentRemove("fatherNidUrl")}
+          />
+
+          {/* 5. Mother's NID */}
+          <div className="md:col-span-2">
+            <DocumentUploadCard
+              id="va-doc-mother-nid"
+              title="Mother's NID"
+              banglaTitle="মাতার জাতীয় পরিচয়পত্র"
+              description="Photo or PDF copy of Mother's National ID card (recommended for physical verification records)."
+              accept="image/png,image/jpeg,image/webp,application/pdf"
+              value={formData.motherNidUrl}
+              isUploading={Boolean(uploadingDocs.motherNidUrl)}
+              error={errors.motherNidUrl?.[0]}
+              onUpload={(file) => handleDocumentUpload("motherNidUrl", file)}
+              onRemove={() => handleDocumentRemove("motherNidUrl")}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Motivation, Experience & Skills */}
       <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-6">
         <div className="border-b border-line pb-4">
           <h2 className="text-base font-bold text-foreground sm:text-lg">
-            3. Volunteer Background & Motivation
+            4. Volunteer Background & Motivation
           </h2>
           <p className="text-xs text-muted-foreground">
             Share why you want to serve and any relevant skills or experiences.
@@ -422,7 +596,7 @@ export function VolunteerApplicationForm({
         </div>
       </div>
 
-      {/* 4. Confirmation & Agreement */}
+      {/* 5. Confirmation & Agreement */}
       <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-5">
         <MandatoryContactStep />
 
@@ -462,5 +636,206 @@ export function VolunteerApplicationForm({
         </div>
       </div>
     </form>
+  );
+}
+
+interface DocumentUploadCardProps {
+  id: string;
+  title: string;
+  banglaTitle: string;
+  description: string;
+  accept: string;
+  required?: boolean;
+  value: string;
+  isUploading: boolean;
+  error?: string;
+  isPhoto?: boolean;
+  onUpload: (file: File) => Promise<void>;
+  onRemove: () => void;
+}
+
+function DocumentUploadCard({
+  id,
+  title,
+  banglaTitle,
+  description,
+  accept,
+  required,
+  value,
+  isUploading,
+  error,
+  isPhoto,
+  onUpload,
+  onRemove,
+}: DocumentUploadCardProps) {
+  const isPdf = Boolean(
+    value &&
+      (value.toLowerCase().includes(".pdf") ||
+        value.toLowerCase().includes("/raw/") ||
+        value.toLowerCase().endsWith(".pdf"))
+  );
+
+  return (
+    <div
+      className={`rounded-2xl border p-4 sm:p-5 transition-all ${
+        value
+          ? "border-emerald-200 bg-emerald-50/20"
+          : error
+          ? "border-crescent/40 bg-crescent-soft/30"
+          : "border-line bg-mist/20 hover:border-brand/40 hover:bg-mist/40"
+      }`}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 mb-2.5">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-bold text-foreground">
+              {title}
+            </h3>
+            {required ? (
+              <span className="rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                Required / আবশ্যক
+              </span>
+            ) : (
+              <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                Optional / ঐচ্ছিক
+              </span>
+            )}
+          </div>
+          <p className="text-xs font-medium text-brand-dark/80 mt-0.5">
+            {banglaTitle}
+          </p>
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground mb-3.5 leading-relaxed">
+        {description}
+      </p>
+
+      {/* Content */}
+      {isUploading ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-brand/50 bg-brand-soft/20 py-8 px-4 text-center">
+          <Loader2 className="h-7 w-7 animate-spin text-brand" />
+          <p className="mt-2.5 text-xs font-semibold text-brand-dark">
+            Uploading & optimizing document…
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Please wait a moment
+          </p>
+        </div>
+      ) : value ? (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-white p-3 shadow-xs">
+          <div className="flex items-center gap-3 min-w-0">
+            {isPdf ? (
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-red-50 border border-red-200 text-red-600 font-bold text-xs shadow-xs">
+                <FileText className="h-6 w-6 text-red-500" />
+              </div>
+            ) : (
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-line bg-mist shadow-xs">
+                <Image
+                  src={value}
+                  alt={title}
+                  fill
+                  sizes="48px"
+                  className="object-cover"
+                />
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                Attached
+              </div>
+              <p className="text-[11px] text-muted-foreground truncate max-w-[200px] sm:max-w-[240px]">
+                {isPdf ? "PDF Document Scan" : isPhoto ? "Passport Photo" : "Document Image"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <a
+              href={value}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-mist transition-colors shadow-2xs"
+            >
+              <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+              View
+            </a>
+
+            <label
+              htmlFor={id}
+              className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-mist cursor-pointer transition-colors shadow-2xs"
+            >
+              <UploadCloud className="h-3.5 w-3.5 text-muted-foreground" />
+              Change
+            </label>
+            <input
+              id={id}
+              type="file"
+              accept={accept}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) onUpload(f);
+                e.target.value = "";
+              }}
+              className="sr-only"
+            />
+
+            <button
+              type="button"
+              onClick={onRemove}
+              className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 p-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors"
+              title="Remove document"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <label
+            htmlFor={id}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const f = e.dataTransfer.files?.[0];
+              if (f) onUpload(f);
+            }}
+            className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-line bg-white/80 py-6 px-4 text-center cursor-pointer transition-all hover:border-brand hover:bg-brand-soft/10 active:scale-[0.99]"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-soft text-brand-dark mb-2">
+              {isPhoto ? <Camera className="h-5 w-5" /> : <FileUp className="h-5 w-5" />}
+            </div>
+            <p className="text-xs font-bold text-foreground">
+              Click to select or drag & drop file
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {isPhoto
+                ? "Passport size photo · JPG, PNG, WebP · Max 10MB"
+                : "Official document · JPG, PNG, WebP, PDF · Max 10MB"}
+            </p>
+            <input
+              id={id}
+              type="file"
+              accept={accept}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) onUpload(f);
+                e.target.value = "";
+              }}
+              className="sr-only"
+            />
+          </label>
+        </div>
+      )}
+
+      {error && (
+        <p className="mt-2 text-xs font-medium text-crescent flex items-center gap-1.5">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

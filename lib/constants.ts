@@ -1,7 +1,7 @@
 import type { UserRole } from "@/types/database";
 
 export const SITE_NAME = "Rajshahi Govt. Polytechnic Institute Red Crescent Youth";
-export const SITE_SHORT_NAME = "RPI Red Crescent Youth";
+export const SITE_SHORT_NAME = "RGPI Red Crescent Youth";
 
 export const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
 

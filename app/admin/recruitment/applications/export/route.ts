@@ -123,6 +123,20 @@ export async function GET(request: Request) {
     }
   });
 
+  columns.push({
+    header: "Docs",
+    width: 2.2,
+    getValue: (v) => {
+      const docs: string[] = [];
+      if (v.photo_url) docs.push("Photo");
+      if (v.nid_or_birth_cert_url) docs.push("NID");
+      if (v.college_reg_card_url) docs.push("ID Card");
+      if (v.father_nid_url) docs.push("F-NID");
+      if (v.mother_nid_url) docs.push("M-NID");
+      return docs.length > 0 ? `${docs.length}/5 (${docs.slice(0, 2).join(",")})` : "None";
+    },
+  });
+
   // Always append Status and Applied Date at the end
   columns.push({
     header: "Status",

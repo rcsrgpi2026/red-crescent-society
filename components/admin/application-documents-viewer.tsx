@@ -119,7 +119,13 @@ export function ApplicationDocumentsViewer({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="gap-1.5 border-brand/30 text-brand-dark hover:bg-brand-soft text-xs font-semibold">
+            <a href={`/admin/recruitment/applications/${application.id}/export`} download>
+              <Download className="h-3.5 w-3.5 text-brand" />
+              <span>Export Full Dossier PDF</span>
+            </a>
+          </Button>
           <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand-dark">
             {providedCount} Uploaded
           </span>

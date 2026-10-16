@@ -190,12 +190,26 @@ export default async function AdminVolunteerApplicationsPage({
         minWidth="min-w-[760px]"
         mobileCardColumns={1}
         actions={(app) => (
-          <Button asChild variant="ghost" size="sm" className="gap-1 text-brand">
-            <Link href={`/admin/recruitment/applications/${app.id}`}>
-              <Eye className="h-3.5 w-3.5" />
-              <span>Review Details</span>
-            </Link>
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button asChild variant="ghost" size="sm" className="gap-1 text-brand">
+              <Link href={`/admin/recruitment/applications/${app.id}`}>
+                <Eye className="h-3.5 w-3.5" />
+                <span>Review</span>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 border-line px-2 text-xs text-muted-foreground hover:border-brand/40 hover:text-brand-dark"
+              title="Download Application Dossier PDF"
+            >
+              <a href={`/admin/recruitment/applications/${app.id}/export`} download>
+                <Download className="h-3.5 w-3.5 text-brand" />
+                <span className="hidden sm:inline">PDF</span>
+              </a>
+            </Button>
+          </div>
         )}
         empty={
           <EmptyState

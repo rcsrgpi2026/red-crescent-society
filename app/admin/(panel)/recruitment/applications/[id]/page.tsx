@@ -21,6 +21,7 @@ import {
   Layers,
   Camera,
   FileCheck,
+  Download,
 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { StatusBadge, statusTone } from "@/components/shared/status-badge";
@@ -117,7 +118,18 @@ export default async function AdminApplicationDetailPage({
             </div>
           </div>
 
-          <ApplicationReviewActions application={application} />
+          <div className="flex flex-wrap items-center gap-3">
+            <Button asChild variant="outline" className="gap-2 border-brand/30 text-brand-dark hover:bg-brand-soft shadow-xs font-semibold">
+              <a
+                href={`/admin/recruitment/applications/${application.id}/export`}
+                download
+              >
+                <Download className="h-4 w-4 text-brand" />
+                <span>Download Application PDF</span>
+              </a>
+            </Button>
+            <ApplicationReviewActions application={application} />
+          </div>
         </div>
       </div>
 

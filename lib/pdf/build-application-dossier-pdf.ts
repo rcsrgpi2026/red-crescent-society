@@ -1,7 +1,7 @@
 import "regenerator-runtime/runtime";
 import fs from "fs";
 import path from "path";
-import { PDFDocument, PDFPage, rgb, type RGB } from "pdf-lib";
+import { PDFDocument, PDFPage, rgb, type RGB, StandardFonts, type PDFFont } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import sharp from "sharp";
 import type { VolunteerApplication } from "@/types/database";
@@ -9,10 +9,11 @@ import { formatDateTime, VOLUNTEER_APPLICATION_STATUS_LABELS } from "@/lib/const
 
 // ---------------------------------------------------------------------------
 // Server-side PDF generation for Individual Volunteer Application Dossier.
+// Official BDRCS Red Crescent Youth (RCY) Standard.
 // Consolidates:
-// 1. Official BDRCS Volunteer Enrollment Application Form (A4 Portrait)
+// 1. Official RCY Volunteer Enrollment Application Form (A4 Portrait)
 // 2. Embedded Passport Photograph
-// 3. Verified Student Academic & Emergency Details
+// 3. Verified Student Academic & Emergency Records
 // 4. Verification Exhibits (NID, College Reg Card, Parents' NIDs)
 // ---------------------------------------------------------------------------
 
@@ -45,18 +46,18 @@ async function loadLogoPng(): Promise<Buffer | null> {
 }
 
 const COLORS = {
-  brandGreen: rgb(0, 0.435, 0.27),       // #006f45
-  brandDark: rgb(0, 0.32, 0.2),          // #005233
-  brandSoft: rgb(0.92, 0.97, 0.94),      // light green tint
+  brandGreen: rgb(0, 0.435, 0.27),       // BDRCS green #006f45
+  brandDark: rgb(0, 0.30, 0.18),         // #004d30
+  brandSoft: rgb(0.92, 0.965, 0.94),     // light green background
   crescentRed: rgb(0.85, 0.12, 0.16),    // BDRCS red #d91f28
-  crescentSoft: rgb(0.99, 0.93, 0.93),   // light red tint
-  text: rgb(0.12, 0.15, 0.14),           // deep dark
-  muted: rgb(0.42, 0.46, 0.44),          // slate muted
+  crescentSoft: rgb(0.99, 0.93, 0.93),   // light red background
+  text: rgb(0.12, 0.15, 0.14),           // dark body text
+  muted: rgb(0.42, 0.46, 0.44),          // slate label text
   line: rgb(0.82, 0.86, 0.84),           // border line
-  lightBg: rgb(0.97, 0.985, 0.98),       // card bg
+  lightBg: rgb(0.97, 0.985, 0.98),       // alternating card bg
   white: rgb(1, 1, 1),
-  amber: rgb(0.85, 0.55, 0.05),
-  amberSoft: rgb(0.99, 0.96, 0.9),
+  amber: rgb(0.78, 0.48, 0.05),
+  amberSoft: rgb(0.99, 0.96, 0.90),
 };
 
 const PAGE_W = 595.28; // A4 portrait width
@@ -85,7 +86,7 @@ async function fetchRemoteBuffer(url: string): Promise<Buffer | null> {
   }
 }
 
-/** Processes image buffer via Sharp for safe PDF embedding */
+/** Processes image buffer via Sharp for safe PDF embedding with auto-rotation */
 async function processImageForPdf(
   buffer: Buffer,
   maxWidth = 1600,
@@ -93,7 +94,7 @@ async function processImageForPdf(
 ): Promise<{ buffer: Buffer; format: "jpeg" | "png" } | null> {
   try {
     const pipeline = sharp(buffer)
-      .rotate() // auto-orient based on EXIF
+      .rotate() // auto-orient based on EXIF orientation
       .resize({
         width: maxWidth,
         height: maxHeight,
@@ -101,12 +102,8 @@ async function processImageForPdf(
         withoutEnlargement: true,
       });
 
-    // Check format
     const meta = await sharp(buffer).metadata();
-    if (meta.format === "png" && !meta.hasAlpha) {
-      const jpeg = await pipeline.jpeg({ quality: 86, progressive: true }).toBuffer();
-      return { buffer: jpeg, format: "jpeg" };
-    } else if (meta.format === "png") {
+    if (meta.format === "png" && meta.hasAlpha) {
       const png = await pipeline.png({ compressionLevel: 8 }).toBuffer();
       return { buffer: png, format: "png" };
     } else {
@@ -124,12 +121,23 @@ export async function buildApplicationDossierPdf(
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
-  const font = await pdf.embedFont(loadFontBytes(), { subset: true });
+
+  // Fonts: Helvetica for razor-sharp official English typography; NotoSansBengali for Bengali values
+  const fontRegular = await pdf.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const fontBengali = await pdf.embedFont(loadFontBytes(), { subset: true });
+
+  function selectFont(text: string, bold = false): PDFFont {
+    if (/[\u0980-\u09FF]/.test(text)) {
+      return fontBengali;
+    }
+    return bold ? fontBold : fontRegular;
+  }
 
   // -------------------------------------------------------------------------
-  // Helper: Text Wrapping
+  // Helper: Text Wrapping with font measurement
   // -------------------------------------------------------------------------
-  function wrapText(text: string, maxWidth: number, fontSize: number): string[] {
+  function wrapText(text: string, maxWidth: number, fontSize: number, bold = false): string[] {
     if (!text) return ["—"];
     const clean = String(text).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
     const paragraphs = clean.split("\n");
@@ -144,13 +152,14 @@ export async function buildApplicationDossierPdf(
       let current = "";
       for (const word of words) {
         const candidate = current ? `${current} ${word}` : word;
+        const font = selectFont(candidate, bold);
         if (font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
           current = candidate;
         } else if (!current) {
-          // Break word if it exceeds maxWidth
           let partial = "";
           for (const ch of word) {
-            if (font.widthOfTextAtSize(partial + ch, fontSize) <= maxWidth) {
+            const f = selectFont(partial + ch, bold);
+            if (f.widthOfTextAtSize(partial + ch, fontSize) <= maxWidth) {
               partial += ch;
             } else {
               if (partial) result.push(partial);
@@ -168,12 +177,25 @@ export async function buildApplicationDossierPdf(
     return result.length ? result : ["—"];
   }
 
+  function drawTextUniversal(
+    page: PDFPage,
+    text: string,
+    x: number,
+    y: number,
+    size: number,
+    color: RGB,
+    bold = false
+  ) {
+    const font = selectFont(text, bold);
+    page.drawText(text, { x, y, size, font, color });
+  }
+
   // =========================================================================
   // PAGE 1: Official Volunteer Application Form
   // =========================================================================
   const page1: PDFPage = pdf.addPage([PAGE_W, PAGE_H]);
 
-  // Page Border Frame
+  // Double Border Frame
   page1.drawRectangle({
     x: MARGIN - 8,
     y: MARGIN - 8,
@@ -198,7 +220,7 @@ export async function buildApplicationDossierPdf(
       const embeddedLogo = await pdf.embedPng(logoBuf);
       page1.drawImage(embeddedLogo, {
         x: MARGIN + 4,
-        y: PAGE_H - MARGIN - 64,
+        y: PAGE_H - MARGIN - 66,
         width: 58,
         height: 58,
       });
@@ -207,38 +229,38 @@ export async function buildApplicationDossierPdf(
     }
   }
 
-  // Title Texts
+  // Header Titles (With RED CRESCENT YOUTH prominently in the title)
   const titleX = MARGIN + 70;
-  page1.drawText("বাংলাদেশ রেড ক্রিসেন্ট সোসাইটি", {
+  page1.drawText("BANGLADESH RED CRESCENT SOCIETY", {
     x: titleX,
     y: PAGE_H - MARGIN - 18,
     size: 13,
-    font,
+    font: fontBold,
     color: COLORS.brandGreen,
   });
-  page1.drawText("BANGLADESH RED CRESCENT SOCIETY", {
+  page1.drawText("RED CRESCENT YOUTH (RCY)", {
     x: titleX,
-    y: PAGE_H - MARGIN - 31,
-    size: 8.5,
-    font,
+    y: PAGE_H - MARGIN - 33,
+    size: 11,
+    font: fontBold,
     color: COLORS.crescentRed,
   });
-  page1.drawText("রাজশাহী পলিটেকনিক ইনস্টিটিউট যুব রেড ক্রিসেন্ট ইউনিট", {
+  page1.drawText("RAJSHAHI POLYTECHNIC INSTITUTE UNIT", {
     x: titleX,
-    y: PAGE_H - MARGIN - 45,
+    y: PAGE_H - MARGIN - 47,
     size: 9.5,
-    font,
+    font: fontBold,
     color: COLORS.text,
   });
-  page1.drawText("Rajshahi Polytechnic Institute Youth Red Crescent Unit", {
+  page1.drawText("Official Volunteer Enrollment & Verification Dossier", {
     x: titleX,
-    y: PAGE_H - MARGIN - 57,
+    y: PAGE_H - MARGIN - 59,
     size: 8,
-    font,
+    font: fontRegular,
     color: COLORS.muted,
   });
 
-  // Top Right: Passport Photo Box (35mm x 45mm ratio ~ 85pt x 110pt)
+  // Top Right: Passport Photo Box (35mm x 45mm ratio ~ 86pt x 108pt)
   const photoW = 86;
   const photoH = 108;
   const photoX = PAGE_W - MARGIN - photoW - 4;
@@ -287,56 +309,57 @@ export async function buildApplicationDossierPdf(
       borderWidth: 1,
       borderColor: COLORS.line,
     });
-    page1.drawText("PASSPORT PHOTO", {
+    page1.drawText("AFFIX PASSPORT", {
       x: photoX + 6,
       y: photoY + 58,
       size: 7.5,
-      font,
+      font: fontBold,
       color: COLORS.muted,
     });
-    page1.drawText("পাসপোর্ট সাইজ ছবি", {
-      x: photoX + 8,
-      y: photoY + 44,
+    page1.drawText("PHOTOGRAPH", {
+      x: photoX + 12,
+      y: photoY + 45,
       size: 7.5,
-      font,
+      font: fontBold,
       color: COLORS.muted,
     });
   }
 
-  // Application Title Banner Pill
+  // Title Banner Pill (Prominently displaying RED CRESCENT YOUTH)
   const bannerY = PAGE_H - MARGIN - 86;
+  const bannerW = CONTENT_W - photoW - 14;
   page1.drawRectangle({
     x: MARGIN,
     y: bannerY,
-    width: CONTENT_W - photoW - 14,
-    height: 22,
+    width: bannerW,
+    height: 20,
     color: COLORS.brandGreen,
   });
-  page1.drawText("যুব রেড ক্রিসেন্ট সদস্যপদ আবেদনপত্র · VOLUNTEER ADMISSION DOSSIER", {
+  page1.drawText("RED CRESCENT YOUTH · VOLUNTEER ENROLLMENT APPLICATION", {
     x: MARGIN + 10,
     y: bannerY + 6,
     size: 8.5,
-    font,
+    font: fontBold,
     color: COLORS.white,
   });
 
   // Meta bar: Tracking ID, Applied Date, Status
-  const metaY = bannerY - 18;
+  const metaY = bannerY - 17;
   const appIdDisplay = `Tracking: #APP-${application.id.slice(0, 8).toUpperCase()}`;
   page1.drawText(appIdDisplay, {
     x: MARGIN,
     y: metaY,
     size: 7.5,
-    font,
+    font: fontBold,
     color: COLORS.muted,
   });
 
   const appliedDate = `Applied: ${formatDateTime(application.created_at)}`;
   page1.drawText(appliedDate, {
-    x: MARGIN + 140,
+    x: MARGIN + 130,
     y: metaY,
     size: 7.5,
-    font,
+    font: fontRegular,
     color: COLORS.muted,
   });
 
@@ -355,29 +378,32 @@ export async function buildApplicationDossierPdf(
       ? COLORS.crescentRed
       : COLORS.amber;
 
+  const statusBoxW = 92;
+  const statusBoxX = bannerW + MARGIN - statusBoxW;
   page1.drawRectangle({
-    x: PAGE_W - MARGIN - photoW - 14 - 90,
+    x: statusBoxX,
     y: metaY - 3,
-    width: 86,
+    width: statusBoxW,
     height: 14,
     color: statusBg,
     borderColor: statusColor,
     borderWidth: 0.5,
   });
+  const statusTextW = fontBold.widthOfTextAtSize(statusLabel, 7.5);
   page1.drawText(statusLabel, {
-    x: PAGE_W - MARGIN - photoW - 14 - 82,
+    x: statusBoxX + (statusBoxW - statusTextW) / 2,
     y: metaY,
     size: 7.5,
-    font,
+    font: fontBold,
     color: statusColor,
   });
 
   // -------------------------------------------------------------------------
-  // Reusable Section Header Drawer
+  // Reusable Section Header
   // -------------------------------------------------------------------------
-  let currentY = metaY - 14;
+  let currentY = metaY - 15;
 
-  function drawSectionHeader(title: string, bengaliSubtitle: string) {
+  function drawSectionHeader(title: string) {
     page1.drawRectangle({
       x: MARGIN,
       y: currentY - 16,
@@ -387,7 +413,7 @@ export async function buildApplicationDossierPdf(
       borderWidth: 0.5,
       borderColor: COLORS.line,
     });
-    // Left accent bar
+    // Left brand accent line
     page1.drawRectangle({
       x: MARGIN,
       y: currentY - 16,
@@ -399,30 +425,21 @@ export async function buildApplicationDossierPdf(
       x: MARGIN + 10,
       y: currentY - 12,
       size: 8.5,
-      font,
+      font: fontBold,
       color: COLORS.brandDark,
     });
-    if (bengaliSubtitle) {
-      page1.drawText(`(${bengaliSubtitle})`, {
-        x: MARGIN + font.widthOfTextAtSize(title, 8.5) + 16,
-        y: currentY - 12,
-        size: 7.5,
-        font,
-        color: COLORS.muted,
-      });
-    }
     currentY -= 20;
   }
 
   // -------------------------------------------------------------------------
-  // Reusable 2-Column Table Drawer
+  // Reusable 2-Column Row (Without Any Label/Value Collisions)
   // -------------------------------------------------------------------------
   function drawTwoColumnRow(
     label1: string,
     val1: string,
     label2: string,
     val2: string,
-    rowH = 18,
+    rowH = 17,
     isAlt = false
   ) {
     const colW = CONTENT_W / 2;
@@ -443,7 +460,7 @@ export async function buildApplicationDossierPdf(
       borderWidth: 0.5,
       borderColor: COLORS.line,
     });
-    // Center divider
+    // Center column divider line
     page1.drawLine({
       start: { x: MARGIN + colW, y: currentY },
       end: { x: MARGIN + colW, y: currentY - rowH },
@@ -452,25 +469,15 @@ export async function buildApplicationDossierPdf(
     });
 
     const textY = currentY - rowH + 5;
+    const labelColOffset = 88; // generous fixed space for labels so values NEVER collide
+
     // Col 1
-    page1.drawText(label1, { x: MARGIN + 6, y: textY, size: 7.5, font, color: COLORS.muted });
-    page1.drawText(val1 || "—", {
-      x: MARGIN + 96,
-      y: textY,
-      size: 8,
-      font,
-      color: COLORS.text,
-    });
+    page1.drawText(label1, { x: MARGIN + 6, y: textY, size: 7.5, font: fontBold, color: COLORS.muted });
+    drawTextUniversal(page1, val1 || "—", MARGIN + labelColOffset, textY, 8, COLORS.text, false);
 
     // Col 2
-    page1.drawText(label2, { x: MARGIN + colW + 6, y: textY, size: 7.5, font, color: COLORS.muted });
-    page1.drawText(val2 || "—", {
-      x: MARGIN + colW + 96,
-      y: textY,
-      size: 8,
-      font,
-      color: COLORS.text,
-    });
+    page1.drawText(label2, { x: MARGIN + colW + 6, y: textY, size: 7.5, font: fontBold, color: COLORS.muted });
+    drawTextUniversal(page1, val2 || "—", MARGIN + colW + labelColOffset, textY, 8, COLORS.text, false);
 
     currentY -= rowH;
   }
@@ -478,10 +485,10 @@ export async function buildApplicationDossierPdf(
   // -------------------------------------------------------------------------
   // 1. Applicant Personal & Academic Information
   // -------------------------------------------------------------------------
-  drawSectionHeader("1. APPLICANT IDENTIFICATION & ACADEMIC RECORD", "শিক্ষার্থীর ব্যক্তিগত ও প্রাতিষ্ঠানিক তথ্য");
-  drawTwoColumnRow("Full Name (নাম):", application.name, "Student Roll (রোল):", application.roll, 17, false);
+  drawSectionHeader("1. APPLICANT IDENTIFICATION & ACADEMIC RECORD");
+  drawTwoColumnRow("Full Name:", application.name, "Student Roll:", application.roll, 17, false);
   drawTwoColumnRow(
-    "Department (বিভাগ):",
+    "Department:",
     application.department,
     "College Reg. No.:",
     application.registration_no || "—",
@@ -489,7 +496,7 @@ export async function buildApplicationDossierPdf(
     true
   );
   drawTwoColumnRow(
-    "Semester (পর্ব):",
+    "Semester:",
     `${application.semester} Semester`,
     "Academic Session:",
     application.session,
@@ -497,17 +504,17 @@ export async function buildApplicationDossierPdf(
     false
   );
   drawTwoColumnRow(
-    "Blood Group (রক্তের গ্রুপ):",
+    "Blood Group:",
     application.blood_group || "—",
-    "Mobile No (মোবাইল):",
+    "Mobile Phone:",
     application.phone,
     17,
     true
   );
   drawTwoColumnRow(
-    "Email Address (ইমেইল):",
+    "Email Address:",
     application.email || "—",
-    "Recruitment Campaign:",
+    "Campaign:",
     application.recruitment_campaigns?.title || "Regular Enrollment",
     17,
     false
@@ -516,13 +523,13 @@ export async function buildApplicationDossierPdf(
   currentY -= 6;
 
   // -------------------------------------------------------------------------
-  // 2. Emergency Contact Information
+  // 2. Emergency Contact Information (Short labels to prevent collisions)
   // -------------------------------------------------------------------------
-  drawSectionHeader("2. EMERGENCY CONTACT DETAILS", "জরুরি যোগাযোগের তথ্য");
+  drawSectionHeader("2. EMERGENCY CONTACT DETAILS");
   drawTwoColumnRow(
-    "Emergency Contact Person:",
+    "Contact Person:",
     application.emergency_contact_name || "—",
-    "Emergency Phone Number:",
+    "Contact Phone:",
     application.emergency_contact_phone || "—",
     18,
     false
@@ -533,7 +540,7 @@ export async function buildApplicationDossierPdf(
   // -------------------------------------------------------------------------
   // 3. Volunteering Profile & Motivation
   // -------------------------------------------------------------------------
-  drawSectionHeader("3. VOLUNTEERING PROFILE & MOTIVATION", "দক্ষতা, অভিজ্ঞতা ও যোগদানের উদ্দেশ্য");
+  drawSectionHeader("3. VOLUNTEERING PROFILE & MOTIVATION");
 
   // Skills row
   const skillsStr = Array.isArray(application.skills)
@@ -547,24 +554,18 @@ export async function buildApplicationDossierPdf(
     borderWidth: 0.5,
     borderColor: COLORS.line,
   });
-  page1.drawText("Skills / Interests (দক্ষতা):", {
+  page1.drawText("Skills & Interests:", {
     x: MARGIN + 6,
     y: currentY - 13,
     size: 7.5,
-    font,
+    font: fontBold,
     color: COLORS.muted,
   });
-  page1.drawText(skillsStr, {
-    x: MARGIN + 120,
-    y: currentY - 13,
-    size: 8,
-    font,
-    color: COLORS.text,
-  });
+  drawTextUniversal(page1, skillsStr, MARGIN + 115, currentY - 13, 8, COLORS.text, false);
   currentY -= 18;
 
   // Previous Experience
-  const expLines = wrapText(application.previous_volunteer_experience || "None", CONTENT_W - 130, 7.5).slice(0, 2);
+  const expLines = wrapText(application.previous_volunteer_experience || "None", CONTENT_W - 125, 7.5).slice(0, 2);
   const expRowH = Math.max(18, expLines.length * 11 + 6);
   page1.drawRectangle({
     x: MARGIN,
@@ -579,18 +580,18 @@ export async function buildApplicationDossierPdf(
     x: MARGIN + 6,
     y: currentY - 13,
     size: 7.5,
-    font,
+    font: fontBold,
     color: COLORS.muted,
   });
   let expTextY = currentY - 13;
   for (const line of expLines) {
-    page1.drawText(line, { x: MARGIN + 120, y: expTextY, size: 7.5, font, color: COLORS.text });
+    drawTextUniversal(page1, line, MARGIN + 115, expTextY, 7.5, COLORS.text, false);
     expTextY -= 11;
   }
   currentY -= expRowH;
 
   // Motivation text
-  const motLines = wrapText(application.motivation || "None", CONTENT_W - 130, 7.5).slice(0, 3);
+  const motLines = wrapText(application.motivation || "None", CONTENT_W - 125, 7.5).slice(0, 3);
   const motRowH = Math.max(20, motLines.length * 11 + 7);
   page1.drawRectangle({
     x: MARGIN,
@@ -600,16 +601,16 @@ export async function buildApplicationDossierPdf(
     borderWidth: 0.5,
     borderColor: COLORS.line,
   });
-  page1.drawText("Why join RCY (উদ্দেশ্য):", {
+  page1.drawText("Reason for Joining RCY:", {
     x: MARGIN + 6,
     y: currentY - 13,
     size: 7.5,
-    font,
+    font: fontBold,
     color: COLORS.muted,
   });
   let motTextY = currentY - 13;
   for (const line of motLines) {
-    page1.drawText(line, { x: MARGIN + 120, y: motTextY, size: 7.5, font, color: COLORS.text });
+    drawTextUniversal(page1, line, MARGIN + 115, motTextY, 7.5, COLORS.text, false);
     motTextY -= 11;
   }
   currentY -= motRowH;
@@ -617,33 +618,33 @@ export async function buildApplicationDossierPdf(
   currentY -= 6;
 
   // -------------------------------------------------------------------------
-  // 4. Submitted Verification Documents Checklist
+  // 4. Submitted Verification Documents Audit Checklist
   // -------------------------------------------------------------------------
-  drawSectionHeader("4. VERIFICATION DOCUMENTS SUBMISSION AUDIT", "দাখিলকৃত প্রমাণ্য নথিপত্রের তালিকা");
+  drawSectionHeader("4. VERIFICATION DOCUMENTS SUBMISSION AUDIT");
 
   const docChecklist = [
     {
-      title: "1. Passport Size Photograph (পাসপোর্ট সাইজ ছবি)",
+      title: "1. Passport Size Photograph",
       provided: Boolean(application.photo_url),
-      location: application.photo_url ? "Embedded in Top-Right Box" : "Not Provided",
+      location: application.photo_url ? "Embedded in Form (Top-Right Box)" : "Not Provided",
     },
     {
-      title: "2. Applicant NID / Birth Certificate (জাতীয় পরিচয়পত্র / জন্ম নিবন্ধন)",
+      title: "2. Applicant National ID / Birth Certificate",
       provided: Boolean(application.nid_or_birth_cert_url),
       location: application.nid_or_birth_cert_url ? "Attached as Exhibit 1 (Next Page)" : "Not Provided",
     },
     {
-      title: "3. College Reg. Card / Student ID (কলেজ রেজিস্ট্রেশন কার্ড / আইডি)",
+      title: "3. College Registration Card / Student ID",
       provided: Boolean(application.college_reg_card_url),
       location: application.college_reg_card_url ? "Attached as Exhibit 2" : "Not Provided",
     },
     {
-      title: "4. Father's National ID Card (পিতার জাতীয় পরিচয়পত্র)",
+      title: "4. Father's National ID Card",
       provided: Boolean(application.father_nid_url),
       location: application.father_nid_url ? "Attached as Exhibit 3" : "Not Provided",
     },
     {
-      title: "5. Mother's National ID Card (মাতার জাতীয় পরিচয়পত্র)",
+      title: "5. Mother's National ID Card",
       provided: Boolean(application.mother_nid_url),
       location: application.mother_nid_url ? "Attached as Exhibit 4" : "Not Provided",
     },
@@ -671,30 +672,50 @@ export async function buildApplicationDossierPdf(
       borderColor: COLORS.line,
     });
 
-    // Checkbox icon
-    const checkText = item.provided ? "[✓] VERIFIED" : "[ ] NOT SUBMITTED";
-    const checkColor = item.provided ? COLORS.brandGreen : COLORS.muted;
+    // Badge styling for submission status
+    const statusText = item.provided ? "ATTACHED" : "NOT SUBMITTED";
+    const statusBgColor = item.provided ? COLORS.brandSoft : COLORS.lightBg;
+    const statusBorderColor = item.provided ? COLORS.brandGreen : COLORS.line;
+    const statusTextColor = item.provided ? COLORS.brandDark : COLORS.muted;
 
     page1.drawText(item.title, {
       x: MARGIN + 8,
       y: currentY - itemH + 4,
       size: 7.5,
-      font,
+      font: fontBold,
       color: COLORS.text,
     });
+
     page1.drawText(item.location, {
-      x: MARGIN + 280,
+      x: MARGIN + 235,
       y: currentY - itemH + 4,
       size: 7,
-      font,
+      font: fontRegular,
       color: COLORS.muted,
     });
-    page1.drawText(checkText, {
-      x: PAGE_W - MARGIN - 90,
-      y: currentY - itemH + 4,
-      size: 7,
-      font,
-      color: checkColor,
+
+    // Draw clean status pill
+    const pillW = 82;
+    const pillH = 11;
+    const pillX = PAGE_W - MARGIN - pillW - 6;
+    const pillY = currentY - itemH + 2;
+
+    page1.drawRectangle({
+      x: pillX,
+      y: pillY,
+      width: pillW,
+      height: pillH,
+      color: statusBgColor,
+      borderColor: statusBorderColor,
+      borderWidth: 0.5,
+    });
+    const textWidth = fontBold.widthOfTextAtSize(statusText, 6.5);
+    page1.drawText(statusText, {
+      x: pillX + (pillW - textWidth) / 2,
+      y: pillY + 2.5,
+      size: 6.5,
+      font: fontBold,
+      color: statusTextColor,
     });
 
     currentY -= itemH;
@@ -703,35 +724,42 @@ export async function buildApplicationDossierPdf(
   currentY -= 6;
 
   // -------------------------------------------------------------------------
-  // 5. Declaration & Official Verification Block
+  // 5. Declaration & Official Verification Signatures
   // -------------------------------------------------------------------------
-  drawSectionHeader("5. APPLICANT DECLARATION & OFFICIAL VERIFICATION", "অঙ্গীকারনামা ও কর্তৃপক্ষ অনুমোদন");
+  drawSectionHeader("5. APPLICANT DECLARATION & OFFICIAL VERIFICATION");
 
-  // Declaration text
   const declText =
-    "আমি এই মর্মে অঙ্গীকার করছি যে, আবেদনপত্রে প্রদত্ত সকল তথ্য এবং সংযুক্ত নথিপত্র সম্পূর্ণ সত্য ও নির্ভুল। রেড ক্রিসেন্ট সোসাইটির ৭টি মূলনীতি মেনে যুব সদস্য হিসেবে নিষ্ঠার সাথে আর্তমানবতার সেবায় কাজ করে যাব।";
+    "I hereby solemnly declare that all information provided in this volunteer application and all attached verification documents are true, complete, and correct. I pledge to strictly adhere to the Seven Fundamental Principles of the Red Cross and Red Crescent Movement and serve humanity with utmost integrity.";
+  const declLines = wrapText(declText, CONTENT_W - 16, 7);
+  const declBoxH = Math.max(26, declLines.length * 10 + 6);
+
   page1.drawRectangle({
     x: MARGIN,
-    y: currentY - 26,
+    y: currentY - declBoxH,
     width: CONTENT_W,
-    height: 26,
+    height: declBoxH,
     color: COLORS.lightBg,
     borderWidth: 0.5,
     borderColor: COLORS.line,
   });
-  page1.drawText(declText, {
-    x: MARGIN + 8,
-    y: currentY - 17,
-    size: 7,
-    font,
-    color: COLORS.text,
-  });
 
-  currentY -= 32;
+  let declY = currentY - 9;
+  for (const line of declLines) {
+    page1.drawText(line, {
+      x: MARGIN + 8,
+      y: declY,
+      size: 7,
+      font: fontRegular,
+      color: COLORS.text,
+    });
+    declY -= 10;
+  }
+
+  currentY -= declBoxH + 6;
 
   // Signatures Area
   const sigBoxW = (CONTENT_W - 20) / 2;
-  const sigBoxH = 58;
+  const sigBoxH = 54;
 
   // Left: Applicant
   page1.drawRectangle({
@@ -743,23 +771,23 @@ export async function buildApplicationDossierPdf(
     borderColor: COLORS.line,
   });
   page1.drawLine({
-    start: { x: MARGIN + 16, y: currentY - sigBoxH + 22 },
-    end: { x: MARGIN + sigBoxW - 16, y: currentY - sigBoxH + 22 },
+    start: { x: MARGIN + 16, y: currentY - sigBoxH + 20 },
+    end: { x: MARGIN + sigBoxW - 16, y: currentY - sigBoxH + 20 },
     thickness: 0.5,
     color: COLORS.line,
   });
-  page1.drawText("Applicant's Signature (আবেদনকারীর স্বাক্ষর)", {
+  page1.drawText("Applicant's Signature", {
     x: MARGIN + 20,
-    y: currentY - sigBoxH + 11,
+    y: currentY - sigBoxH + 10,
     size: 7.5,
-    font,
+    font: fontBold,
     color: COLORS.text,
   });
   page1.drawText(`Date: ${application.created_at.slice(0, 10)}`, {
     x: MARGIN + 20,
-    y: currentY - sigBoxH + 3,
+    y: currentY - sigBoxH + 2,
     size: 6.5,
-    font,
+    font: fontRegular,
     color: COLORS.muted,
   });
 
@@ -774,16 +802,16 @@ export async function buildApplicationDossierPdf(
     borderColor: COLORS.line,
   });
   page1.drawLine({
-    start: { x: rightSigX + 16, y: currentY - sigBoxH + 22 },
-    end: { x: rightSigX + sigBoxW - 16, y: currentY - sigBoxH + 22 },
+    start: { x: rightSigX + 16, y: currentY - sigBoxH + 20 },
+    end: { x: rightSigX + sigBoxW - 16, y: currentY - sigBoxH + 20 },
     thickness: 0.5,
     color: COLORS.line,
   });
-  page1.drawText("Youth Unit Leader / Verifying Officer (অনুমোদনকারী)", {
+  page1.drawText("Youth Unit Leader / Verifying Authority", {
     x: rightSigX + 16,
-    y: currentY - sigBoxH + 11,
+    y: currentY - sigBoxH + 10,
     size: 7.5,
-    font,
+    font: fontBold,
     color: COLORS.brandDark,
   });
   const reviewNote = application.reviewed_at
@@ -791,9 +819,9 @@ export async function buildApplicationDossierPdf(
     : `Status: ${application.status} · Verification Pending`;
   page1.drawText(reviewNote, {
     x: rightSigX + 16,
-    y: currentY - sigBoxH + 3,
+    y: currentY - sigBoxH + 2,
     size: 6.5,
-    font,
+    font: fontRegular,
     color: COLORS.muted,
   });
 
@@ -804,7 +832,7 @@ export async function buildApplicationDossierPdf(
       x: MARGIN,
       y: MARGIN - 18,
       size: 7,
-      font,
+      font: fontRegular,
       color: COLORS.muted,
     }
   );
@@ -812,7 +840,7 @@ export async function buildApplicationDossierPdf(
     x: PAGE_W - MARGIN - 26,
     y: MARGIN - 18,
     size: 7,
-    font,
+    font: fontBold,
     color: COLORS.muted,
   });
 
@@ -822,31 +850,26 @@ export async function buildApplicationDossierPdf(
   const exhibits: Array<{
     number: number;
     title: string;
-    bengaliTitle: string;
     url: string | null | undefined;
   }> = [
     {
       number: 1,
       title: "APPLICANT'S NATIONAL ID / BIRTH CERTIFICATE",
-      bengaliTitle: "আবেদনকারীর জাতীয় পরিচয়পত্র / জন্ম নিবন্ধন সনদ",
       url: application.nid_or_birth_cert_url,
     },
     {
       number: 2,
       title: "COLLEGE REGISTRATION CARD / STUDENT ID",
-      bengaliTitle: "কলেজ রেজিস্ট্রেশন কার্ড / স্টুডেন্ট আইডি",
       url: application.college_reg_card_url,
     },
     {
       number: 3,
       title: "FATHER'S NATIONAL ID CARD",
-      bengaliTitle: "পিতার জাতীয় পরিচয়পত্র (এনআইডি)",
       url: application.father_nid_url,
     },
     {
       number: 4,
       title: "MOTHER'S NATIONAL ID CARD",
-      bengaliTitle: "মাতার জাতীয় পরিচয়পত্র (এনআইডি)",
       url: application.mother_nid_url,
     },
   ];
@@ -858,7 +881,6 @@ export async function buildApplicationDossierPdf(
 
     const buffer = await fetchRemoteBuffer(exhibit.url);
     if (!buffer) {
-      // Add a page noting the document could not be retrieved
       pageIndex++;
       const errorPage = pdf.addPage([PAGE_W, PAGE_H]);
       drawExhibitBanner(errorPage, exhibit, pageIndex);
@@ -875,14 +897,14 @@ export async function buildApplicationDossierPdf(
         x: MARGIN + 20,
         y: 310,
         size: 10,
-        font,
+        font: fontBold,
         color: COLORS.crescentRed,
       });
       errorPage.drawText(`Storage URL: ${exhibit.url}`, {
         x: MARGIN + 20,
         y: 285,
         size: 8,
-        font,
+        font: fontRegular,
         color: COLORS.text,
       });
       continue;
@@ -902,7 +924,7 @@ export async function buildApplicationDossierPdf(
           const donorPage = copiedPages[i];
           pdf.addPage(donorPage);
 
-          // Add a stamp at the top of donor page
+          // Stamp header at top of donor page
           donorPage.drawRectangle({
             x: 10,
             y: donorPage.getHeight() - 24,
@@ -916,7 +938,7 @@ export async function buildApplicationDossierPdf(
               x: 16,
               y: donorPage.getHeight() - 17,
               size: 7.5,
-              font,
+              font: fontBold,
               color: COLORS.white,
             }
           );
@@ -925,7 +947,7 @@ export async function buildApplicationDossierPdf(
         console.warn("Failed merging donor PDF exhibit:", err);
       }
     } else {
-      // It's an image (JPG, PNG, WebP, etc.)
+      // Image (JPG, PNG, WebP, etc.)
       const processed = await processImageForPdf(buffer, 1800, 2400);
       if (!processed) continue;
 
@@ -939,9 +961,8 @@ export async function buildApplicationDossierPdf(
             ? await pdf.embedPng(processed.buffer)
             : await pdf.embedJpg(processed.buffer);
 
-        // Dimensions available on exhibit page
-        const headerH = 75;
-        const footerH = 40;
+        const headerH = 68;
+        const footerH = 38;
         const availW = CONTENT_W;
         const availH = PAGE_H - MARGIN * 2 - headerH - footerH;
 
@@ -957,7 +978,7 @@ export async function buildApplicationDossierPdf(
         const drawX = MARGIN + (availW - drawW) / 2;
         const drawY = MARGIN + footerH + (availH - drawH) / 2;
 
-        // Background card behind image
+        // Card background behind document
         exhibitPage.drawRectangle({
           x: drawX - 3,
           y: drawY - 3,
@@ -976,14 +997,14 @@ export async function buildApplicationDossierPdf(
           height: drawH,
         });
 
-        // Image caption watermark below image
+        // Watermark footer
         exhibitPage.drawText(
-          `Official Verification Document Copy · RPI Red Crescent Society Youth Unit · Applicant: ${application.name}`,
+          `Official Verification Document Copy · Red Crescent Youth · Rajshahi Polytechnic Institute Unit · Applicant: ${application.name}`,
           {
             x: MARGIN,
             y: MARGIN - 18,
             size: 7,
-            font,
+            font: fontRegular,
             color: COLORS.muted,
           }
         );
@@ -991,7 +1012,7 @@ export async function buildApplicationDossierPdf(
           x: PAGE_W - MARGIN - 30,
           y: MARGIN - 18,
           size: 7,
-          font,
+          font: fontBold,
           color: COLORS.muted,
         });
       } catch (err) {
@@ -1002,7 +1023,7 @@ export async function buildApplicationDossierPdf(
 
   function drawExhibitBanner(
     targetPage: PDFPage,
-    ex: { number: number; title: string; bengaliTitle: string },
+    ex: { number: number; title: string },
     pageNum: number
   ) {
     // Outer border frame
@@ -1019,47 +1040,46 @@ export async function buildApplicationDossierPdf(
     const bannerTop = PAGE_H - MARGIN;
     targetPage.drawRectangle({
       x: MARGIN,
-      y: bannerTop - 42,
+      y: bannerTop - 36,
       width: CONTENT_W,
-      height: 42,
+      height: 36,
       color: COLORS.brandGreen,
     });
 
     targetPage.drawText(`EXHIBIT ${ex.number}: ${ex.title}`, {
       x: MARGIN + 12,
-      y: bannerTop - 20,
+      y: bannerTop - 18,
       size: 10,
-      font,
+      font: fontBold,
       color: COLORS.white,
     });
-    targetPage.drawText(ex.bengaliTitle, {
+    targetPage.drawText("Official Verification Document · Red Crescent Youth (RCY)", {
       x: MARGIN + 12,
-      y: bannerTop - 34,
-      size: 8,
-      font,
+      y: bannerTop - 30,
+      size: 7.5,
+      font: fontRegular,
       color: COLORS.brandSoft,
     });
 
     // Sub-banner info
-    const subTop = bannerTop - 44;
+    const subTop = bannerTop - 38;
     targetPage.drawRectangle({
       x: MARGIN,
-      y: subTop - 18,
+      y: subTop - 16,
       width: CONTENT_W,
-      height: 18,
+      height: 16,
       color: COLORS.lightBg,
       borderWidth: 0.5,
       borderColor: COLORS.line,
     });
-    targetPage.drawText(
+    drawTextUniversal(
+      targetPage,
       `Applicant: ${application.name}  |  Roll: ${application.roll}  |  Dept: ${application.department}  |  Session: ${application.session}`,
-      {
-        x: MARGIN + 10,
-        y: subTop - 12,
-        size: 7.5,
-        font,
-        color: COLORS.text,
-      }
+      MARGIN + 10,
+      subTop - 11,
+      7.5,
+      COLORS.text,
+      false
     );
   }
 

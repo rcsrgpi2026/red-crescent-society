@@ -49,12 +49,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly" as const,
       priority: 0.6,
     })),
-    ...(notices.data ?? []).map((n) => ({
-      url: `${baseUrl}/notices/${n.slug}`,
-      lastModified: new Date(n.updated_at),
-      changeFrequency: "monthly" as const,
-      priority: 0.5,
-    })),
+    ...(notices.data ?? [])
+      .filter((n) => Boolean(n.slug))
+      .map((n) => ({
+        url: `${baseUrl}/notices/${encodeURI(n.slug)}`,
+        lastModified: new Date(n.updated_at),
+        changeFrequency: "monthly" as const,
+        priority: 0.5,
+      })),
   ];
 
   return [...staticRoutes, ...dynamicRoutes];

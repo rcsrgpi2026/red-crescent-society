@@ -22,6 +22,7 @@ import {
   Loader2,
   AlertCircle,
   Info,
+  Upload,
 } from "lucide-react";
 import { Button, Input, Label, Textarea, Checkbox } from "@/components/ui";
 import { saveFormConfigsAction, resetFormConfigsAction } from "@/lib/admin-actions";
@@ -309,7 +310,17 @@ export function FormEditorClient({ initialConfigs }: FormEditorClientProps) {
                         <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
                           <span className="font-mono text-xs bg-mist px-1.5 py-0.2 rounded">{field.name}</span>
                           <span>·</span>
-                          <span className="capitalize font-medium text-poly">{field.type}</span>
+                          {field.type === "file" ? (
+                            <span className="font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[10px]">
+                              📁 File Upload
+                            </span>
+                          ) : field.type === "date" ? (
+                            <span className="font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-1.5 py-0.5 rounded text-[10px]">
+                              📅 Date / Calendar
+                            </span>
+                          ) : (
+                            <span className="capitalize font-medium text-poly">{field.type}</span>
+                          )}
                           {field.isCore && (
                             <>
                               <span>·</span>
@@ -490,6 +501,20 @@ export function FormEditorClient({ initialConfigs }: FormEditorClientProps) {
                             <Checkbox disabled />
                             <span>{field.placeholder || field.label}</span>
                           </label>
+                        ) : field.type === "file" ? (
+                          <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-line bg-mist/40 p-2.5 text-xs text-muted-foreground">
+                            <Upload className="h-4 w-4 text-brand shrink-0" />
+                            <span className="truncate">{field.placeholder || "ডকুমেন্ট বা ছবি ফাইল আপলোড (PDF, JPG, PNG)"}</span>
+                          </div>
+                        ) : field.type === "date" ? (
+                          <div className="relative flex items-center">
+                            <Input
+                              type="date"
+                              disabled
+                              className="h-8 text-xs bg-mist/30 cursor-not-allowed pl-8"
+                            />
+                            <CalendarDays className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                          </div>
                         ) : (
                           <Input
                             type={field.type}
@@ -568,9 +593,11 @@ export function FormEditorClient({ initialConfigs }: FormEditorClientProps) {
                     <option value="number">Number (সংখ্যা)</option>
                     <option value="email">Email (ইমেইল)</option>
                     <option value="tel">Phone (ফোন নম্বর)</option>
+                    <option value="date">Date (তারিখ নির্বাচন / ক্যালেন্ডার)</option>
                     <option value="textarea">Textarea (বড় প্যারাগ্রাফ)</option>
                     <option value="select">Dropdown (ড্রপডাউন লিস্ট)</option>
                     <option value="checkbox">Checkbox (টিকবক্স)</option>
+                    <option value="file">File Upload (ডকুমেন্ট / ফাইল আপলোড)</option>
                   </select>
                 </div>
 

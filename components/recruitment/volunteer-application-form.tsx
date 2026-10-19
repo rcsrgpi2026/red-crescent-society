@@ -26,14 +26,16 @@ import {
   UploadCloud,
   Trash2,
   Eye,
-  ExternalLink,
   FileUp,
-  FolderOpen,
+  ClipboardList,
+  CalendarDays,
+  CalendarCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -41,44 +43,205 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BLOOD_GROUPS, SEMESTERS } from "@/lib/constants";
+import {
+  BLOOD_GROUPS,
+  SEMESTERS,
+  SEMESTER_LABELS,
+  DEPARTMENTS,
+  normalizeSemester,
+} from "@/lib/constants";
 import { submitVolunteerApplication } from "@/lib/recruitment-actions";
 import { AddToContactsCard } from "@/components/shared/add-to-contacts-card";
 import { MandatoryContactStep } from "@/components/forms/mandatory-contact-step";
 import { getCurrentPushSubscriptionData } from "@/lib/notifications/client";
 import { uploadImageToStorage } from "@/lib/upload";
 import type { RecruitmentCampaign, Student, VolunteerApplication } from "@/types/database";
+import { DEFAULT_FORM_CONFIGS, type FormConfig, type FormFieldConfig } from "@/types/form-editor";
+
+/**
+ * Normalizes any date string (ISO YYYY-MM-DD or DD/MM/YYYY or DD-MM-YYYY)
+ * to HTML5 date input format (YYYY-MM-DD).
+ */
+function toDateInputValue(val: string | null | undefined): string {
+  if (!val) return "";
+  const trimmed = String(val).trim();
+  if (!trimmed) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  if (trimmed.includes("T")) {
+    const part = trimmed.split("T")[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(part)) return part;
+  }
+  const parts = trimmed.split(/[\/\-\.]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      // YYYY/MM/DD
+      const [y, m, d] = parts;
+      return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    }
+    if (parts[2].length === 4) {
+      // DD/MM/YYYY
+      const [d, m, y] = parts;
+      return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    }
+  }
+  return "";
+}
+
+/**
+ * Returns formatted Bengali date preview and calculated age for immediate user confirmation.
+ */
+function formatBengaliDatePreview(isoDate: string): { formatted: string; ageText?: string } | null {
+  if (!isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return null;
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  if (isNaN(dateObj.getTime())) return null;
+
+  const monthsBn = [
+    "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
+    "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"
+  ];
+  const digitsToBn = (num: number | string) =>
+    String(num).replace(/\d/g, (digit) => "০১২৩৪৫৬৭৮৯"[Number(digit)]);
+
+  const formatted = `${digitsToBn(d)} ${monthsBn[m - 1]} ${digitsToBn(y)}`;
+
+  const today = new Date();
+  let age = today.getFullYear() - y;
+  const monthDiff = today.getMonth() - (m - 1);
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < d)) {
+    age--;
+  }
+
+  const ageText = age >= 0 && age < 120 ? `বয়স: ${digitsToBn(age)} বছর` : undefined;
+
+  return { formatted, ageText };
+}
 
 interface VolunteerApplicationFormProps {
   campaign: RecruitmentCampaign;
   student: Student;
   previousApplication?: VolunteerApplication | null;
+  formConfig?: FormConfig;
 }
 
 export function VolunteerApplicationForm({
   campaign,
   student,
   previousApplication,
+  formConfig,
 }: VolunteerApplicationFormProps) {
-  const [formData, setFormData] = useState({
-    phone: previousApplication?.phone || student.phone || "",
-    bloodGroup: previousApplication?.blood_group || student.blood_group || "",
-    semester: previousApplication?.semester || student.semester || "",
-    emergencyContactName: previousApplication?.emergency_contact_name || "",
-    emergencyContactPhone: previousApplication?.emergency_contact_phone || "",
-    previousVolunteerExperience: previousApplication?.previous_volunteer_experience || "",
-    motivation: previousApplication?.motivation || "",
-    skills: Array.isArray(previousApplication?.skills)
-      ? previousApplication.skills.join(", ")
-      : typeof previousApplication?.skills === "string"
-      ? (previousApplication.skills as string)
-      : "",
-    photoUrl: previousApplication?.photo_url || student.photo_url || "",
-    nidOrBirthCertUrl: previousApplication?.nid_or_birth_cert_url || "",
-    fatherNidUrl: previousApplication?.father_nid_url || "",
-    motherNidUrl: previousApplication?.mother_nid_url || "",
-    collegeRegCardUrl: previousApplication?.college_reg_card_url || "",
-    agreement: false,
+  const activeConfig = formConfig || DEFAULT_FORM_CONFIGS.volunteer_application;
+  const activeFields: FormFieldConfig[] = (activeConfig?.fields || [])
+    .filter((f) => f.enabled)
+    .sort((a, b) => a.order - b.order);
+
+  const activeGeneralFields = activeFields.filter((f) => f.type !== "file");
+  const activeFileFields = activeFields.filter((f) => f.type === "file");
+
+  const prevFormData = (previousApplication as any)?.form_data || {};
+
+  const [formData, setFormData] = useState<Record<string, any>>(() => {
+    const rawSemester =
+      previousApplication?.semester ||
+      prevFormData.semester ||
+      student.semester ||
+      "";
+    const sem = normalizeSemester(rawSemester) || rawSemester;
+
+    const rollVal =
+      previousApplication?.roll ||
+      prevFormData.studentId ||
+      prevFormData.roll ||
+      student.roll ||
+      "";
+
+    const sessionVal =
+      previousApplication?.session ||
+      prevFormData.session ||
+      student.session ||
+      "";
+
+    const deptVal =
+      previousApplication?.department ||
+      prevFormData.department ||
+      student.department ||
+      "";
+
+    const nameVal =
+      previousApplication?.name ||
+      prevFormData.name ||
+      student.name ||
+      "";
+
+    const phoneVal =
+      previousApplication?.phone ||
+      prevFormData.phone ||
+      student.phone ||
+      "";
+
+    const emailVal =
+      previousApplication?.email ||
+      prevFormData.email ||
+      student.email ||
+      "";
+
+    const bloodVal =
+      previousApplication?.blood_group ||
+      prevFormData.bloodGroup ||
+      student.blood_group ||
+      "";
+
+    return {
+      nameBn: previousApplication?.name_bn || prevFormData.nameBn || "",
+      name: nameVal,
+      fatherName: previousApplication?.father_name || prevFormData.fatherName || "",
+      motherName: previousApplication?.mother_name || prevFormData.motherName || "",
+      dob: previousApplication?.dob || prevFormData.dob || "",
+      bloodGroup: bloodVal,
+      nationality: previousApplication?.nationality || prevFormData.nationality || "বাংলাদেশী",
+      registrationNo: previousApplication?.registration_no || (student as any).registration_no || "",
+      department: deptVal,
+      semester: sem,
+      studentId: rollVal,
+      roll: rollVal,
+      session: sessionVal,
+      shift: previousApplication?.shift || prevFormData.shift || "১ম শিফট (1st Shift)",
+      group: previousApplication?.group_name || prevFormData.group || "",
+      maritalStatus: previousApplication?.marital_status || prevFormData.maritalStatus || "অবিবাহিত (Single)",
+      permanentAddress: previousApplication?.permanent_address || prevFormData.permanentAddress || student.address || "",
+      presentAddress: previousApplication?.present_address || prevFormData.presentAddress || student.address || "",
+      latestGpa: previousApplication?.latest_gpa || prevFormData.latestGpa || "",
+      phone: phoneVal,
+      email: emailVal,
+      skills: Array.isArray(previousApplication?.skills)
+        ? previousApplication.skills.join(", ")
+        : typeof previousApplication?.skills === "string"
+        ? (previousApplication.skills as string)
+        : "",
+      previousExperience:
+        previousApplication?.previous_volunteer_experience || prevFormData.previousExperience || "না (No)",
+      emergencyContactName: previousApplication?.emergency_contact_name || prevFormData.emergencyContactName || "",
+      emergencyContactPhone: previousApplication?.emergency_contact_phone || prevFormData.emergencyContactPhone || "",
+      motivation: previousApplication?.motivation || prevFormData.motivation || "",
+      photoUrl: previousApplication?.photo_url || prevFormData.photoUrl || student.photo_url || "",
+      nidOrBirthCertUrl: previousApplication?.nid_or_birth_cert_url || prevFormData.nidOrBirthCertUrl || "",
+      fatherNidUrl: previousApplication?.father_nid_url || prevFormData.fatherNidUrl || "",
+      motherNidUrl: previousApplication?.mother_nid_url || prevFormData.motherNidUrl || "",
+      collegeRegCardUrl: previousApplication?.college_reg_card_url || prevFormData.collegeRegCardUrl || "",
+      agreement: false,
+      ...prevFormData,
+      // Verified student profile details take precedence over any empty prevFormData values
+      ...(nameVal ? { name: nameVal } : {}),
+      ...(rollVal ? { roll: rollVal, studentId: rollVal } : {}),
+      ...(sessionVal ? { session: sessionVal } : {}),
+      ...(deptVal ? { department: deptVal } : {}),
+      ...(sem ? { semester: sem } : {}),
+      ...(phoneVal ? { phone: phoneVal } : {}),
+      ...(emailVal ? { email: emailVal } : {}),
+      ...(bloodVal ? { bloodGroup: bloodVal } : {}),
+    };
   });
 
   const [uploadingDocs, setUploadingDocs] = useState<Record<string, boolean>>({});
@@ -90,38 +253,69 @@ export function VolunteerApplicationForm({
   } | null>(null);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
 
-  const handleChange = (field: string, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleChange = (field: string, value: any) => {
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "roll") next.studentId = value;
+      if (field === "studentId") next.roll = value;
+      return next;
+    });
+  };
+
+  const getFieldValue = (key: string) => {
+    if (
+      key === "semester" ||
+      key === "currentSemester" ||
+      key.toLowerCase().includes("semester") ||
+      key.includes("পর্ব")
+    ) {
+      const s =
+        formData[key] ||
+        formData.semester ||
+        formData.currentSemester ||
+        previousApplication?.semester ||
+        student.semester ||
+        "";
+      return normalizeSemester(s) || s;
+    }
+    if (formData[key] !== undefined && formData[key] !== "") return formData[key];
+    if (key === "session") return student.session || "";
+    if (key === "roll" || key === "studentId") return student.roll || "";
+    if (key === "department") return student.department || "";
+    if (key === "phone") return student.phone || "";
+    if (key === "email") return student.email || "";
+    if (key === "name") return student.name || "";
+    if (key === "bloodGroup") return student.blood_group || "";
+    if (key === "photoUrl") return student.photo_url || "";
+    return formData[key] ?? "";
   };
 
   const handleDocumentUpload = async (
-    field: "photoUrl" | "nidOrBirthCertUrl" | "fatherNidUrl" | "motherNidUrl" | "collegeRegCardUrl",
+    field: string,
     file: File
   ) => {
     if (!file) return;
     setUploadingDocs((prev) => ({ ...prev, [field]: true }));
     try {
+      const isPhoto = field === "photoUrl" || field.toLowerCase().includes("photo");
       const url = await uploadImageToStorage(file, "recruitment_docs", {
-        maxDimension: field === "photoUrl" ? 1000 : 2000,
+        maxDimension: isPhoto ? 1000 : 2000,
       });
       setFormData((prev) => ({ ...prev, [field]: url }));
-      // Clear error for this field if any
       setErrors((prev) => {
         const next = { ...prev };
         delete next[field];
         return next;
       });
-      toast.success("Document uploaded successfully!");
+      toast.success("Document uploaded successfully.");
     } catch (err: any) {
-      toast.error(err.message || "Failed to upload document");
+      toast.error(err.message || "Failed to upload document.");
     } finally {
       setUploadingDocs((prev) => ({ ...prev, [field]: false }));
     }
   };
 
-  const handleDocumentRemove = (
-    field: "photoUrl" | "nidOrBirthCertUrl" | "fatherNidUrl" | "motherNidUrl" | "collegeRegCardUrl"
-  ) => {
+  const handleDocumentRemove = (field: string) => {
     setFormData((prev) => ({ ...prev, [field]: "" }));
     toast.info("Document removed.");
   };
@@ -132,44 +326,43 @@ export function VolunteerApplicationForm({
     setErrors({});
     setMessage(null);
 
-    // Validate mandatory verification documents
+    // Validate mandatory verification documents dynamically based on Form Editor configuration
     const validationErrors: Record<string, string[]> = {};
-    if (!formData.photoUrl) {
-      validationErrors.photoUrl = ["Passport size photo is required for your official membership card."];
-    }
-    if (!formData.nidOrBirthCertUrl) {
-      validationErrors.nidOrBirthCertUrl = ["Applicant's NID or Birth Certificate is required."];
-    }
-    if (!formData.collegeRegCardUrl) {
-      validationErrors.collegeRegCardUrl = ["College registration card or student ID is required."];
-    }
+    activeFileFields.forEach((field) => {
+      const fieldKey = field.name || field.id;
+      if (field.required && !formData[fieldKey]) {
+        validationErrors[fieldKey] = [`${field.label} আপলোড করা আবশ্যক।`];
+      }
+    });
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       setMessage({
         type: "error",
-        text: "Please upload the required verification documents (Passport Photo, NID/Birth Certificate, and College Registration Card).",
+        text: "অনুগ্রহ করে আবশ্যক প্রমাণীকরণ কাগজপত্র আপলোড করুন।",
       });
       setSubmitting(false);
       return;
     }
 
+    const finalFormData: Record<string, any> = { ...formData };
+    activeGeneralFields.forEach((field) => {
+      const fieldKey = field.name || field.id;
+      if (finalFormData[fieldKey] === undefined || finalFormData[fieldKey] === "") {
+        const val = getFieldValue(fieldKey);
+        if (val) finalFormData[fieldKey] = val;
+      }
+    });
+
     const fd = new FormData();
     fd.append("campaignId", campaign.id);
-    fd.append("phone", formData.phone);
-    fd.append("bloodGroup", formData.bloodGroup);
-    fd.append("semester", formData.semester || student.semester || "");
-    fd.append("emergencyContactName", formData.emergencyContactName);
-    fd.append("emergencyContactPhone", formData.emergencyContactPhone);
-    fd.append("previousVolunteerExperience", formData.previousVolunteerExperience);
-    fd.append("motivation", formData.motivation);
-    fd.append("skills", formData.skills);
-    fd.append("photoUrl", formData.photoUrl);
-    fd.append("nidOrBirthCertUrl", formData.nidOrBirthCertUrl);
-    fd.append("fatherNidUrl", formData.fatherNidUrl);
-    fd.append("motherNidUrl", formData.motherNidUrl);
-    fd.append("collegeRegCardUrl", formData.collegeRegCardUrl);
-    fd.append("agreement", formData.agreement ? "true" : "false");
+
+    // Pass all formData entries
+    Object.entries(finalFormData).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) {
+        fd.append(k, typeof v === "boolean" ? (v ? "true" : "false") : String(v));
+      }
+    });
 
     try {
       const pushData = await getCurrentPushSubscriptionData();
@@ -190,19 +383,23 @@ export function VolunteerApplicationForm({
         setSubmittedSuccess(true);
         setMessage({
           type: "success",
-          text: result.message || "Application submitted successfully!",
+          text: result.message || "ভর্তি আবেদন সফলভাবে সম্পন্ন হয়েছে!",
         });
       } else {
-        if (result.errors) setErrors(result.errors);
+        const errs = { ...(result.errors || {}) };
+        if (errs.previousVolunteerExperience && !errs.previousExperience) {
+          errs.previousExperience = errs.previousVolunteerExperience;
+        }
+        setErrors(errs);
         setMessage({
           type: "error",
-          text: result.message || "Please correct the highlighted errors.",
+          text: result.message || "অনুগ্রহ করে ফর্মের ভুলগুলো সংশোধন করুন।",
         });
       }
     } catch (err: any) {
       setMessage({
         type: "error",
-        text: err.message || "An unexpected error occurred. Please try again.",
+        text: err.message || "আবেদন দাখিলের সময় কোনো সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
       });
     } finally {
       setSubmitting(false);
@@ -216,26 +413,25 @@ export function VolunteerApplicationForm({
           <CheckCircle2 className="h-9 w-9" />
         </div>
         <h2 className="mt-5 text-2xl font-bold text-foreground">
-          Application Submitted Successfully!
+          ভর্তি আবেদন সফলভাবে দাখিল হয়েছে!
         </h2>
         <p className="mx-auto mt-2.5 max-w-lg text-sm leading-relaxed text-muted-foreground">
-          Thank you, <strong>{student.name}</strong>! Your volunteer application for <strong>{campaign.title}</strong> has been received and is currently under review by the society leadership.
+          ধন্যবাদ, <strong>{student.name}</strong>! আপনার ভর্তি আবেদনটি নেতৃত্বের যাচাই-বাছাইয়ের জন্য জমা হয়েছে। আবেদন অনুমোদিত হলে আপনি আপনার ডিজিটাল সদস্যপদ ও প্রবেশপত্র পাবেন।
         </p>
 
         <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5 text-xs font-bold text-amber-800">
           <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-          Status: 🟡 Under Review
+          স্ট্যাটাস: 🟡 যাচাই-বাছাই চলছে (Under Review)
         </div>
 
-        {/* 1-Click Add to Contacts reminder to ensure future notification emails reach inbox */}
         <AddToContactsCard className="mt-7" />
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <Button asChild size="lg" className="bg-brand hover:bg-brand-dark">
-            <Link href="/student">Go to Student Portal</Link>
+            <Link href="/student">স্টুডেন্ট পোর্টালে যান</Link>
           </Button>
           <Button asChild size="lg" variant="outline">
-            <Link href="/">Back to Homepage</Link>
+            <Link href="/">মূল পাতায় ফিরে যান</Link>
           </Button>
         </div>
       </div>
@@ -263,381 +459,363 @@ export function VolunteerApplicationForm({
         </div>
       )}
 
-      {/* 1. Verified Student Record (Read-only) */}
-      <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-brand" />
-            <div>
-              <h2 className="text-base font-bold text-foreground sm:text-lg">
-                1. Verified Student Profile
+      {/* Official Admission Form Header Card */}
+      <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-line pb-6 text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row items-center gap-3.5 sm:gap-4 text-center sm:text-left w-full sm:w-auto">
+            <div className="relative flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-2xl bg-brand-soft border border-brand/20 p-2 shadow-2xs">
+              <Image
+                src="/icon-192.png"
+                alt="BDRCS Logo"
+                width={56}
+                height={56}
+                className="object-contain"
+              />
+            </div>
+            <div className="space-y-1 w-full sm:w-auto text-center sm:text-left">
+              <p className="text-xs font-bold uppercase tracking-wider text-crescent">
+                যুব রেড ক্রিসেন্ট (Youth Red Crescent)
+              </p>
+              <h2 className="text-lg sm:text-xl font-extrabold text-foreground leading-snug">
+                রাজশাহী সরকারি পলিটেকনিক ইনস্টিটিউট শাখা
               </h2>
               <p className="text-xs text-muted-foreground">
-                Loaded automatically from your authenticated RGPI student account.
+                সপুরা, রাজশাহী - ৬২০৩ • {activeConfig.title || "ভর্তি আবেদন ফর্ম"}
               </p>
             </div>
           </div>
-          <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand-dark">
-            Verified Account
-          </span>
+
+          <div className="shrink-0 flex items-center justify-center gap-2 rounded-full bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 text-xs font-bold text-emerald-800">
+            <ShieldCheck className="h-4 w-4 text-emerald-600" />
+            <span>ভেরিফাইড স্টুডেন্ট অ্যাকাউন্ট</span>
+          </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-2xl border border-line bg-mist/30 p-3.5">
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              <User className="h-3.5 w-3.5 text-brand" />
-              Full Name
-            </span>
-            <p className="mt-1 text-sm font-semibold text-foreground">{student.name}</p>
-          </div>
+        {/* Dynamic Form Editor Fields Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {activeGeneralFields.map((field) => {
+            const fieldKey = field.name || field.id;
+            const isFullWidth =
+              field.type === "textarea" ||
+              fieldKey.toLowerCase().includes("address") ||
+              fieldKey.toLowerCase().includes("motivation");
 
-          <div className="rounded-2xl border border-line bg-mist/30 p-3.5">
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              <Hash className="h-3.5 w-3.5 text-brand" />
-              Student Roll
-            </span>
-            <p className="mt-1 text-sm font-semibold text-foreground">{student.roll}</p>
-          </div>
+            const isStudentPreFilled = Boolean(
+              (fieldKey === "name" && student.name) ||
+              ((fieldKey === "studentId" || fieldKey === "roll") && student.roll) ||
+              (fieldKey === "session" && student.session) ||
+              (fieldKey === "department" && student.department) ||
+              ((fieldKey === "semester" ||
+                fieldKey === "currentSemester" ||
+                fieldKey.toLowerCase().includes("semester") ||
+                field.id === "semester" ||
+                field.name === "semester" ||
+                field.label?.toLowerCase().includes("semester") ||
+                field.label?.includes("পর্ব")) &&
+                student.semester) ||
+              (fieldKey === "phone" && student.phone) ||
+              (fieldKey === "email" && student.email) ||
+              (fieldKey === "bloodGroup" && student.blood_group)
+            );
 
-          <div className="rounded-2xl border border-line bg-mist/30 p-3.5">
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              <Building2 className="h-3.5 w-3.5 text-brand" />
-              Department
-            </span>
-            <p className="mt-1 text-sm font-semibold text-foreground">{student.department}</p>
-          </div>
+            const fieldValue = getFieldValue(fieldKey);
 
-          <div className="rounded-2xl border border-line bg-mist/30 p-3.5">
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              <Layers className="h-3.5 w-3.5 text-brand" />
-              Current Semester
-            </span>
-            {student.semester ? (
-              <p className="mt-1 text-sm font-semibold text-foreground">
-                {student.semester} Semester
-              </p>
-            ) : (
-              <div className="mt-1">
-                <Select
-                  value={formData.semester}
-                  onValueChange={(val) => handleChange("semester", val)}
-                >
-                  <SelectTrigger className="h-8 text-xs bg-white">
-                    <SelectValue placeholder="Select semester" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SEMESTERS.map((sem) => (
-                      <SelectItem key={sem} value={sem}>
-                        {sem} Semester
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            return (
+              <div
+                key={field.id}
+                className={`space-y-1.5 ${isFullWidth ? "md:col-span-2" : "col-span-1"}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor={`va-${field.id}`} className="text-xs font-bold text-foreground">
+                    {field.label} {field.required && <span className="text-crescent">*</span>}
+                  </Label>
+                  {isStudentPreFilled ? (
+                    <span className="text-[10px] font-medium text-brand bg-brand-soft/60 px-2 py-0.5 rounded-md">
+                      প্রোফাইল থেকে যুক্ত
+                    </span>
+                  ) : !field.required ? (
+                    <span className="text-[10px] text-muted-foreground font-normal">
+                      ঐচ্ছিক
+                    </span>
+                  ) : null}
+                </div>
+
+                {field.type === "textarea" ? (
+                  <Textarea
+                    id={`va-${field.id}`}
+                    name={fieldKey}
+                    rows={fieldKey.toLowerCase().includes("address") ? 3 : 4}
+                    value={fieldValue ?? ""}
+                    onChange={(e) => handleChange(fieldKey, e.target.value)}
+                    placeholder={field.placeholder}
+                    required={field.required}
+                    className="text-xs sm:text-sm bg-white"
+                  />
+                ) : field.type === "select" ? (
+                  (() => {
+                    const isSemesterField =
+                      fieldKey === "semester" ||
+                      fieldKey === "currentSemester" ||
+                      field.id === "semester" ||
+                      field.name === "semester" ||
+                      field.label?.toLowerCase().includes("semester") ||
+                      field.label?.includes("পর্ব");
+
+                    const isBloodField =
+                      fieldKey === "bloodGroup" ||
+                      field.id === "bloodGroup" ||
+                      field.name === "bloodGroup" ||
+                      field.label?.toLowerCase().includes("blood") ||
+                      field.label?.includes("রক্ত");
+
+                    const isDeptField =
+                      fieldKey === "department" ||
+                      field.id === "department" ||
+                      field.name === "department" ||
+                      field.label?.toLowerCase().includes("department") ||
+                      field.label?.includes("ডিপার্টমেন্ট");
+
+                    let optionsList: readonly string[] = [];
+                    if (isSemesterField) {
+                      optionsList = SEMESTERS;
+                    } else if (isBloodField) {
+                      optionsList = BLOOD_GROUPS;
+                    } else if (isDeptField) {
+                      optionsList = DEPARTMENTS;
+                    } else if (field.options && field.options.length > 0) {
+                      optionsList = field.options;
+                    }
+
+                    const rawVal = fieldValue || (isSemesterField ? student.semester : "");
+                    const selectValue = isSemesterField
+                      ? normalizeSemester(rawVal) || rawVal
+                      : rawVal;
+
+                    return (
+                      <Select
+                        value={selectValue ? String(selectValue) : undefined}
+                        onValueChange={(val) => {
+                          handleChange(fieldKey, val);
+                          if (isSemesterField) {
+                            handleChange("semester", val);
+                            handleChange("currentSemester", val);
+                          }
+                        }}
+                        required={field.required}
+                      >
+                        <SelectTrigger id={`va-${field.id}`} className="h-10 text-xs sm:text-sm bg-white">
+                          <SelectValue placeholder={field.placeholder || "নির্বাচন করুন..."} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {optionsList.map((opt) => {
+                            const itemVal = isSemesterField ? normalizeSemester(opt) || opt : opt;
+                            const label = isSemesterField
+                              ? SEMESTER_LABELS[itemVal] || `${itemVal} Semester`
+                              : opt;
+                            return (
+                              <SelectItem key={opt} value={itemVal} className="text-xs sm:text-sm">
+                                {label}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    );
+                  })()
+                ) : field.type === "checkbox" ? (
+                  <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer pt-1">
+                    <Checkbox
+                      id={`va-${field.id}`}
+                      checked={Boolean(formData[fieldKey])}
+                      onCheckedChange={(checked) => handleChange(fieldKey, Boolean(checked))}
+                    />
+                    <span>{field.placeholder || field.label}</span>
+                  </label>
+                ) : field.type === "date" || fieldKey === "dob" || field.id === "dob" ? (
+                  (() => {
+                    const isoDateVal = toDateInputValue(fieldValue);
+                    const datePreview = formatBengaliDatePreview(isoDateVal);
+                    const todayStr = new Date().toISOString().split("T")[0];
+
+                    return (
+                      <div className="space-y-1.5">
+                        <div className="relative flex items-center group">
+                          <Input
+                            id={`va-${field.id}`}
+                            name={fieldKey}
+                            type="date"
+                            max={todayStr}
+                            min="1960-01-01"
+                            value={isoDateVal}
+                            onChange={(e) => handleChange(fieldKey, e.target.value)}
+                            required={field.required}
+                            className="h-10 text-xs sm:text-sm bg-white pl-10 pr-10 cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-75 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
+                            onClick={(e) => {
+                              try {
+                                (e.currentTarget as any).showPicker?.();
+                              } catch {}
+                            }}
+                          />
+                          <Calendar className="absolute left-3.5 h-4 w-4 text-emerald-600 pointer-events-none group-focus-within:text-brand transition-colors" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const el = document.getElementById(`va-${field.id}`) as HTMLInputElement | null;
+                              try {
+                                (el as any)?.showPicker?.();
+                              } catch {
+                                el?.focus();
+                              }
+                            }}
+                            className="absolute right-2.5 p-1 rounded-full text-slate-400 hover:text-brand hover:bg-slate-100 transition-colors"
+                            title="ক্যালেন্ডার খুলুন"
+                          >
+                            <CalendarDays className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {datePreview ? (
+                          <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-poly font-medium bg-poly/5 px-2.5 py-1 rounded-lg border border-poly/15 w-fit">
+                            <CalendarCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                            <span>নির্বাচিত তারিখ: <strong>{datePreview.formatted}</strong></span>
+                            {datePreview.ageText && (
+                              <span className="text-muted-foreground font-normal">({datePreview.ageText})</span>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                            <span>ক্যালেন্ডার আইকন বা বক্সে ক্লিক করে জন্ম তারিখ নির্বাচন করুন</span>
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <Input
+                    id={`va-${field.id}`}
+                    name={fieldKey}
+                    type={field.type}
+                    value={fieldValue ?? ""}
+                    onChange={(e) => handleChange(fieldKey, e.target.value)}
+                    placeholder={field.placeholder}
+                    required={field.required}
+                    className="h-10 text-xs sm:text-sm bg-white"
+                  />
+                )}
+
+                {field.helpText && (
+                  <p className="text-[11px] text-muted-foreground">{field.helpText}</p>
+                )}
+
+                {errors[fieldKey] && (
+                  <p className="text-[11px] font-semibold text-crescent">{errors[fieldKey][0]}</p>
+                )}
               </div>
-            )}
-          </div>
-
-
-          <div className="rounded-2xl border border-line bg-mist/30 p-3.5">
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              <Calendar className="h-3.5 w-3.5 text-brand" />
-              Session
-            </span>
-            <p className="mt-1 text-sm font-semibold text-foreground">{student.session}</p>
-          </div>
-
-          <div className="rounded-2xl border border-line bg-mist/30 p-3.5">
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              <Mail className="h-3.5 w-3.5 text-brand" />
-              Email Address
-            </span>
-            <p className="mt-1 text-sm font-semibold text-foreground truncate">{student.email}</p>
-          </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* 2. Contact & Emergency Details */}
-      <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-6">
-        <div className="border-b border-line pb-4">
-          <h2 className="text-base font-bold text-foreground sm:text-lg">
-            2. Contact & Emergency Information
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Provide active contact numbers for communication and emergency response.
-          </p>
-        </div>
-
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="va-phone">Your Mobile Number *</Label>
-            <Input
-              id="va-phone"
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => handleChange("phone", e.target.value)}
-              placeholder="017XXXXXXXX"
-              className="mt-1.5"
-              required
-            />
-            {errors.phone && (
-              <p className="mt-1 text-xs font-medium text-crescent">{errors.phone[0]}</p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="va-blood">Blood Group</Label>
-            <Select
-              value={formData.bloodGroup}
-              onValueChange={(val) => handleChange("bloodGroup", val)}
-            >
-              <SelectTrigger id="va-blood" className="mt-1.5">
-                <SelectValue placeholder="Select blood group" />
-              </SelectTrigger>
-              <SelectContent>
-                {BLOOD_GROUPS.map((bg) => (
-                  <SelectItem key={bg} value={bg}>
-                    {bg}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.bloodGroup && (
-              <p className="mt-1 text-xs font-medium text-crescent">{errors.bloodGroup[0]}</p>
-            )}
-          </div>
-        </div>
-
-
-
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="va-em-name">Emergency Contact Name</Label>
-            <Input
-              id="va-em-name"
-              value={formData.emergencyContactName}
-              onChange={(e) => handleChange("emergencyContactName", e.target.value)}
-              placeholder="e.g. Father / Mother / Guardian"
-              className="mt-1.5"
-              required
-            />
-            {errors.emergencyContactName && (
-              <p className="mt-1 text-xs font-medium text-crescent">
-                {errors.emergencyContactName[0]}
+      {/* Official Identity Verification Documents & Passport Photo */}
+      {activeFileFields.length > 0 && (
+        <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-6">
+          <div className="border-b border-line pb-4 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <FileCheck className="h-5 w-5 text-brand" />
+                <h2 className="text-base font-bold text-foreground sm:text-lg">
+                  প্রয়োজনীয় প্রমাণীকরণ কাগজপত্র ও পাসপোর্ট ছবি
+                </h2>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                ভর্তি আবেদন ফর্মের সাথে মিল রেখে পাসপোর্ট সাইজ ছবি ও অফিসিয়াল ডকুমেন্ট আপলোড করুন (JPG, PNG, WebP বা PDF, সর্বোচ্চ 10MB)।
               </p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="va-em-phone">Emergency Contact Mobile Number</Label>
-            <Input
-              id="va-em-phone"
-              type="tel"
-              value={formData.emergencyContactPhone}
-              onChange={(e) => handleChange("emergencyContactPhone", e.target.value)}
-              placeholder="017XXXXXXXX"
-              className="mt-1.5"
-              required
-            />
-            {errors.emergencyContactPhone && (
-              <p className="mt-1 text-xs font-medium text-crescent">
-                {errors.emergencyContactPhone[0]}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Identity Verification Documents */}
-      <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-6">
-        <div className="border-b border-line pb-4 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <FileCheck className="h-5 w-5 text-brand" />
-              <h2 className="text-base font-bold text-foreground sm:text-lg">
-                3. Identity Verification Documents
-              </h2>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              প্রয়োজনীয় প্রমাণীকরণ কাগজপত্র ও পাসপোর্ট ছবি আপলোড করুন (Upload clear scans or photos in PNG, JPG, WebP, or PDF up to 10MB).
-            </p>
+            <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand-dark">
+              {activeFileFields.length} Documents Configured
+            </span>
           </div>
-          <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand-dark">
-            Physical Form Equivalent
-          </span>
-        </div>
 
-        <div className="grid gap-5 md:grid-cols-2">
-          {/* 1. Passport Size Photo */}
-          <DocumentUploadCard
-            id="va-doc-photo"
-            title="Passport Size Photo"
-            banglaTitle="পাসপোর্ট সাইজ ছবি"
-            description="Clear recent portrait photo on neutral background. This photo will be officially printed on your digital volunteer ID card."
-            accept="image/png,image/jpeg,image/webp"
-            required
-            isPhoto
-            value={formData.photoUrl}
-            isUploading={Boolean(uploadingDocs.photoUrl)}
-            error={errors.photoUrl?.[0]}
-            onUpload={(file) => handleDocumentUpload("photoUrl", file)}
-            onRemove={() => handleDocumentRemove("photoUrl")}
-          />
+          <div className="grid gap-5 md:grid-cols-2">
+            {activeFileFields.map((field, idx) => {
+              const fieldKey = field.name || field.id;
+              const isPhoto = fieldKey === "photoUrl" || fieldKey.toLowerCase().includes("photo");
+              const isLastOdd = activeFileFields.length % 2 !== 0 && idx === activeFileFields.length - 1;
+              const isFullWidth = fieldKey === "motherNidUrl" || isLastOdd;
 
-          {/* 2. Applicant's NID or Birth Certificate */}
-          <DocumentUploadCard
-            id="va-doc-nid"
-            title="Applicant's NID or Birth Certificate"
-            banglaTitle="আবেদনকারীর জাতীয় পরিচয়পত্র বা জন্ম নিবন্ধন সনদ"
-            description="Clear photo or PDF copy of your Smart National ID card or verified Online Birth Certificate."
-            accept="image/png,image/jpeg,image/webp,application/pdf"
-            required
-            value={formData.nidOrBirthCertUrl}
-            isUploading={Boolean(uploadingDocs.nidOrBirthCertUrl)}
-            error={errors.nidOrBirthCertUrl?.[0]}
-            onUpload={(file) => handleDocumentUpload("nidOrBirthCertUrl", file)}
-            onRemove={() => handleDocumentRemove("nidOrBirthCertUrl")}
-          />
-
-          {/* 3. College Registration Card / Student ID */}
-          <DocumentUploadCard
-            id="va-doc-college-card"
-            title="College Registration Card / Student ID"
-            banglaTitle="কলেজ রেজিস্ট্রেশন কার্ড বা স্টুডেন্ট আইডি"
-            description="Clear photo or PDF scan of your Polytechnic Registration Card or current semester Student ID card."
-            accept="image/png,image/jpeg,image/webp,application/pdf"
-            required
-            value={formData.collegeRegCardUrl}
-            isUploading={Boolean(uploadingDocs.collegeRegCardUrl)}
-            error={errors.collegeRegCardUrl?.[0]}
-            onUpload={(file) => handleDocumentUpload("collegeRegCardUrl", file)}
-            onRemove={() => handleDocumentRemove("collegeRegCardUrl")}
-          />
-
-          {/* 4. Father's NID */}
-          <DocumentUploadCard
-            id="va-doc-father-nid"
-            title="Father's NID"
-            banglaTitle="পিতার জাতীয় পরিচয়পত্র"
-            description="Photo or PDF copy of Father's National ID card (recommended for physical verification records)."
-            accept="image/png,image/jpeg,image/webp,application/pdf"
-            value={formData.fatherNidUrl}
-            isUploading={Boolean(uploadingDocs.fatherNidUrl)}
-            error={errors.fatherNidUrl?.[0]}
-            onUpload={(file) => handleDocumentUpload("fatherNidUrl", file)}
-            onRemove={() => handleDocumentRemove("fatherNidUrl")}
-          />
-
-          {/* 5. Mother's NID */}
-          <div className="md:col-span-2">
-            <DocumentUploadCard
-              id="va-doc-mother-nid"
-              title="Mother's NID"
-              banglaTitle="মাতার জাতীয় পরিচয়পত্র"
-              description="Photo or PDF copy of Mother's National ID card (recommended for physical verification records)."
-              accept="image/png,image/jpeg,image/webp,application/pdf"
-              value={formData.motherNidUrl}
-              isUploading={Boolean(uploadingDocs.motherNidUrl)}
-              error={errors.motherNidUrl?.[0]}
-              onUpload={(file) => handleDocumentUpload("motherNidUrl", file)}
-              onRemove={() => handleDocumentRemove("motherNidUrl")}
-            />
+              return (
+                <div key={field.id} className={isFullWidth ? "md:col-span-2" : "col-span-1"}>
+                  <DocumentUploadCard
+                    id={`va-doc-${field.id}`}
+                    title={field.label}
+                    banglaTitle={field.placeholder || "Document Upload"}
+                    description={field.helpText || field.placeholder || "পরিষ্কার ছবি বা পিডিএফ স্ক্যান আপলোড করুন (JPG, PNG, WebP বা PDF, সর্বোচ্চ 10MB)।"}
+                    accept={isPhoto ? "image/png,image/jpeg,image/webp" : "image/png,image/jpeg,image/webp,application/pdf"}
+                    required={field.required}
+                    isPhoto={isPhoto}
+                    value={formData[fieldKey] || ""}
+                    isUploading={Boolean(uploadingDocs[fieldKey])}
+                    error={errors[fieldKey]?.[0]}
+                    onUpload={(file) => handleDocumentUpload(fieldKey, file)}
+                    onRemove={() => handleDocumentRemove(fieldKey)}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* 4. Motivation, Experience & Skills */}
+      {/* Official Declaration & Pledge (প্রত্যয়ন ও অঙ্গীকারনামা) */}
       <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-6">
-        <div className="border-b border-line pb-4">
-          <h2 className="text-base font-bold text-foreground sm:text-lg">
-            4. Volunteer Background & Motivation
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Share why you want to serve and any relevant skills or experiences.
-          </p>
-        </div>
+        <MandatoryContactStep />
 
-        <div>
-          <Label htmlFor="va-motivation">
-            Why do you want to join RGPI Red Crescent Youth? <span className="text-crescent">*</span>
-          </Label>
-          <Textarea
-            id="va-motivation"
-            rows={4}
-            value={formData.motivation}
-            onChange={(e) => handleChange("motivation", e.target.value)}
-            placeholder="Tell us what inspires you to serve humanity and why you want to become part of the society…"
-            className="mt-1.5"
-            required
-          />
-          {errors.motivation && (
-            <p className="mt-1 text-xs font-medium text-crescent">{errors.motivation[0]}</p>
+        <div className="rounded-2xl border border-brand/20 bg-brand-soft/20 p-5 space-y-3">
+          <p className="text-xs font-bold text-brand-dark uppercase tracking-wider">
+            আবেদনকারীর প্রত্যয়ন ও অঙ্গীকারনামা:
+          </p>
+          <p className="text-xs sm:text-sm leading-relaxed text-foreground font-medium">
+            &ldquo;আমি এই মর্মে প্রত্যয়ন করছি যে, আবেদন পত্রে প্রদত্ত সকল তথ্য নির্ভুল ও সত্য। আমাকে রাজশাহী সরকারি পলিটেকনিক ইনস্টিটিউট এর যুব রেড ক্রিসেন্টে ভর্তি সুযোগ দিলে, আমি যুব রেড ক্রিসেন্টের সকল বিধি-বিধান মেনে চলবো। নিয়ম বহির্ভূত কোনো কিছু করলে কর্তৃপক্ষের দেয়া সিদ্ধান্ত আমি মেনে নিতে বাধ্য থাকিব।&rdquo;
+          </p>
+
+          <div className="flex items-start gap-3 pt-2">
+            <Checkbox
+              id="va-agreement"
+              checked={formData.agreement}
+              onCheckedChange={(val) => handleChange("agreement", Boolean(val))}
+              className="mt-0.5"
+              required
+            />
+            <Label htmlFor="va-agreement" className="text-xs sm:text-sm font-bold text-foreground cursor-pointer">
+              আমি উপরের শর্ত ও নিয়মাবলী সম্পূর্ণরূপে পড়েছি এবং সম্মতি প্রদান করছি।
+            </Label>
+          </div>
+          {errors.agreement && (
+            <p className="text-xs font-medium text-crescent">{errors.agreement[0]}</p>
           )}
         </div>
 
-        <div>
-          <Label htmlFor="va-experience">
-            Previous Volunteering Experience (Optional)
-          </Label>
-          <Textarea
-            id="va-experience"
-            rows={3}
-            value={formData.previousVolunteerExperience}
-            onChange={(e) => handleChange("previousVolunteerExperience", e.target.value)}
-            placeholder="Have you volunteered or participated in social/humanitarian activities before? Describe briefly…"
-            className="mt-1.5"
-          />
-        </div>
+        <div className="pt-2 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-center sm:text-left">
+            <p className="text-xs font-bold text-foreground">
+              মানবিকতা • সেবা • ঐক্য
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              আবেদন অনুমোদিত হলে আপনার প্রবেশপত্র ও ডিজিটাল সদস্যপদ আইডি প্রদান করা হবে।
+            </p>
+          </div>
 
-        <div>
-          <Label htmlFor="va-skills">
-            Skills / Areas of Interest (Comma separated)
-          </Label>
-          <Input
-            id="va-skills"
-            value={formData.skills}
-            onChange={(e) => handleChange("skills", e.target.value)}
-            placeholder="e.g. First Aid, Photography, Graphic Design, Event Coordination, Public Speaking"
-            className="mt-1.5"
-          />
-        </div>
-      </div>
-
-      {/* 5. Confirmation & Agreement */}
-      <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-5">
-        <MandatoryContactStep />
-
-        <div className="flex items-start gap-3">
-          <input
-            id="va-agreement"
-            type="checkbox"
-            checked={formData.agreement}
-            onChange={(e) => handleChange("agreement", e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-line text-brand focus:ring-brand"
-            required
-          />
-          <Label htmlFor="va-agreement" className="text-xs sm:text-sm leading-relaxed cursor-pointer font-normal text-foreground">
-            I confirm that the information provided is correct and true to the best of my knowledge. I understand that submitting this application does not guarantee membership and that my application will be reviewed by the society leadership.
-          </Label>
-        </div>
-        {errors.agreement && (
-          <p className="text-xs font-medium text-crescent">{errors.agreement[0]}</p>
-        )}
-
-        <div className="pt-3 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-muted-foreground">
-            Upon approval, your student role will be upgraded to Volunteer with an official Member ID.
-          </p>
           <Button
             type="submit"
             disabled={submitting}
-            className="w-full sm:w-auto gap-2 rounded-full h-11 px-8 bg-crescent hover:bg-crescent-dark text-white font-bold shadow-md shadow-crescent/20 active:scale-[0.98] transition-all"
+            className="w-full sm:w-auto gap-2 rounded-full h-11 px-9 bg-crescent hover:bg-crescent-dark text-white font-bold shadow-md shadow-crescent/20 active:scale-[0.98] transition-all"
           >
             {submitting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Send className="h-4 w-4" />
             )}
-            {submitting ? "Submitting Application…" : "Submit Volunteer Application"}
+            {submitting ? "দাখিল করা হচ্ছে…" : "ভর্তি আবেদন দাখিল করুন"}
           </Button>
         </div>
       </div>
@@ -691,7 +869,6 @@ function DocumentUploadCard({
           : "border-line bg-mist/20 hover:border-brand/40 hover:bg-mist/40"
       }`}
     >
-      {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-2.5">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -718,15 +895,14 @@ function DocumentUploadCard({
         {description}
       </p>
 
-      {/* Content */}
       {isUploading ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-brand/50 bg-brand-soft/20 py-8 px-4 text-center">
           <Loader2 className="h-7 w-7 animate-spin text-brand" />
           <p className="mt-2.5 text-xs font-semibold text-brand-dark">
-            Uploading & optimizing document…
+            ডকুমেন্ট আপলোড ও অপটিমাইজ করা হচ্ছে…
           </p>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            Please wait a moment
+            অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন
           </p>
         </div>
       ) : value ? (
@@ -750,7 +926,7 @@ function DocumentUploadCard({
             <div className="min-w-0">
               <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
-                Attached
+                সংযুক্ত হয়েছে
               </div>
               <p className="text-[11px] text-muted-foreground truncate max-w-[200px] sm:max-w-[240px]">
                 {isPdf ? "PDF Document Scan" : isPhoto ? "Passport Photo" : "Document Image"}
@@ -766,7 +942,7 @@ function DocumentUploadCard({
               className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-mist transition-colors shadow-2xs"
             >
               <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-              View
+              দেখুন
             </a>
 
             <label
@@ -774,7 +950,7 @@ function DocumentUploadCard({
               className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-mist cursor-pointer transition-colors shadow-2xs"
             >
               <UploadCloud className="h-3.5 w-3.5 text-muted-foreground" />
-              Change
+              পরিবর্তন
             </label>
             <input
               id={id}
@@ -814,12 +990,12 @@ function DocumentUploadCard({
               {isPhoto ? <Camera className="h-5 w-5" /> : <FileUp className="h-5 w-5" />}
             </div>
             <p className="text-xs font-bold text-foreground">
-              Click to select or drag & drop file
+              ক্লিক করে ফাইল নির্বাচন করুন বা টেনে এনে ড্রপ করুন
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               {isPhoto
-                ? "Passport size photo · JPG, PNG, WebP · Max 10MB"
-                : "Official document · JPG, PNG, WebP, PDF · Max 10MB"}
+                ? "পাসপোর্ট সাইজ ছবি · JPG, PNG, WebP · সর্বোচ্চ 10MB"
+                : "অফিসিয়াল ডকুমেন্ট · JPG, PNG, WebP, PDF · সর্বোচ্চ 10MB"}
             </p>
             <input
               id={id}

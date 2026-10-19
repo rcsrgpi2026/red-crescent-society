@@ -45,3 +45,57 @@ export async function generateNextMemberId(
 
   return candidate;
 }
+
+/**
+ * Generates the next sequential unique Admission Serial / Roll Number (e.g. online-reg-1, online-reg-2).
+ * Formatted as online-reg-N starting from 1.
+ * If a user/record is deleted from the database, its roll number is freed up and re-used for new approvals.
+ */
+export async function generateNextApplicationSerialNo(
+  supabase: SupabaseClient
+): Promise<string> {
+  const [appsRes, membersRes] = await Promise.all([
+    supabase
+      .from("volunteer_applications")
+      .select("serial_no")
+      .eq("status", "APPROVED")
+      .or("serial_no.ilike.online-reg-%,serial_no.ilike.reg-online-%"),
+    supabase
+      .from("team_members")
+      .select("roll")
+      .or("roll.ilike.online-reg-%,roll.ilike.reg-online-%"),
+  ]);
+
+  if (appsRes.error) {
+    console.error("generateNextApplicationSerialNo query error (apps):", appsRes.error);
+  }
+  if (membersRes.error) {
+    console.error("generateNextApplicationSerialNo query error (members):", membersRes.error);
+  }
+
+  const takenNumbers = new Set<number>();
+
+  const extractNum = (str: string | null | undefined) => {
+    if (!str) return;
+    // Matches online-reg-1, online-reg-0001, reg-online-1, etc.
+    const match = str.match(/(?:online-reg|reg-online)-0*(\d+)/i);
+    if (match && match[1]) {
+      const num = parseInt(match[1], 10);
+      if (!isNaN(num) && num > 0) {
+        takenNumbers.add(num);
+      }
+    }
+  };
+
+  for (const a of appsRes.data ?? []) extractNum(a.serial_no);
+  for (const m of membersRes.data ?? []) extractNum(m.roll);
+
+  // Start from 1 and find the lowest available positive number (e.g. online-reg-1)
+  let next = 1;
+  while (takenNumbers.has(next)) {
+    next++;
+  }
+
+  return `online-reg-${next}`;
+}
+

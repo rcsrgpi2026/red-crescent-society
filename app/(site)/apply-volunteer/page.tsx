@@ -16,6 +16,7 @@ import {
 import {
   getActiveRecruitmentCampaign,
   getMyVolunteerApplication,
+  getFormConfigs,
 } from "@/lib/queries";
 import { getCurrentUser, getProfile, getCurrentStudent } from "@/lib/auth";
 import { isSemesterEligible, formatDateTime, VOLUNTEER_APPLICATION_STATUS_LABELS } from "@/lib/constants";
@@ -29,11 +30,12 @@ export const metadata: Metadata = {
 };
 
 export default async function ApplyVolunteerPage() {
-  const [campaign, user, profile, student] = await Promise.all([
+  const [campaign, user, profile, student, formConfigs] = await Promise.all([
     getActiveRecruitmentCampaign(),
     getCurrentUser(),
     getProfile(),
     getCurrentStudent(),
+    getFormConfigs(),
   ]);
 
   // 1. If Recruitment is CLOSED
@@ -292,6 +294,7 @@ export default async function ApplyVolunteerPage() {
         <VolunteerApplicationForm
           campaign={campaign}
           student={student}
+          formConfig={formConfigs.volunteer_application}
           previousApplication={existingApp?.status === "REJECTED" ? existingApp : null}
         />
       </div>

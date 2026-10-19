@@ -29,8 +29,9 @@ import { Reveal } from "@/components/shared/reveal";
 import { Button } from "@/components/ui/button";
 import { ApplicationReviewActions } from "@/components/admin/application-review-actions";
 import { ApplicationDocumentsViewer } from "@/components/admin/application-documents-viewer";
-import { adminGetVolunteerApplication } from "@/lib/queries";
-import { formatDateTime, VOLUNTEER_APPLICATION_STATUS_LABELS } from "@/lib/constants";
+import { VolunteerAdmitCard } from "@/components/recruitment/volunteer-admit-card";
+import { adminGetVolunteerApplication, getFormConfigs } from "@/lib/queries";
+import { formatDateTime, formatDate, VOLUNTEER_APPLICATION_STATUS_LABELS } from "@/lib/constants";
 
 export const metadata = {
   title: "Volunteer Application Details",
@@ -43,25 +44,59 @@ export default async function AdminApplicationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const application = await adminGetVolunteerApplication(id);
+  const [application, formConfigs] = await Promise.all([
+    adminGetVolunteerApplication(id),
+    getFormConfigs(),
+  ]);
 
   if (!application) {
     notFound();
   }
 
+  const isApproved = application.status === "APPROVED";
+
   const studentOverview = [
-    { icon: User, label: "Full Name", value: application.name },
-    { icon: Hash, label: "Roll Number", value: application.roll },
-    { icon: Layers, label: "College Reg. No.", value: application.registration_no || "—" },
+    { icon: User, label: "Full Name (English)", value: application.name },
+    ...(application.name_bn ? [{ icon: User, label: "নাম (বাংলায়)", value: application.name_bn }] : []),
+    {
+      icon: Hash,
+      label: "ফর্ম এর ক্রমিক/রোল নং (Official Serial / Roll)",
+      value: isApproved
+        ? (application.serial_no || application.roll || "Approved")
+        : "অনুমোদনের পর নির্ধারিত হবে (Pending Approval)",
+    },
+    ...(isApproved
+      ? [{ icon: Layers, label: "College Reg. No.", value: application.registration_no || "—" }]
+      : []),
     { icon: Calendar, label: "Academic Session", value: application.session },
     { icon: Building2, label: "Department", value: application.department },
     { icon: GraduationCap, label: "Semester", value: `${application.semester} Semester` },
+    ...(application.shift ? [{ icon: Layers, label: "Shift", value: application.shift }] : []),
+    ...(application.group_name ? [{ icon: Layers, label: "Group", value: application.group_name }] : []),
+    ...(application.latest_gpa ? [{ icon: GraduationCap, label: "Latest GPA", value: application.latest_gpa }] : []),
     { icon: Mail, label: "Email Address", value: application.email },
   ];
 
   const contactEmergency = [
     { icon: Phone, label: "Mobile Number", value: application.phone },
     { icon: Droplets, label: "Blood Group", value: application.blood_group || "—" },
+    ...(application.father_name ? [{ icon: User, label: "পিতার নাম", value: application.father_name }] : []),
+    ...(application.mother_name ? [{ icon: User, label: "মাতার নাম", value: application.mother_name }] : []),
+    ...(application.dob
+      ? [
+          {
+            icon: Calendar,
+            label: "জন্ম তারিখ",
+            value: /^\d{4}-\d{2}-\d{2}$/.test(application.dob)
+              ? formatDate(application.dob)
+              : application.dob,
+          },
+        ]
+      : []),
+    ...(application.nationality ? [{ icon: User, label: "জাতীয়তা", value: application.nationality }] : []),
+    ...(application.marital_status ? [{ icon: User, label: "বৈবাহিক অবস্থা", value: application.marital_status }] : []),
+    ...(application.permanent_address ? [{ icon: Building2, label: "স্থায়ী ঠিকানা", value: application.permanent_address }] : []),
+    ...(application.present_address ? [{ icon: Building2, label: "বর্তমান ঠিকানা", value: application.present_address }] : []),
     { icon: User, label: "Emergency Contact", value: application.emergency_contact_name },
     { icon: Phone, label: "Emergency Phone", value: application.emergency_contact_phone },
   ];
@@ -115,6 +150,13 @@ export default async function AdminApplicationDetailPage({
                   {application.recruitment_campaigns?.title || "Recruitment"}
                 </span>
               </p>
+              {application.serial_no && (
+                <div className="mt-1.5 flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-bold font-mono text-emerald-800 shadow-2xs">
+                    ক্রমিক নং: {application.serial_no}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -167,7 +209,10 @@ export default async function AdminApplicationDetailPage({
 
           {/* 2. Submitted Verification Documents */}
           <Reveal delay={0.03}>
-            <ApplicationDocumentsViewer application={application} />
+            <ApplicationDocumentsViewer
+              application={application}
+              formConfig={formConfigs.volunteer_application}
+            />
           </Reveal>
 
           {/* 3. Motivation & Volunteer Experience */}
@@ -286,6 +331,15 @@ export default async function AdminApplicationDetailPage({
           )}
         </div>
       </div>
+
+      {/* Official Admit Card (প্রবেশ পত্র) Slip - Visible when Approved */}
+      {isApproved && (
+        <Reveal delay={0.2}>
+          <div className="rounded-3xl border border-emerald-200 bg-white p-3.5 sm:p-8 shadow-sm space-y-4">
+            <VolunteerAdmitCard application={application} />
+          </div>
+        </Reveal>
+      )}
     </div>
   );
 }

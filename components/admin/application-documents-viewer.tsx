@@ -25,9 +25,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { VolunteerApplication } from "@/types/database";
+import type { FormConfig } from "@/types/form-editor";
 
 interface ApplicationDocumentsViewerProps {
   application: VolunteerApplication;
+  formConfig?: FormConfig;
 }
 
 interface DocumentItem {
@@ -42,6 +44,7 @@ interface DocumentItem {
 
 export function ApplicationDocumentsViewer({
   application,
+  formConfig,
 }: ApplicationDocumentsViewerProps) {
   const [selectedDoc, setSelectedDoc] = useState<{
     title: string;
@@ -49,53 +52,82 @@ export function ApplicationDocumentsViewer({
     isPdf: boolean;
   } | null>(null);
 
-  const documents: DocumentItem[] = [
-    {
-      key: "photo",
-      title: "Passport Size Photo",
-      banglaTitle: "পাসপোর্ট সাইজ ছবি",
-      url: application.photo_url,
-      icon: Camera,
-      required: true,
-      typeHint: "Official ID Photo",
-    },
-    {
-      key: "nid",
-      title: "Applicant NID / Birth Certificate",
-      banglaTitle: "জাতীয় পরিচয়পত্র বা জন্ম নিবন্ধন সনদ",
-      url: application.nid_or_birth_cert_url,
-      icon: FileCheck,
-      required: true,
-      typeHint: "Primary Identification",
-    },
-    {
-      key: "college_card",
-      title: "College Registration Card / Student ID",
-      banglaTitle: "কলেজ রেজিস্ট্রেশন বা আইডি কার্ড",
-      url: application.college_reg_card_url,
-      icon: Layers,
-      required: true,
-      typeHint: "Academic Enrollment",
-    },
-    {
-      key: "father_nid",
-      title: "Father's NID",
-      banglaTitle: "পিতার জাতীয় পরিচয়পত্র",
-      url: application.father_nid_url,
-      icon: Shield,
-      required: false,
-      typeHint: "Parent Verification",
-    },
-    {
-      key: "mother_nid",
-      title: "Mother's NID",
-      banglaTitle: "মাতার জাতীয় পরিচয়পত্র",
-      url: application.mother_nid_url,
-      icon: Shield,
-      required: false,
-      typeHint: "Parent Verification",
-    },
-  ];
+  function getFileUrl(field: { id: string; name?: string }) {
+    const key = field.name || field.id;
+    if (key === "photoUrl" || key === "photo") return application.photo_url;
+    if (key === "nidOrBirthCertUrl" || key === "nid") return application.nid_or_birth_cert_url;
+    if (key === "collegeRegCardUrl" || key === "college_card") return application.college_reg_card_url;
+    if (key === "fatherNidUrl" || key === "father_nid") return application.father_nid_url;
+    if (key === "motherNidUrl" || key === "mother_nid") return application.mother_nid_url;
+    return (application.form_data as any)?.[key] || null;
+  }
+
+  const fileFields = (formConfig?.fields || []).filter((f) => f.type === "file");
+  const documents: DocumentItem[] = fileFields.length > 0
+    ? fileFields
+        .filter((f) => f.enabled || Boolean(getFileUrl(f)))
+        .map((f) => {
+          const isPhoto = f.name === "photoUrl" || f.id === "photoUrl" || (f.name || "").toLowerCase().includes("photo");
+          const isNid = f.name === "nidOrBirthCertUrl" || (f.name || "").toLowerCase().includes("nid");
+          const isCollege = f.name === "collegeRegCardUrl" || (f.name || "").toLowerCase().includes("college");
+          const Icon = isPhoto ? Camera : isNid ? FileCheck : isCollege ? Layers : Shield;
+          return {
+            key: f.name || f.id,
+            title: f.label,
+            banglaTitle: f.placeholder || f.label,
+            url: getFileUrl(f),
+            icon: Icon,
+            required: f.required,
+            typeHint: isPhoto ? "Official ID Photo" : isNid ? "Primary Identification" : isCollege ? "Academic Enrollment" : "Verification Document",
+          };
+        })
+    : [
+        {
+          key: "photo",
+          title: "Passport Size Photo",
+          banglaTitle: "পাসপোর্ট সাইজ ছবি",
+          url: application.photo_url,
+          icon: Camera,
+          required: true,
+          typeHint: "Official ID Photo",
+        },
+        {
+          key: "nid",
+          title: "Applicant NID / Birth Certificate",
+          banglaTitle: "জাতীয় পরিচয়পত্র বা জন্ম নিবন্ধন সনদ",
+          url: application.nid_or_birth_cert_url,
+          icon: FileCheck,
+          required: true,
+          typeHint: "Primary Identification",
+        },
+        {
+          key: "college_card",
+          title: "College Registration Card / Student ID",
+          banglaTitle: "কলেজ রেজিস্ট্রেশন বা আইডি কার্ড",
+          url: application.college_reg_card_url,
+          icon: Layers,
+          required: true,
+          typeHint: "Academic Enrollment",
+        },
+        {
+          key: "father_nid",
+          title: "Father's NID",
+          banglaTitle: "পিতার জাতীয় পরিচয়পত্র",
+          url: application.father_nid_url,
+          icon: Shield,
+          required: false,
+          typeHint: "Parent Verification",
+        },
+        {
+          key: "mother_nid",
+          title: "Mother's NID",
+          banglaTitle: "মাতার জাতীয় পরিচয়পত্র",
+          url: application.mother_nid_url,
+          icon: Shield,
+          required: false,
+          typeHint: "Parent Verification",
+        },
+      ];
 
   const providedCount = documents.filter((d) => Boolean(d.url)).length;
 

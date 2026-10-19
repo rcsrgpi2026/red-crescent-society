@@ -21,9 +21,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ConfirmDelete } from "@/components/admin/confirm-delete";
 import {
   adminApproveVolunteerApplication,
   adminRejectVolunteerApplication,
+  adminDeleteVolunteerApplication,
 } from "@/lib/recruitment-actions";
 import type { VolunteerApplication } from "@/types/database";
 
@@ -39,13 +41,19 @@ export function ApplicationReviewActions({
 
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [customSerialNo, setCustomSerialNo] = useState(
+    application.serial_no || ""
+  );
   const [rejectionReason, setRejectionReason] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleApprove = () => {
     setErrorMsg(null);
     startTransition(async () => {
-      const res = await adminApproveVolunteerApplication(application.id);
+      const res = await adminApproveVolunteerApplication(
+        application.id,
+        customSerialNo
+      );
       if (res.success) {
         setApproveDialogOpen(false);
         router.refresh();
@@ -73,10 +81,17 @@ export function ApplicationReviewActions({
 
   if (application.status !== "PENDING") {
     return (
-      <div className="rounded-2xl border border-line bg-mist/40 p-4 text-center">
-        <p className="text-xs font-semibold text-muted-foreground">
-          This application has been reviewed ({application.status.toLowerCase()}). No further actions required.
-        </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="rounded-xl border border-line bg-mist/40 px-3.5 py-1.5 text-xs font-semibold text-muted-foreground">
+          Application status: {application.status}
+        </div>
+        <ConfirmDelete
+          action={adminDeleteVolunteerApplication}
+          id={application.id}
+          label="Delete Application"
+          description={`Are you sure you want to delete ${application.name}'s application? If approved, its assigned roll number (${application.serial_no || application.roll}) will be permanently deleted and freed for subsequent registrations.`}
+          redirectTo="/admin/recruitment/applications"
+        />
       </div>
     );
   }
@@ -88,6 +103,7 @@ export function ApplicationReviewActions({
           type="button"
           onClick={() => {
             setErrorMsg(null);
+            setCustomSerialNo(application.serial_no || "");
             setApproveDialogOpen(true);
           }}
           disabled={isPending}
@@ -110,6 +126,14 @@ export function ApplicationReviewActions({
           <XCircle className="h-4 w-4" />
           Reject Application
         </Button>
+
+        <ConfirmDelete
+          action={adminDeleteVolunteerApplication}
+          id={application.id}
+          label="Delete"
+          description={`Delete this volunteer application for ${application.name}? This will remove the application and completely free any associated registration roll.`}
+          redirectTo="/admin/recruitment/applications"
+        />
       </div>
 
       {/* Approve Confirmation Dialog */}
@@ -123,22 +147,40 @@ export function ApplicationReviewActions({
               Approve Volunteer Application
             </DialogTitle>
             <DialogDescription className="text-center text-xs leading-relaxed text-muted-foreground">
-              Are you sure you want to approve <strong>{application.name}</strong> (Roll: {application.roll}) as an official RGPI Red Crescent Youth volunteer?
+              Are you sure you want to approve <strong>{application.name}</strong>&apos;s volunteer admission application?
             </DialogDescription>
           </DialogHeader>
 
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 text-xs text-emerald-950 space-y-2">
-            <p className="font-semibold flex items-center gap-1.5 text-emerald-800">
-              <ShieldCheck className="h-4 w-4" />
-              Automated actions upon approval:
-            </p>
-            <ul className="list-disc list-inside space-y-1 text-emerald-900/90 pl-1">
-              <li>Student role will be converted to <strong>VOLUNTEER</strong>.</li>
-              <li>A sequential Member ID (RCR-{new Date().getFullYear()}-XXXX) will be generated.</li>
-              <li>Official Team Member portal and ID Card access will be unlocked.</li>
-              <li>An automated celebration notification will be dispatched.</li>
-              <li>Student account data remains fully preserved.</li>
-            </ul>
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 text-xs text-emerald-950 space-y-2">
+              <p className="font-semibold flex items-center gap-1.5 text-emerald-800">
+                <ShieldCheck className="h-4 w-4" />
+                অনুমোদনের পর স্বয়ংক্রিয় কার্যক্রম:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-emerald-900/90 pl-1">
+                <li>আবেদনের স্ট্যাটাস <strong>APPROVED</strong> হবে এবং ক্রমিক/রোল নম্বর ইস্যু হবে।</li>
+                <li>অফিসিয়াল <strong>প্রবেশপত্র (Admit Card)</strong> স্টুডেন্ট পোর্টালে উন্মুক্ত হবে।</li>
+                <li>আবেদনকারী <strong>STUDENT</strong> হিসেবেই থাকবে। ইন্টারভিউ ও ট্রেইনিং সম্পন্ন হলে অ্যাডমিন তাকে পরবর্তীতে অফিসিয়াল RCY সদস্যপদে প্রমোট করতে পারবেন।</li>
+              </ul>
+            </div>
+
+            {/* Custom / Confirmed Form Serial or Roll No */}
+            <div className="space-y-1.5 pt-1">
+              <Label htmlFor="custom-serial-no" className="text-xs font-semibold text-foreground">
+                অফিসিয়াল ফর্ম এর ক্রমিক/রোল নং (Form Serial / Roll No)
+              </Label>
+              <input
+                id="custom-serial-no"
+                type="text"
+                value={customSerialNo}
+                onChange={(e) => setCustomSerialNo(e.target.value)}
+                placeholder="স্বয়ংক্রিয়ভাবে তৈরি হবে: online-reg-1 (বা কাস্টম লিখুন)"
+                className="w-full rounded-xl border border-line bg-white px-3 py-2 text-xs font-mono font-medium focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                অনুমোদনের পর এই রোল নম্বরটি (online-reg-1, online-reg-2...) স্বয়ংক্রিয়ভাবে তৈরি হয়ে প্রবেশপত্রে ও স্টুডেন্ট পোর্টালে যুক্ত হবে। খালি রাখলে ক্রমানুসারে তৈরি হবে।
+              </p>
+            </div>
           </div>
 
           {errorMsg && (
@@ -199,7 +241,7 @@ export function ApplicationReviewActions({
               className="text-xs"
             />
             <p className="text-[11px] text-muted-foreground">
-              This note will be included respectfully in the applicant's notification.
+              This note will be included respectfully in the applicant&apos;s notification.
             </p>
           </div>
 

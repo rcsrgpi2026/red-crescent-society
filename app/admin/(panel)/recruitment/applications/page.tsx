@@ -16,6 +16,9 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Reveal } from "@/components/shared/reveal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { DownloadDossiersZipButton } from "@/components/admin/download-dossiers-zip-button";
+import { ConfirmDelete } from "@/components/admin/confirm-delete";
+import { adminDeleteVolunteerApplication } from "@/lib/recruitment-actions";
 import { adminGetVolunteerApplications } from "@/lib/queries";
 import { formatDateTime, VOLUNTEER_APPLICATION_STATUS_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -60,11 +63,22 @@ export default async function AdminVolunteerApplicationsPage({
       ),
     },
     {
-      header: "Roll & Session",
+      header: "Roll / Serial",
       render: (app) => (
         <div>
-          <p className="text-xs font-semibold text-brand-dark">Roll: {app.roll}</p>
-          <p className="text-[11px] text-muted-foreground">Session: {app.session}</p>
+          {app.status === "APPROVED" ? (
+            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 text-xs font-bold text-emerald-800">
+              ক্রমিক/রোল: {app.serial_no || app.roll}
+            </span>
+          ) : (
+            <span
+              className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200/80 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+              title="অনুমোদনের পর অফিসিয়াল রোল/ক্রমিক নম্বর ইস্যু হবে"
+            >
+              ⏳ অনুমোদনের অপেক্ষায়
+            </span>
+          )}
+          <p className="text-[11px] text-muted-foreground mt-0.5">Session: {app.session}</p>
         </div>
       ),
     },
@@ -112,13 +126,17 @@ export default async function AdminVolunteerApplicationsPage({
         description="Review student volunteer applications, verify applicant credentials, and approve or reject candidates."
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <DownloadDossiersZipButton
+              status={params.status}
+              count={applications.length}
+            />
             <Button asChild variant="outline" size="sm" className="gap-2">
               <a
                 href={`/admin/recruitment/applications/export${params.status ? `?status=${params.status}` : ""}`}
                 download
               >
                 <Download className="h-4 w-4" />
-                Download PDF
+                Table PDF
               </a>
             </Button>
             <Button asChild variant="outline" size="sm" className="gap-2">
@@ -209,6 +227,12 @@ export default async function AdminVolunteerApplicationsPage({
                 <span className="hidden sm:inline">PDF</span>
               </a>
             </Button>
+            <ConfirmDelete
+              action={adminDeleteVolunteerApplication}
+              id={app.id}
+              label=""
+              description={`Delete ${app.name}'s application? If approved, its assigned roll number (${app.serial_no || app.roll}) will be permanently deleted and freed for subsequent registrations.`}
+            />
           </div>
         )}
         empty={

@@ -34,6 +34,17 @@ export const SEMESTERS = [
   "8th",
 ] as const;
 
+export const SEMESTER_LABELS: Record<string, string> = {
+  "1st": "1st Semester (১ম পর্ব)",
+  "2nd": "2nd Semester (২য় পর্ব)",
+  "3rd": "3rd Semester (৩য় পর্ব)",
+  "4th": "4th Semester (৪র্থ পর্ব)",
+  "5th": "5th Semester (৫ম পর্ব)",
+  "6th": "6th Semester (৬ষ্ঠ পর্ব)",
+  "7th": "7th Semester (৭ম পর্ব)",
+  "8th": "8th Semester (৮ম পর্ব)",
+};
+
 
 /** Leadership hierarchy — the admin declares each member's position. */
 export const TEAM_POSITIONS = [
@@ -226,7 +237,25 @@ export const VOLUNTEER_APPLICATION_STATUS_LABELS: Record<string, string> = {
 export function normalizeSemester(sem: string | null | undefined): string {
   if (!sem) return "";
   const cleaned = sem.trim().toLowerCase();
-  const match = cleaned.match(/^([1-8])(?:st|nd|rd|th)?(?:\s+semester)?$/i);
+
+  // Handle Bengali numerals and forms (e.g. "১ম পর্ব", "১ম", "১")
+  const bnToEnMap: Record<string, string> = {
+    "১": "1st",
+    "২": "2nd",
+    "৩": "3rd",
+    "৪": "4th",
+    "৫": "5th",
+    "৬": "6th",
+    "৭": "7th",
+    "৮": "8th",
+  };
+  for (const [bn, en] of Object.entries(bnToEnMap)) {
+    if (cleaned.includes(bn)) {
+      return en;
+    }
+  }
+
+  const match = cleaned.match(/^([1-8])(?:st|nd|rd|th)?(?:\s+semester|\s+sem|\s+পর্ব)?$/i);
   if (match) {
     const num = match[1];
     if (num === "1") return "1st";
@@ -269,13 +298,19 @@ export const EVENT_STATUS_LABELS: Record<string, string> = {
   DRAFT: "Draft",
 };
 
-export function slugify(input: string): string {
-  return input
+export function slugify(input: string, fallback?: string): string {
+  if (!input) return fallback ?? "";
+  const slug = input
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/[\s_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    // Retain Unicode letters, combining marks (e.g. Bengali vowels/virama), numbers, spaces, and hyphens
+    .replace(/[^\p{L}\p{M}\p{N}\s-]/gu, "")
+    // Convert whitespace and underscores into hyphens
+    .replace(/[\s_-]+/gu, "-")
+    // Strip leading or trailing hyphens
+    .replace(/^-+|-+$/gu, "");
+
+  return slug || (fallback ?? "");
 }
 
 export function formatDate(

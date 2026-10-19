@@ -14,6 +14,7 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { StudentProfileEditor } from "@/components/student/student-profile-editor";
 import { DonorContactNotifications } from "@/components/portal/donor-contact-notifications";
 import { NotificationPreferencesForm } from "@/components/notifications/preference-form";
+import { VolunteerAdmitCard } from "@/components/recruitment/volunteer-admit-card";
 import { getMyNotificationPreferences } from "@/lib/notifications/actions";
 import { formatDateTime } from "@/lib/constants";
 
@@ -36,9 +37,9 @@ export default async function StudentPortalPage() {
 
 
   return (
-    <div className="min-h-screen bg-mist">
+    <div className="min-h-screen bg-mist print:bg-white print:min-h-0">
       {/* Portal header */}
-      <header className="border-b border-line bg-white sticky top-0 z-30">
+      <header className="border-b border-line bg-white sticky top-0 z-30 print:hidden">
         <div className="mx-auto flex h-16 max-w-4xl items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <SiteLogo variant="society" className="w-9 shrink-0" />
@@ -72,19 +73,19 @@ export default async function StudentPortalPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 print:max-w-none print:p-0 print:m-0">
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-brand-dark"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-brand-dark print:hidden"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Back to website
         </Link>
 
-        <div className="mt-6 space-y-6">
+        <div className="mt-6 space-y-6 print:mt-0 print:space-y-0">
           {/* Official RCY Team Member Status Card */}
           {teamMembership && (
-            <div className="relative overflow-hidden rounded-3xl border border-emerald-300 bg-gradient-to-r from-[#033c27] via-brand to-emerald-700 p-6 text-white shadow-md sm:p-7">
+            <div className="relative overflow-hidden rounded-3xl border border-emerald-300 bg-gradient-to-r from-[#033c27] via-brand to-emerald-700 p-6 text-white shadow-md sm:p-7 print:hidden">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3.5">
                   <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-emerald-200 shadow-sm border border-white/20">
@@ -121,7 +122,7 @@ export default async function StudentPortalPage() {
 
           {/* Volunteer Application Review Status (if submitted and not yet a team member) */}
           {!teamMembership && myApplication && myApplication.status === "PENDING" && (
-            <div className="rounded-3xl border border-amber-200 bg-amber-50/80 p-6 shadow-sm sm:p-7">
+            <div className="rounded-3xl border border-amber-200 bg-amber-50/80 p-6 shadow-sm sm:p-7 print:hidden">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3.5">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 shadow-sm">
@@ -133,12 +134,15 @@ export default async function StudentPortalPage() {
                         Volunteer Application Under Review
                       </h3>
                       <span className="rounded-full bg-amber-200/80 px-2.5 py-0.5 text-[11px] font-bold text-amber-900 uppercase">
-                        Pending
+                        Pending Approval
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
                       Your volunteer application for <strong>{myApplication.recruitment_campaigns?.title || "Recruitment"}</strong> was submitted on{" "}
-                      <strong>{formatDateTime(myApplication.created_at)}</strong>. Society leadership is reviewing your application.
+                      <strong>{formatDateTime(myApplication.created_at)}</strong>. Society leadership is currently reviewing it.
+                    </p>
+                    <p className="mt-2 text-xs font-semibold text-amber-800 bg-amber-100/60 inline-block px-2.5 py-1 rounded-lg">
+                      ⏳ নোট: আবেদন অনুমোদিত হলে স্বয়ংক্রিয়ভাবে আপনার অফিসিয়াল রোল/ক্রমিক নম্বর ও প্রবেশ পত্র (Admit Card) এখানে প্রদর্শিত হবে।
                     </p>
                   </div>
                 </div>
@@ -146,31 +150,41 @@ export default async function StudentPortalPage() {
             </div>
           )}
 
-          {!teamMembership && myApplication && myApplication.status === "APPROVED" && (
-            <div className="rounded-3xl border border-emerald-200 bg-emerald-50/80 p-6 shadow-sm sm:p-7">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-3.5">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 shadow-sm">
-                    <CheckCircle2 className="h-6 w-6" />
-                  </span>
-                  <div>
-                    <h3 className="text-base font-bold text-foreground">
-                      Volunteer Application Approved! 🎉
-                    </h3>
-                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                      Congratulations! Your volunteer membership has been approved. You can now access the official Team Member Portal and your digital ID card.
-                    </p>
+          {/* Volunteer Application Approved: Display Celebration & Official Admit Card Slip */}
+          {myApplication && myApplication.status === "APPROVED" && (
+            <div className="space-y-6 print:space-y-0">
+              <div className="rounded-3xl border border-emerald-200 bg-emerald-50/90 p-6 shadow-sm sm:p-7 print:hidden">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3.5">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 shadow-sm">
+                      <CheckCircle2 className="h-6 w-6" />
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-base font-bold text-foreground">
+                          Volunteer Application Approved! 🎉
+                        </h3>
+                        <span className="rounded-full bg-emerald-600 text-white px-2.5 py-0.5 text-[11px] font-mono font-bold">
+                          রোল/ক্রমিক নং: {myApplication.serial_no || myApplication.roll}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                        অভিনন্দন! আপনার স্বেচ্ছাসেবী ভর্তি আবেদনটি অনুমোদিত হয়েছে। নিচে আপনার অফিসিয়াল <strong>প্রবেশ পত্র (Admit Card)</strong> দেওয়া হলো। এটি সংরক্ষণ বা প্রিন্ট করে ইন্টারভিউ ও ভর্তি পরীক্ষার সময় সাথে রাখুন।
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0">
-                  <Link href="/volunteer">Go to Volunteer Portal</Link>
-                </Button>
+              </div>
+
+              {/* Official Admit Card (প্রবেশ পত্র) Slip */}
+              <div className="rounded-3xl border border-line bg-white p-3 sm:p-8 shadow-sm print:border-none print:p-0 print:shadow-none print:m-0">
+                <VolunteerAdmitCard application={myApplication} />
               </div>
             </div>
           )}
 
           {!teamMembership && myApplication && myApplication.status === "REJECTED" && (
-            <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-7">
+            <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-7 print:hidden">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3.5">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-crescent-soft text-crescent shadow-sm">
@@ -210,7 +224,7 @@ export default async function StudentPortalPage() {
 
           {/* Active Recruitment Invitation Banner (if no application and not a member) */}
           {!teamMembership && !myApplication && activeCampaign && (
-            <div className="relative overflow-hidden rounded-3xl border border-brand/20 bg-gradient-to-r from-brand-dark via-[#043c28] to-brand p-6 text-white shadow-md sm:p-7">
+            <div className="relative overflow-hidden rounded-3xl border border-brand/20 bg-gradient-to-r from-brand-dark via-[#043c28] to-brand p-6 text-white shadow-md sm:p-7 print:hidden">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3.5">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white shadow-sm border border-white/20">
@@ -239,12 +253,15 @@ export default async function StudentPortalPage() {
             </div>
           )}
 
-          <DonorContactNotifications requests={notifications} />
-          <StudentProfileEditor student={student} />
-
+          <div className="print:hidden">
+            <DonorContactNotifications requests={notifications} />
+          </div>
+          <div className="print:hidden">
+            <StudentProfileEditor student={student} />
+          </div>
 
           {/* Smart Notification Preferences */}
-          <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-4">
+          <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 space-y-4 print:hidden">
             <div>
               <h3 className="text-base font-bold text-foreground">Notification & Alert Preferences</h3>
               <p className="text-xs text-muted-foreground">

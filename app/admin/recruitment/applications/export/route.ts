@@ -114,11 +114,35 @@ export async function GET(request: Request) {
         width: 3.0,
         getValue: (v) => v.previous_volunteer_experience || "—",
       });
+    } else if (fieldId === "registrationno" || fieldId === "registration_no") {
+      columns.push({
+        header: cleanHeader || "Reg No",
+        width: 2.2,
+        getValue: (v) => v.registration_no || (v as any).registrationNo || "—",
+      });
+    } else if (fieldId === "previousexperience" || fieldId === "previous_volunteer_experience") {
+      columns.push({
+        header: cleanHeader || "Prev Exp",
+        width: 2.8,
+        getValue: (v) => v.previous_volunteer_experience || (v as any).previousExperience || "—",
+      });
     } else if (fieldId === "motivation") {
       columns.push({
         header: cleanHeader || "Motivation",
         width: 3.2,
         getValue: (v) => v.motivation || "—",
+      });
+    } else {
+      // General fallback for any other enabled field from Form Editor
+      columns.push({
+        header: cleanHeader || field.label,
+        width: 2.4,
+        getValue: (v) => {
+          const val = (v as any)[field.name] ?? (v as any)[field.id] ?? (v as any)[fieldId];
+          if (val === null || val === undefined || val === "") return "—";
+          if (Array.isArray(val)) return val.join(", ");
+          return String(val);
+        },
       });
     }
   });

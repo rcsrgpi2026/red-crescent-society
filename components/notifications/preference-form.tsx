@@ -89,7 +89,9 @@ export function NotificationPreferencesForm({
             <div>
               <h4 className="text-sm font-semibold text-foreground">Device Push Notifications</h4>
               <p className="text-xs text-muted-foreground">
-                {mounted && permission === "granted"
+                {mounted && !isPushSupported()
+                  ? "Push notifications are not supported on this browser."
+                  : mounted && permission === "granted"
                   ? "Push alerts are active on this browser/device."
                   : mounted && permission === "denied"
                   ? "Push alerts are blocked in browser settings."
@@ -97,7 +99,7 @@ export function NotificationPreferencesForm({
               </p>
             </div>
           </div>
-          {permission !== "granted" && isPushSupported() && (
+          {mounted && permission !== "granted" && isPushSupported() && (
             <Button
               size="sm"
               onClick={handleEnablePush}
@@ -112,7 +114,7 @@ export function NotificationPreferencesForm({
               {permission === "denied" ? "Blocked in Browser" : "Enable Push"}
             </Button>
           )}
-          {permission === "granted" && (
+          {mounted && permission === "granted" && (
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
               <Check className="h-4 w-4" /> Active
             </span>

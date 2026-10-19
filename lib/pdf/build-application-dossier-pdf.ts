@@ -1,11 +1,13 @@
-import "regenerator-runtime/runtime";
+import "regenerator-runtime/runtime.js";
 import fs from "fs";
 import path from "path";
 import { PDFDocument, PDFPage, rgb, type RGB, StandardFonts, type PDFFont } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import sharp from "sharp";
 import type { VolunteerApplication } from "@/types/database";
-import { formatDateTime, VOLUNTEER_APPLICATION_STATUS_LABELS } from "@/lib/constants";
+import type { FormConfig } from "@/types/form-editor";
+import { DEFAULT_FORM_CONFIGS } from "@/types/form-editor";
+import { formatDateTime, formatDate, VOLUNTEER_APPLICATION_STATUS_LABELS } from "@/lib/constants";
 
 // ---------------------------------------------------------------------------
 // Server-side PDF generation for Individual Volunteer Application Dossier.
@@ -22,7 +24,9 @@ let logoPngCache: Buffer | null = null;
 
 function loadFontBytes(): Uint8Array {
   if (!fontBytesCache) {
-    const file = path.join(process.cwd(), "lib", "pdf", "fonts", "NotoSansBengali.ttf");
+    const kalpurushFile = path.join(process.cwd(), "lib", "pdf", "fonts", "kalpurush.ttf");
+    const fallbackFile = path.join(process.cwd(), "lib", "pdf", "fonts", "NotoSansBengali.ttf");
+    const file = fs.existsSync(kalpurushFile) ? kalpurushFile : fallbackFile;
     fontBytesCache = fs.readFileSync(file);
   }
   return fontBytesCache;
@@ -117,21 +121,84 @@ async function processImageForPdf(
 }
 
 export async function buildApplicationDossierPdf(
-  application: VolunteerApplication
+  application: VolunteerApplication,
+  formConfig?: FormConfig
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
+
+  const cfg = formConfig || DEFAULT_FORM_CONFIGS.volunteer_application;
+  const rawFileFields = (cfg.fields || []).filter((f) => f.type === "file");
+  const configuredFileFields = rawFileFields.length > 0
+    ? rawFileFields
+    : [
+        { id: "photoUrl", name: "photoUrl", label: "১ কপি পাসপোর্ট সাইজ ছবি (Passport Photo)", type: "file" as const, required: true, enabled: true, order: 25 },
+        { id: "nidOrBirthCertUrl", name: "nidOrBirthCertUrl", label: "আবেদনকারীর জাতীয় পরিচয়পত্র বা জন্ম নিবন্ধন", type: "file" as const, required: true, enabled: true, order: 26 },
+        { id: "collegeRegCardUrl", name: "collegeRegCardUrl", label: "কলেজ রেজিস্ট্রেশন কার্ড বা স্টুডেন্ট আইডি", type: "file" as const, required: true, enabled: true, order: 27 },
+        { id: "fatherNidUrl", name: "fatherNidUrl", label: "পিতার জাতীয় পরিচয়পত্র", type: "file" as const, required: false, enabled: true, order: 28 },
+        { id: "motherNidUrl", name: "motherNidUrl", label: "মাতার জাতীয় পরিচয়পত্র", type: "file" as const, required: false, enabled: true, order: 29 },
+      ];
+
+  const enabledFileFields = configuredFileFields.filter((f) => f.enabled);
+
+  function getFileUrl(field: { id: string; name?: string }): string | null | undefined {
+    const key = field.name || field.id;
+    if (key === "photoUrl" || key === "photo") return application.photo_url;
+    if (key === "nidOrBirthCertUrl" || key === "nid") return application.nid_or_birth_cert_url;
+    if (key === "collegeRegCardUrl" || key === "college_card") return application.college_reg_card_url;
+    if (key === "fatherNidUrl" || key === "father_nid") return application.father_nid_url;
+    if (key === "motherNidUrl" || key === "mother_nid") return application.mother_nid_url;
+    return (application.form_data as any)?.[key] || null;
+  }
 
   // Fonts: Helvetica for razor-sharp official English typography; NotoSansBengali for Bengali values
   const fontRegular = await pdf.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const fontBengali = await pdf.embedFont(loadFontBytes(), { subset: true });
 
+  const BENGALI_CHECK = /[\u0980-\u09FF\u0964\u0965\u200C\u200D]|[^\u0000-\u00FF\u2022\u2013\u2014\u2018\u2019\u201C\u201D\u2026]/;
+
   function selectFont(text: string, bold = false): PDFFont {
-    if (/[\u0980-\u09FF]/.test(text)) {
+    if (BENGALI_CHECK.test(text)) {
       return fontBengali;
     }
     return bold ? fontBold : fontRegular;
+  }
+
+  // Segment text into script runs so Bengali text is shaped independently by fontkit
+  // without being corrupted when preceded or followed by Latin characters.
+  function getScriptRuns(text: string): Array<{ text: string; isBengali: boolean }> {
+    if (!text) return [];
+    if (!BENGALI_CHECK.test(text)) {
+      return [{ text, isBengali: false }];
+    }
+    const regex = /([\u0980-\u09FF\u0964\u0965\u200C\u200D]+(?:\s+[\u0980-\u09FF\u0964\u0965\u200C\u200D]+)*)|([^\u0980-\u09FF\u0964\u0965\u200C\u200D]+)/g;
+    const runs: Array<{ text: string; isBengali: boolean }> = [];
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(text)) !== null) {
+      if (m[0]) {
+        runs.push({ text: m[0], isBengali: Boolean(m[1]) });
+      }
+    }
+    return runs.length > 0 ? runs : [{ text, isBengali: false }];
+  }
+
+  function getFontForRun(run: { text: string; isBengali: boolean }, bold = false): PDFFont {
+    if (run.isBengali || BENGALI_CHECK.test(run.text)) {
+      return fontBengali;
+    }
+    return bold ? fontBold : fontRegular;
+  }
+
+  function measureTextUniversal(text: string, size: number, bold = false): number {
+    if (!text) return 0;
+    const runs = getScriptRuns(text);
+    let totalW = 0;
+    for (const run of runs) {
+      const font = getFontForRun(run, bold);
+      totalW += font.widthOfTextAtSize(run.text, size);
+    }
+    return totalW;
   }
 
   // -------------------------------------------------------------------------
@@ -152,14 +219,12 @@ export async function buildApplicationDossierPdf(
       let current = "";
       for (const word of words) {
         const candidate = current ? `${current} ${word}` : word;
-        const font = selectFont(candidate, bold);
-        if (font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
+        if (measureTextUniversal(candidate, fontSize, bold) <= maxWidth) {
           current = candidate;
         } else if (!current) {
           let partial = "";
           for (const ch of word) {
-            const f = selectFont(partial + ch, bold);
-            if (f.widthOfTextAtSize(partial + ch, fontSize) <= maxWidth) {
+            if (measureTextUniversal(partial + ch, fontSize, bold) <= maxWidth) {
               partial += ch;
             } else {
               if (partial) result.push(partial);
@@ -186,8 +251,14 @@ export async function buildApplicationDossierPdf(
     color: RGB,
     bold = false
   ) {
-    const font = selectFont(text, bold);
-    page.drawText(text, { x, y, size, font, color });
+    if (!text) return;
+    const runs = getScriptRuns(text);
+    let curX = x;
+    for (const run of runs) {
+      const font = getFontForRun(run, bold);
+      page.drawText(run.text, { x: curX, y, size, font, color });
+      curX += font.widthOfTextAtSize(run.text, size);
+    }
   }
 
   // =========================================================================
@@ -343,20 +414,22 @@ export async function buildApplicationDossierPdf(
     color: COLORS.white,
   });
 
-  // Meta bar: Tracking ID, Applied Date, Status
+  // Meta bar: Serial No, Tracking ID, Applied Date, Status
   const metaY = bannerY - 17;
-  const appIdDisplay = `Tracking: #APP-${application.id.slice(0, 8).toUpperCase()}`;
-  page1.drawText(appIdDisplay, {
+  const serialText = application.serial_no
+    ? `Serial: ${application.serial_no}`
+    : `Tracking: #APP-${application.id.slice(0, 8).toUpperCase()}`;
+  page1.drawText(serialText, {
     x: MARGIN,
     y: metaY,
     size: 7.5,
     font: fontBold,
-    color: COLORS.muted,
+    color: application.serial_no ? COLORS.brandGreen : COLORS.muted,
   });
 
   const appliedDate = `Applied: ${formatDateTime(application.created_at)}`;
   page1.drawText(appliedDate, {
-    x: MARGIN + 130,
+    x: MARGIN + 140,
     y: metaY,
     size: 7.5,
     font: fontRegular,
@@ -486,36 +559,56 @@ export async function buildApplicationDossierPdf(
   // 1. Applicant Personal & Academic Information
   // -------------------------------------------------------------------------
   drawSectionHeader("1. APPLICANT IDENTIFICATION & ACADEMIC RECORD");
-  drawTwoColumnRow("Full Name:", application.name, "Student Roll:", application.roll, 17, false);
+  drawTwoColumnRow(
+    "Full Name:",
+    application.name,
+    "Online Serial No.:",
+    application.serial_no || "Pending Approval",
+    17,
+    false
+  );
+  if (application.name_bn || application.dob) {
+    const displayDob = application.dob
+      ? (/^\d{4}-\d{2}-\d{2}$/.test(application.dob)
+          ? formatDate(application.dob)
+          : application.dob)
+      : "—";
+    drawTwoColumnRow("Name (Bangla):", application.name_bn || "—", "Date of Birth:", displayDob, 17, true);
+  }
+  if (application.father_name || application.mother_name) {
+    drawTwoColumnRow("Father's Name:", application.father_name || "—", "Mother's Name:", application.mother_name || "—", 17, false);
+  }
   drawTwoColumnRow(
     "Department:",
     application.department,
-    "College Reg. No.:",
-    application.registration_no || "—",
+    "Student Roll / Reg:",
+    `${application.roll}${application.registration_no ? ` • Reg: ${application.registration_no}` : ""}`,
     17,
     true
   );
+  const shiftText = application.shift ? (application.shift.includes("১ম") || application.shift.includes("1st") ? "1st Shift" : "2nd Shift") : "";
+  const groupText = application.group_name || "";
   drawTwoColumnRow(
-    "Semester:",
-    `${application.semester} Semester`,
-    "Academic Session:",
-    application.session,
+    "Semester / Shift:",
+    `${application.semester} Sem${shiftText ? ` • ${shiftText}` : ""}`,
+    "Session / Group:",
+    `${application.session}${groupText ? ` • ${groupText}` : ""}`,
     17,
     false
   );
   drawTwoColumnRow(
     "Blood Group:",
     application.blood_group || "—",
-    "Mobile Phone:",
-    application.phone,
+    "Latest GPA:",
+    application.latest_gpa || "—",
     17,
     true
   );
   drawTwoColumnRow(
+    "Mobile Phone:",
+    application.phone,
     "Email Address:",
     application.email || "—",
-    "Campaign:",
-    application.recruitment_campaigns?.title || "Regular Enrollment",
     17,
     false
   );
@@ -622,33 +715,34 @@ export async function buildApplicationDossierPdf(
   // -------------------------------------------------------------------------
   drawSectionHeader("4. VERIFICATION DOCUMENTS SUBMISSION AUDIT");
 
-  const docChecklist = [
-    {
-      title: "1. Passport Size Photograph",
-      provided: Boolean(application.photo_url),
-      location: application.photo_url ? "Embedded in Form (Top-Right Box)" : "Not Provided",
-    },
-    {
-      title: "2. Applicant National ID / Birth Certificate",
-      provided: Boolean(application.nid_or_birth_cert_url),
-      location: application.nid_or_birth_cert_url ? "Attached as Exhibit 1 (Next Page)" : "Not Provided",
-    },
-    {
-      title: "3. College Registration Card / Student ID",
-      provided: Boolean(application.college_reg_card_url),
-      location: application.college_reg_card_url ? "Attached as Exhibit 2" : "Not Provided",
-    },
-    {
-      title: "4. Father's National ID Card",
-      provided: Boolean(application.father_nid_url),
-      location: application.father_nid_url ? "Attached as Exhibit 3" : "Not Provided",
-    },
-    {
-      title: "5. Mother's National ID Card",
-      provided: Boolean(application.mother_nid_url),
-      location: application.mother_nid_url ? "Attached as Exhibit 4" : "Not Provided",
-    },
-  ];
+  let nonPhotoChecklistCounter = 1;
+  const docChecklist = enabledFileFields.map((field, idx) => {
+    const isPhoto = field.name === "photoUrl" || field.id === "photoUrl" || (field.name || "").toLowerCase().includes("photo");
+    const url = getFileUrl(field);
+    const provided = Boolean(url);
+
+    let location = "Not Provided";
+    if (isPhoto) {
+      location = provided ? "Embedded in Form (Top-Right Box)" : (field.required ? "Not Provided" : "Optional / Not Provided");
+    } else {
+      if (provided) {
+        location = `Attached as Exhibit ${nonPhotoChecklistCounter++}`;
+      } else {
+        location = field.required ? "Not Provided" : "Optional / Not Provided";
+      }
+    }
+
+    const cleanLabel = field.label.includes("(")
+      ? field.label.replace(/\s*\([^)]*\)\s*/g, "").trim()
+      : field.label;
+
+    return {
+      title: `${idx + 1}. ${cleanLabel || field.label}`,
+      provided,
+      required: field.required,
+      location,
+    };
+  });
 
   for (let i = 0; i < docChecklist.length; i++) {
     const item = docChecklist[i];
@@ -673,26 +767,30 @@ export async function buildApplicationDossierPdf(
     });
 
     // Badge styling for submission status
-    const statusText = item.provided ? "ATTACHED" : "NOT SUBMITTED";
-    const statusBgColor = item.provided ? COLORS.brandSoft : COLORS.lightBg;
-    const statusBorderColor = item.provided ? COLORS.brandGreen : COLORS.line;
-    const statusTextColor = item.provided ? COLORS.brandDark : COLORS.muted;
+    const statusText = item.provided
+      ? "ATTACHED"
+      : item.required
+      ? "NOT SUBMITTED"
+      : "OPTIONAL";
+    const statusBgColor = item.provided
+      ? COLORS.brandSoft
+      : item.required
+      ? COLORS.crescentSoft
+      : COLORS.lightBg;
+    const statusBorderColor = item.provided
+      ? COLORS.brandGreen
+      : item.required
+      ? COLORS.crescentRed
+      : COLORS.line;
+    const statusTextColor = item.provided
+      ? COLORS.brandDark
+      : item.required
+      ? COLORS.crescentRed
+      : COLORS.muted;
 
-    page1.drawText(item.title, {
-      x: MARGIN + 8,
-      y: currentY - itemH + 4,
-      size: 7.5,
-      font: fontBold,
-      color: COLORS.text,
-    });
+    drawTextUniversal(page1, item.title, MARGIN + 8, currentY - itemH + 4, 7.5, COLORS.text, true);
 
-    page1.drawText(item.location, {
-      x: MARGIN + 235,
-      y: currentY - itemH + 4,
-      size: 7,
-      font: fontRegular,
-      color: COLORS.muted,
-    });
+    drawTextUniversal(page1, item.location, MARGIN + 235, currentY - itemH + 4, 7, COLORS.muted, false);
 
     // Draw clean status pill
     const pillW = 82;
@@ -709,12 +807,13 @@ export async function buildApplicationDossierPdf(
       borderColor: statusBorderColor,
       borderWidth: 0.5,
     });
-    const textWidth = fontBold.widthOfTextAtSize(statusText, 6.5);
+    const statusFont = selectFont(statusText, true);
+    const textWidth = statusFont.widthOfTextAtSize(statusText, 6.5);
     page1.drawText(statusText, {
       x: pillX + (pillW - textWidth) / 2,
       y: pillY + 2.5,
       size: 6.5,
-      font: fontBold,
+      font: statusFont,
       color: statusTextColor,
     });
 
@@ -851,28 +950,23 @@ export async function buildApplicationDossierPdf(
     number: number;
     title: string;
     url: string | null | undefined;
-  }> = [
-    {
-      number: 1,
-      title: "APPLICANT'S NATIONAL ID / BIRTH CERTIFICATE",
-      url: application.nid_or_birth_cert_url,
-    },
-    {
-      number: 2,
-      title: "COLLEGE REGISTRATION CARD / STUDENT ID",
-      url: application.college_reg_card_url,
-    },
-    {
-      number: 3,
-      title: "FATHER'S NATIONAL ID CARD",
-      url: application.father_nid_url,
-    },
-    {
-      number: 4,
-      title: "MOTHER'S NATIONAL ID CARD",
-      url: application.mother_nid_url,
-    },
-  ];
+  }> = [];
+
+  let exhibitPageNumber = 1;
+  const nonPhotoFields = enabledFileFields.filter(
+    (f) => f.name !== "photoUrl" && f.id !== "photoUrl" && !(f.name || "").toLowerCase().includes("photo")
+  );
+
+  for (const field of nonPhotoFields) {
+    const url = getFileUrl(field);
+    if (url) {
+      exhibits.push({
+        number: exhibitPageNumber++,
+        title: field.label,
+        url,
+      });
+    }
+  }
 
   let pageIndex = 1;
 
@@ -932,15 +1026,15 @@ export async function buildApplicationDossierPdf(
             height: 18,
             color: COLORS.brandGreen,
           });
-          donorPage.drawText(
-            `EXHIBIT ${exhibit.number}: ${exhibit.title} · Applicant: ${application.name} (Roll: ${application.roll})`,
-            {
-              x: 16,
-              y: donorPage.getHeight() - 17,
-              size: 7.5,
-              font: fontBold,
-              color: COLORS.white,
-            }
+          const stampText = `EXHIBIT ${exhibit.number}: ${exhibit.title} · Applicant: ${application.name} (Roll: ${application.roll})`;
+          drawTextUniversal(
+            donorPage,
+            stampText,
+            16,
+            donorPage.getHeight() - 17,
+            7.5,
+            COLORS.white,
+            true
           );
         }
       } catch (err) {
@@ -1046,13 +1140,15 @@ export async function buildApplicationDossierPdf(
       color: COLORS.brandGreen,
     });
 
-    targetPage.drawText(`EXHIBIT ${ex.number}: ${ex.title}`, {
-      x: MARGIN + 12,
-      y: bannerTop - 18,
-      size: 10,
-      font: fontBold,
-      color: COLORS.white,
-    });
+    drawTextUniversal(
+      targetPage,
+      `EXHIBIT ${ex.number}: ${ex.title}`,
+      MARGIN + 12,
+      bannerTop - 18,
+      9.5,
+      COLORS.white,
+      true
+    );
     targetPage.drawText("Official Verification Document · Red Crescent Youth (RCY)", {
       x: MARGIN + 12,
       y: bannerTop - 30,

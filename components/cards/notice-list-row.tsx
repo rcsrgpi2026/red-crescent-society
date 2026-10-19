@@ -19,7 +19,7 @@ export function NoticeListRow({
 
   return (
     <Link
-      href={`/notices/${notice.slug}`}
+      href={`/notices/${notice.slug || notice.id}`}
       className="group flex items-center gap-3 rounded-2xl border border-line bg-white p-4 transition-all hover:border-brand/40 hover:shadow-sm sm:gap-4"
     >
       {/* Date block */}

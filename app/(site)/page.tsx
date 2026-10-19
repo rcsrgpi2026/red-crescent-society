@@ -20,6 +20,7 @@ import { SiteAnnouncementModal } from "@/components/announcement/site-announceme
 import {
   getSettings,
   getHomeStats,
+  getHomeEvents,
   getUpcomingEvents,
   getPublishedNotices,
   getRecentActivities,
@@ -74,7 +75,7 @@ export default async function HomePage() {
     getServerLocale(),
     getSettings(),
     getHomeStats(),
-    getUpcomingEvents(3),
+    getHomeEvents(6),
     getPublishedNotices(4),
     getRecentActivities(6),
     getPublicTrainings(),
@@ -190,13 +191,21 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Make a Difference — upcoming events */}
+      {/* Make a Difference — upcoming & past events */}
       <section className="border-b border-line bg-white">
         <div className="container-site py-16 lg:py-24">
           <Reveal>
             <SectionHeader
               eyebrow={t.home.eventsEyebrow}
-              title={t.home.eventsTitle}
+              title={
+                events.some((e) => e.status === "UPCOMING" || e.status === "ONGOING")
+                  ? (events.some((e) => e.status !== "UPCOMING" && e.status !== "ONGOING")
+                      ? (locale === "bn" ? "আসন্ন ও সাম্প্রতিক ইভেন্ট" : "Upcoming & Recent Events")
+                      : t.home.eventsTitle)
+                  : events.length > 0
+                  ? (locale === "bn" ? "সাম্প্রতিক ও পূর্ববর্তী ইভেন্ট" : "Recent Events & Activities")
+                  : t.home.eventsTitle
+              }
               description={t.home.eventsDescription}
             />
           </Reveal>

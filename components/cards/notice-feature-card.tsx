@@ -22,7 +22,7 @@ export function NoticeFeatureCard({
 }) {
   return (
     <Link
-      href={`/notices/${notice.slug}`}
+      href={`/notices/${notice.slug || notice.id}`}
       className="group relative flex flex-col overflow-hidden rounded-2xl border border-brand/40 bg-gradient-to-br from-brand-soft/60 via-white to-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand hover:shadow-md sm:p-7"
     >
       {/* Accent band */}

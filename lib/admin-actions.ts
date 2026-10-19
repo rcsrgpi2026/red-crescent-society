@@ -186,21 +186,38 @@ export async function deleteTeamMember(id: string): Promise<ActionResult> {
   await guard();
   const supabase = await createClient();
 
-  // Grab the linked Supabase auth account id before the profile row is gone.
+  // Grab the linked Supabase auth account id, roll, and student_id before the profile row is gone.
   const { data: member } = await supabase
     .from("team_members")
-    .select("user_id")
+    .select("user_id, roll, student_id")
     .eq("id", id)
     .maybeSingle();
+
+  let admin: ReturnType<typeof createAdminClient> | null = null;
+  try {
+    admin = createAdminClient();
+  } catch {
+    admin = null;
+  }
+
+  // Delete any linked volunteer applications so their roll number is completely freed
+  if (admin) {
+    if (member?.user_id) {
+      await admin.from("volunteer_applications").delete().eq("user_id", member.user_id);
+    }
+    if (member?.roll) {
+      await admin.from("volunteer_applications").delete().eq("serial_no", member.roll);
+    }
+    if (member?.student_id) {
+      await admin.from("volunteer_applications").delete().eq("student_id", member.student_id);
+    }
+  }
 
   // Delete the Supabase authentication account FIRST so we never end up with a
   // deleted profile row whose login account still exists. If the auth deletion
   // fails, abort and keep the member intact — the admin can retry later.
   if (member?.user_id) {
-    let admin: ReturnType<typeof createAdminClient>;
-    try {
-      admin = createAdminClient();
-    } catch {
+    if (!admin) {
       return {
         success: false,
         message: "Could not delete the login account — SUPABASE_SERVICE_ROLE_KEY is not configured. The team member was NOT deleted.",
@@ -221,6 +238,7 @@ export async function deleteTeamMember(id: string): Promise<ActionResult> {
   await logAudit("volunteer_deleted", "volunteer", id);
   revalidatePath("/admin/team");
   revalidatePath("/admin/community");
+  revalidatePath("/admin/recruitment/applications");
   revalidatePath("/team");
   revalidatePath("/community");
   revalidatePath("/");
@@ -228,7 +246,7 @@ export async function deleteTeamMember(id: string): Promise<ActionResult> {
   updateTag("community");
   invalidateLeadershipCache();
   clearResponseCache();
-  return { success: true, message: "Team member and their login account deleted." };
+  return { success: true, message: "Team member, volunteer roll, and their login account deleted." };
 }
 
 /**
@@ -247,11 +265,25 @@ export async function deleteStudent(id: string): Promise<ActionResult> {
     .eq("id", id)
     .maybeSingle();
 
+  let admin: ReturnType<typeof createAdminClient> | null = null;
+  try {
+    admin = createAdminClient();
+  } catch {
+    admin = null;
+  }
+
+  // Delete linked volunteer applications and team members so their roll number is completely freed
+  if (admin) {
+    if (student?.user_id) {
+      await admin.from("volunteer_applications").delete().eq("user_id", student.user_id);
+      await admin.from("team_members").delete().eq("user_id", student.user_id);
+    }
+    await admin.from("volunteer_applications").delete().eq("student_id", id);
+    await admin.from("team_members").delete().eq("student_id", id);
+  }
+
   if (student?.user_id) {
-    let admin: ReturnType<typeof createAdminClient>;
-    try {
-      admin = createAdminClient();
-    } catch {
+    if (!admin) {
       return {
         success: false,
         message: "Could not delete the login account — SUPABASE_SERVICE_ROLE_KEY is not configured. The student was NOT deleted.",
@@ -270,7 +302,9 @@ export async function deleteStudent(id: string): Promise<ActionResult> {
   if (error)    return { success: false, message: "Could not delete the student." };
   await logAudit("student_deleted", "student", id);
   revalidatePath("/admin/students");
-  return { success: true, message: "Student and their login account deleted." };
+  revalidatePath("/admin/recruitment/applications");
+  revalidatePath("/admin/team");
+  return { success: true, message: "Student, volunteer roll, and their login account deleted." };
 }
 
 /**
@@ -1408,10 +1442,26 @@ export async function saveEvent(formData: FormData): Promise<ActionResult> {
   if (!title) return { success: false, message: "Title is required." };
 
   const endDate = String(formData.get("endDate") ?? "").trim() || null;
+  const supabase = await createClient();
+
+  const userEventSlug = String(formData.get("slug") ?? "").trim();
+  const baseEventSlug = slugify(userEventSlug || title) || `event-${Date.now().toString(36)}`;
+  let uniqueEventSlug = baseEventSlug;
+  let eventSuffix = 1;
+  while (true) {
+    let checkQuery = supabase.from("events").select("id").eq("slug", uniqueEventSlug);
+    if (id) {
+      checkQuery = checkQuery.neq("id", id);
+    }
+    const { data: existingEvent } = await checkQuery.maybeSingle();
+    if (!existingEvent) break;
+    eventSuffix++;
+    uniqueEventSlug = `${baseEventSlug}-${eventSuffix}`;
+  }
 
   const payload: Record<string, any> = {
     title,
-    slug: String(formData.get("slug") ?? "") ? String(formData.get("slug")) : slugify(title),
+    slug: uniqueEventSlug,
     cover_image: String(formData.get("coverImage") ?? "") || null,
     description: String(formData.get("description") ?? "") || null,
     date: String(formData.get("date") ?? "") || null,
@@ -1429,7 +1479,6 @@ export async function saveEvent(formData: FormData): Promise<ActionResult> {
     report: String(formData.get("report") ?? "") || null,
   };
 
-  const supabase = await createClient();
   let insertOrUpdateErr = null;
 
   if (id) {
@@ -1542,11 +1591,26 @@ export async function saveActivity(formData: FormData): Promise<ActionResult> {
   const images = String(formData.get("images") ?? "")
     .split("\n")
     .map((s) => s.trim())
-    .filter(Boolean);
+  const supabase = await createClient();
+
+  const userActivitySlug = String(formData.get("slug") ?? "").trim();
+  const baseActivitySlug = slugify(userActivitySlug || title) || `activity-${Date.now().toString(36)}`;
+  let uniqueActivitySlug = baseActivitySlug;
+  let actSuffix = 1;
+  while (true) {
+    let checkQuery = supabase.from("activities").select("id").eq("slug", uniqueActivitySlug);
+    if (id) {
+      checkQuery = checkQuery.neq("id", id);
+    }
+    const { data: existingAct } = await checkQuery.maybeSingle();
+    if (!existingAct) break;
+    actSuffix++;
+    uniqueActivitySlug = `${baseActivitySlug}-${actSuffix}`;
+  }
 
   const payload = {
     title,
-    slug: String(formData.get("slug") ?? "") ? String(formData.get("slug")) : slugify(title),
+    slug: uniqueActivitySlug,
     date: String(formData.get("date") ?? "") || null,
     category: String(formData.get("category") ?? "") || null,
     description: String(formData.get("description") ?? "") || null,
@@ -1554,8 +1618,6 @@ export async function saveActivity(formData: FormData): Promise<ActionResult> {
     participants: Number(formData.get("participants") ?? 0) || 0,
     impact: String(formData.get("impact") ?? "") || null,
   };
-
-  const supabase = await createClient();
   if (id) {
     const { error } = await supabase.from("activities").update(payload).eq("id", id);
     if (error) return { success: false, message: "Could not update the activity." };
@@ -1673,7 +1735,7 @@ export async function saveNotice(formData: FormData): Promise<ActionResult> {
     const registrationInstructions = String(formData.get("event_registration_instructions") ?? "").trim() || null;
     const maxParticipants = Number(formData.get("event_max_participants") ?? 0) || null;
 
-    const eventSlug = slugify(eventTitle);
+    const eventSlug = slugify(eventTitle) || `event-${Date.now().toString(36)}`;
     const eventPayload = {
       title: eventTitle,
       slug: eventSlug,
@@ -1738,9 +1800,24 @@ export async function saveNotice(formData: FormData): Promise<ActionResult> {
     event_id = null;
   }
 
+  const rawNoticeSlug = String(formData.get("slug") ?? "").trim();
+  const baseNoticeSlug = slugify(rawNoticeSlug || title) || `notice-${Date.now().toString(36)}`;
+  let uniqueNoticeSlug = baseNoticeSlug;
+  let noticeSuffix = 1;
+  while (true) {
+    let checkQuery = supabase.from("notices").select("id").eq("slug", uniqueNoticeSlug);
+    if (id) {
+      checkQuery = checkQuery.neq("id", id);
+    }
+    const { data: existingNotice } = await checkQuery.maybeSingle();
+    if (!existingNotice) break;
+    noticeSuffix++;
+    uniqueNoticeSlug = `${baseNoticeSlug}-${noticeSuffix}`;
+  }
+
   const payload = {
     title,
-    slug: String(formData.get("slug") ?? "") ? String(formData.get("slug")) : slugify(title),
+    slug: uniqueNoticeSlug,
     content: String(formData.get("content") ?? "") || null,
     category: String(formData.get("category") ?? "") || null,
     pinned: formData.get("pinned") === "on",
@@ -1969,9 +2046,26 @@ export async function saveTraining(formData: FormData): Promise<ActionResult> {
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { success: false, message: "Title is required." };
 
+  const supabase = await createClient();
+
+  const userTrainingSlug = String(formData.get("slug") ?? "").trim();
+  const baseTrainingSlug = slugify(userTrainingSlug || title) || `training-${Date.now().toString(36)}`;
+  let uniqueTrainingSlug = baseTrainingSlug;
+  let trSuffix = 1;
+  while (true) {
+    let checkQuery = supabase.from("training").select("id").eq("slug", uniqueTrainingSlug);
+    if (id) {
+      checkQuery = checkQuery.neq("id", id);
+    }
+    const { data: existingTr } = await checkQuery.maybeSingle();
+    if (!existingTr) break;
+    trSuffix++;
+    uniqueTrainingSlug = `${baseTrainingSlug}-${trSuffix}`;
+  }
+
   const payload = {
     title,
-    slug: String(formData.get("slug") ?? "") ? String(formData.get("slug")) : slugify(title),
+    slug: uniqueTrainingSlug,
     date: String(formData.get("date") ?? "") || null,
     trainer: String(formData.get("trainer") ?? "") || null,
     location: String(formData.get("location") ?? "") || null,
@@ -1980,7 +2074,6 @@ export async function saveTraining(formData: FormData): Promise<ActionResult> {
     status: String(formData.get("status") ?? "UPCOMING"),
   };
 
-  const supabase = await createClient();
   if (id) {
     const { error } = await supabase.from("training").update(payload).eq("id", id);
     if (error) return { success: false, message: "Could not update the training." };
@@ -2034,9 +2127,25 @@ export async function saveAlbum(formData: FormData): Promise<ActionResult> {
   if (!title) return { success: false, message: "Title is required." };
 
   const supabase = await createClient();
+
+  const userAlbumSlug = String(formData.get("slug") ?? "").trim();
+  const baseAlbumSlug = slugify(userAlbumSlug || title) || `album-${Date.now().toString(36)}`;
+  let uniqueAlbumSlug = baseAlbumSlug;
+  let albSuffix = 1;
+  while (true) {
+    let checkQuery = supabase.from("gallery_albums").select("id").eq("slug", uniqueAlbumSlug);
+    if (id) {
+      checkQuery = checkQuery.neq("id", id);
+    }
+    const { data: existingAlb } = await checkQuery.maybeSingle();
+    if (!existingAlb) break;
+    albSuffix++;
+    uniqueAlbumSlug = `${baseAlbumSlug}-${albSuffix}`;
+  }
+
   const payload = {
     title,
-    slug: String(formData.get("slug") ?? "") ? String(formData.get("slug")) : slugify(title),
+    slug: uniqueAlbumSlug,
     description: String(formData.get("description") ?? "") || null,
     cover_image: String(formData.get("coverImage") ?? "") || null,
     date: String(formData.get("date") ?? "") || null,

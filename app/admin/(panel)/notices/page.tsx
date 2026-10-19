@@ -47,7 +47,7 @@ export default async function AdminNoticesPage() {
           )}
           <div className="min-w-0">
             <p className="font-medium text-foreground truncate max-w-xs">{notice.title}</p>
-            <p className="text-xs text-muted-foreground">/notices/{notice.slug}</p>
+            <p className="text-xs text-muted-foreground">/notices/{notice.slug || notice.id}</p>
           </div>
         </div>
       ),

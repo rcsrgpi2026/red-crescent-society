@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { DEFAULT_COMMUNITY_MEMBERS, resolveEventStatus, SESSIONS, TEAM_POSITIONS } from "@/lib/constants";
+import { DEFAULT_COMMUNITY_MEMBERS, resolveEventStatus, SESSIONS, TEAM_POSITIONS, SEMESTERS } from "@/lib/constants";
 import type {
   Achievement,
   Activity,
@@ -36,7 +36,7 @@ import type {
   VolunteerApplication,
   CustomPopupConfig,
 } from "@/types/database";
-import { DEFAULT_FORM_CONFIGS, type FormConfig, type FormKey } from "@/types/form-editor";
+import { DEFAULT_FORM_CONFIGS, type FormConfig, type FormKey, type FormFieldConfig } from "@/types/form-editor";
 
 
 /**
@@ -114,35 +114,45 @@ export async function getFormConfigs(): Promise<Record<FormKey, FormConfig>> {
   }
 
   const saved = data.value as Partial<Record<FormKey, FormConfig>>;
+
+  const mergeConfig = (key: FormKey): FormConfig => {
+    const defaultCfg = DEFAULT_FORM_CONFIGS[key];
+    const savedCfg = saved[key];
+    if (!savedCfg) return defaultCfg;
+
+    const savedFields = savedCfg.fields || [];
+    const fieldMap = new Map<string, FormFieldConfig>();
+    savedFields.forEach((f) => fieldMap.set(f.name || f.id, f));
+
+    defaultCfg.fields.forEach((df) => {
+      const keyName = df.name || df.id;
+      if (!fieldMap.has(keyName)) {
+        fieldMap.set(keyName, df);
+      } else if (keyName === "semester") {
+        const current = fieldMap.get(keyName)!;
+        fieldMap.set(keyName, {
+          ...current,
+          options: [...SEMESTERS],
+        });
+      }
+    });
+
+    const mergedFields = Array.from(fieldMap.values()).sort((a, b) => a.order - b.order);
+
+    return {
+      ...defaultCfg,
+      ...savedCfg,
+      title: savedCfg.title || defaultCfg.title,
+      description: savedCfg.description || defaultCfg.description,
+      fields: mergedFields,
+    };
+  };
+
   return {
-    event_registration: {
-      ...DEFAULT_FORM_CONFIGS.event_registration,
-      ...(saved.event_registration ?? {}),
-      title: saved.event_registration?.title || DEFAULT_FORM_CONFIGS.event_registration.title,
-      description: saved.event_registration?.description || DEFAULT_FORM_CONFIGS.event_registration.description,
-      fields: saved.event_registration?.fields ?? DEFAULT_FORM_CONFIGS.event_registration.fields,
-    },
-    volunteer_application: {
-      ...DEFAULT_FORM_CONFIGS.volunteer_application,
-      ...(saved.volunteer_application ?? {}),
-      title: saved.volunteer_application?.title || DEFAULT_FORM_CONFIGS.volunteer_application.title,
-      description: saved.volunteer_application?.description || DEFAULT_FORM_CONFIGS.volunteer_application.description,
-      fields: saved.volunteer_application?.fields ?? DEFAULT_FORM_CONFIGS.volunteer_application.fields,
-    },
-    blood_request: {
-      ...DEFAULT_FORM_CONFIGS.blood_request,
-      ...(saved.blood_request ?? {}),
-      title: saved.blood_request?.title || DEFAULT_FORM_CONFIGS.blood_request.title,
-      description: saved.blood_request?.description || DEFAULT_FORM_CONFIGS.blood_request.description,
-      fields: saved.blood_request?.fields ?? DEFAULT_FORM_CONFIGS.blood_request.fields,
-    },
-    contact: {
-      ...DEFAULT_FORM_CONFIGS.contact,
-      ...(saved.contact ?? {}),
-      title: saved.contact?.title || DEFAULT_FORM_CONFIGS.contact.title,
-      description: saved.contact?.description || DEFAULT_FORM_CONFIGS.contact.description,
-      fields: saved.contact?.fields ?? DEFAULT_FORM_CONFIGS.contact.fields,
-    },
+    event_registration: mergeConfig("event_registration"),
+    volunteer_application: mergeConfig("volunteer_application"),
+    blood_request: mergeConfig("blood_request"),
+    contact: mergeConfig("contact"),
   };
 }
 
@@ -295,6 +305,36 @@ export const getUpcomingEvents = unstable_cache(
     return active.slice(0, limit);
   },
   ["upcoming-events"],
+  { tags: ["events"], revalidate: 60 }
+);
+
+export const getHomeEvents = unstable_cache(
+  async (limit = 6): Promise<Event[]> => {
+    const supabase = getPublicClient();
+    if (!supabase) return [];
+    const { data } = await supabase
+      .from("events")
+      .select("*")
+      .not("status", "in", '("CANCELLED","DRAFT")')
+      .order("date", { ascending: false })
+      .limit(50);
+
+    const mapped = (data ?? []).map(mapEventWithResolvedStatus);
+    const valid = mapped.filter((e) => e.status !== "CANCELLED" && e.status !== "DRAFT");
+
+    // Upcoming & ongoing first (soonest date first)
+    const upcoming = valid
+      .filter((e) => e.status === "UPCOMING" || e.status === "ONGOING")
+      .sort((a, b) => new Date(a.date || "").getTime() - new Date(b.date || "").getTime());
+
+    // Past / completed next (newest date first)
+    const past = valid
+      .filter((e) => e.status !== "UPCOMING" && e.status !== "ONGOING")
+      .sort((a, b) => new Date(b.date || "").getTime() - new Date(a.date || "").getTime());
+
+    return [...upcoming, ...past].slice(0, limit);
+  },
+  ["home-events"],
   { tags: ["events"], revalidate: 60 }
 );
 
@@ -543,14 +583,27 @@ export const getPublicEvents = unstable_cache(
     if (params?.category) query = query.eq("category", params.category);
 
     const { data } = await query
-      .order("date", { ascending: true })
+      .not("status", "in", '("CANCELLED","DRAFT")')
+      .order("date", { ascending: false })
       .limit(params?.limit ?? 60);
 
     const mapped = (data ?? []).map(mapEventWithResolvedStatus);
-    if (params?.status) {
-      return mapped.filter((e) => e.status === params.status);
-    }
-    return mapped;
+    const valid = mapped.filter((e) => e.status !== "DRAFT" && e.status !== "CANCELLED");
+    const filtered = params?.status
+      ? valid.filter((e) => e.status === params.status)
+      : valid;
+
+    // Upcoming and Ongoing first (soonest date first)
+    const active = filtered
+      .filter((e) => e.status === "UPCOMING" || e.status === "ONGOING")
+      .sort((a, b) => new Date(a.date || "").getTime() - new Date(b.date || "").getTime());
+
+    // Past / completed next (newest date first)
+    const past = filtered
+      .filter((e) => e.status !== "UPCOMING" && e.status !== "ONGOING")
+      .sort((a, b) => new Date(b.date || "").getTime() - new Date(a.date || "").getTime());
+
+    return [...active, ...past];
   },
   ["public-events"],
   { tags: ["events"], revalidate: 60 }
@@ -558,8 +611,22 @@ export const getPublicEvents = unstable_cache(
 
 export async function getPublicEventBySlug(slug: string): Promise<Event | null> {
   const supabase = getPublicClient();
-  if (!supabase) return null;
-  const { data } = await supabase.from("events").select("*").eq("slug", slug).maybeSingle();
+  if (!supabase || !slug) return null;
+  let decodedSlug = slug;
+  try {
+    decodedSlug = decodeURIComponent(slug);
+  } catch {
+    decodedSlug = slug;
+  }
+  let { data } = await supabase.from("events").select("*").eq("slug", decodedSlug).maybeSingle();
+  if (!data && decodedSlug !== slug) {
+    const res = await supabase.from("events").select("*").eq("slug", slug).maybeSingle();
+    data = res.data;
+  }
+  if (!data && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)) {
+    const res = await supabase.from("events").select("*").eq("id", slug).maybeSingle();
+    data = res.data;
+  }
   return data ? mapEventWithResolvedStatus(data) : null;
 }
 
@@ -613,12 +680,38 @@ export const getPublicNotices = unstable_cache(
 export const getPublicNoticeBySlug = unstable_cache(
   async (slug: string): Promise<Notice | null> => {
     const supabase = getPublicClient();
-    if (!supabase) return null;
-    const { data } = await supabase
+    if (!supabase || !slug) return null;
+    let decodedSlug = slug;
+    try {
+      decodedSlug = decodeURIComponent(slug);
+    } catch {
+      decodedSlug = slug;
+    }
+
+    let { data } = await supabase
       .from("notices")
       .select("*, events(*), notice_attachments(id, notice_id, name, url, size, created_at)")
-      .eq("slug", slug)
+      .eq("slug", decodedSlug)
       .maybeSingle();
+
+    if (!data && decodedSlug !== slug) {
+      const res = await supabase
+        .from("notices")
+        .select("*, events(*), notice_attachments(id, notice_id, name, url, size, created_at)")
+        .eq("slug", slug)
+        .maybeSingle();
+      data = res.data;
+    }
+
+    if (!data && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)) {
+      const res = await supabase
+        .from("notices")
+        .select("*, events(*), notice_attachments(id, notice_id, name, url, size, created_at)")
+        .eq("id", slug)
+        .maybeSingle();
+      data = res.data;
+    }
+
     if (!data) return null;
 
     let linkedEvent: Event | null = null;
@@ -688,12 +781,37 @@ export const getAllAlbums = unstable_cache(
 export const getAlbumBySlug = unstable_cache(
   async (slug: string): Promise<GalleryAlbum | null> => {
     const supabase = getPublicClient();
-    if (!supabase) return null;
-    const { data } = await supabase
+    if (!supabase || !slug) return null;
+    let decodedSlug = slug;
+    try {
+      decodedSlug = decodeURIComponent(slug);
+    } catch {
+      decodedSlug = slug;
+    }
+    let { data } = await supabase
       .from("gallery_albums")
       .select("*")
-      .eq("slug", slug)
+      .eq("slug", decodedSlug)
       .maybeSingle();
+
+    if (!data && decodedSlug !== slug) {
+      const res = await supabase
+        .from("gallery_albums")
+        .select("*")
+        .eq("slug", slug)
+        .maybeSingle();
+      data = res.data;
+    }
+
+    if (!data && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)) {
+      const res = await supabase
+        .from("gallery_albums")
+        .select("*")
+        .eq("id", slug)
+        .maybeSingle();
+      data = res.data;
+    }
+
     return data;
   },
   ["album"],

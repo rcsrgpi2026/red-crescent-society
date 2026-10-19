@@ -94,6 +94,7 @@ export async function updateStudentProfile(
   const parsed = studentProfileSchema.safeParse({
     name: formData.get("name"),
     session: formData.get("session"),
+    semester: formData.get("semester") || undefined,
     roll: formData.get("roll"),
     department: formData.get("department"),
     phone: formData.get("phone"),

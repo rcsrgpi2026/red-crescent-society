@@ -4,7 +4,9 @@ import {
   Hourglass,
   XCircle,
   ArrowLeft,
+  ArrowRight,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { requireTeamMember } from "@/lib/auth";
 import {
   getUpcomingEvents,
@@ -217,7 +219,7 @@ export default async function TeamMemberPortalPage() {
         </h2>
         <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-muted-foreground">
           Your team member application was reviewed but not approved at this time.
-          You may contact the society leadership if you believe this was in error.
+          You can update your student profile and re-apply with corrected information during open recruitment.
         </p>
         <div className="mt-4 inline-flex">
           <StatusBadge
@@ -225,6 +227,16 @@ export default async function TeamMemberPortalPage() {
             tone={statusTone(teamMember.status)}
           />
         </div>
+        {activeCampaign && (
+          <div className="mt-6 flex justify-center">
+            <Button asChild size="sm" className="bg-brand hover:bg-brand-dark text-white font-bold gap-1.5 shadow-sm">
+              <Link href="/apply-volunteer">
+                Re-apply for Volunteer Membership
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
     );
   }

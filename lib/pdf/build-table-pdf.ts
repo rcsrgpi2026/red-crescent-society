@@ -1,7 +1,7 @@
-import "regenerator-runtime/runtime";
+import "regenerator-runtime/runtime.js";
 import fs from "fs";
 import path from "path";
-import { PDFDocument, PDFPage, rgb, type RGB } from "pdf-lib";
+import { PDFDocument, PDFPage, rgb, type RGB, StandardFonts } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 
 // ---------------------------------------------------------------------------
@@ -14,7 +14,9 @@ let fontBytesCache: Uint8Array | null = null;
 
 function loadFontBytes(): Uint8Array {
   if (!fontBytesCache) {
-    const file = path.join(process.cwd(), "lib", "pdf", "fonts", "NotoSansBengali.ttf");
+    const kalpurushFile = path.join(process.cwd(), "lib", "pdf", "fonts", "kalpurush.ttf");
+    const fallbackFile = path.join(process.cwd(), "lib", "pdf", "fonts", "NotoSansBengali.ttf");
+    const file = fs.existsSync(kalpurushFile) ? kalpurushFile : fallbackFile;
     fontBytesCache = fs.readFileSync(file);
   }
   return fontBytesCache;
@@ -56,7 +58,64 @@ const HEADER_SIZE = 9.5;
 export async function buildTablePdf<T>(spec: PdfTableSpec<T>): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
-  const font = await pdf.embedFont(loadFontBytes(), { subset: true });
+  const fontBengali = await pdf.embedFont(loadFontBytes(), { subset: true });
+  const fontLatin = await pdf.embedFont(StandardFonts.Helvetica);
+  const fontLatinBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+
+  const BENGALI_CHECK = /[\u0980-\u09FF\u0964\u0965\u200C\u200D]|[^\u0000-\u00FF\u2022\u2013\u2014\u2018\u2019\u201C\u201D\u2026]/;
+
+  function getScriptRuns(text: string): Array<{ text: string; isBengali: boolean }> {
+    if (!text) return [];
+    if (!BENGALI_CHECK.test(text)) {
+      return [{ text, isBengali: false }];
+    }
+    const regex = /([\u0980-\u09FF\u0964\u0965\u200C\u200D]+(?:\s+[\u0980-\u09FF\u0964\u0965\u200C\u200D]+)*)|([^\u0980-\u09FF\u0964\u0965\u200C\u200D]+)/g;
+    const runs: Array<{ text: string; isBengali: boolean }> = [];
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(text)) !== null) {
+      if (m[0]) {
+        runs.push({ text: m[0], isBengali: Boolean(m[1]) });
+      }
+    }
+    return runs.length > 0 ? runs : [{ text, isBengali: false }];
+  }
+
+  function getFontForRun(run: { text: string; isBengali: boolean }, bold = false) {
+    if (run.isBengali || BENGALI_CHECK.test(run.text)) {
+      return fontBengali;
+    }
+    return bold ? fontLatinBold : fontLatin;
+  }
+
+  function measureText(text: string, size: number, bold = false): number {
+    if (!text) return 0;
+    const runs = getScriptRuns(text);
+    let totalW = 0;
+    for (const run of runs) {
+      const f = getFontForRun(run, bold);
+      totalW += f.widthOfTextAtSize(run.text, size);
+    }
+    return totalW;
+  }
+
+  function drawText(
+    targetPage: PDFPage,
+    text: string,
+    x: number,
+    y: number,
+    size: number,
+    color: RGB,
+    bold = false
+  ) {
+    if (!text) return;
+    const runs = getScriptRuns(text);
+    let curX = x;
+    for (const run of runs) {
+      const f = getFontForRun(run, bold);
+      targetPage.drawText(run.text, { x: curX, y, size, font: f, color });
+      curX += f.widthOfTextAtSize(run.text, size);
+    }
+  }
 
   let page: PDFPage = pdf.addPage([PAGE_W, PAGE_H]);
 
@@ -74,19 +133,19 @@ export async function buildTablePdf<T>(spec: PdfTableSpec<T>): Promise<Uint8Arra
   }
 
   /** Wraps text to fit a column, breaking long words by character. */
-  function wrap(text: string, maxWidth: number): string[] {
+  function wrap(text: string, maxWidth: number, bold = false): string[] {
     if (!text) return [""];
     const words = String(text).split(/\s+/);
     const lines: string[] = [];
     let current = "";
     for (const word of words) {
       const candidate = current ? `${current} ${word}` : word;
-      if (font.widthOfTextAtSize(candidate, FONT_SIZE) <= maxWidth) {
+      if (measureText(candidate, FONT_SIZE, bold) <= maxWidth) {
         current = candidate;
       } else if (!current) {
         let partial = "";
         for (const ch of word) {
-          if (font.widthOfTextAtSize(partial + ch, FONT_SIZE) <= maxWidth) {
+          if (measureText(partial + ch, FONT_SIZE, bold) <= maxWidth) {
             partial += ch;
           } else {
             lines.push(partial);
@@ -122,14 +181,14 @@ export async function buildTablePdf<T>(spec: PdfTableSpec<T>): Promise<Uint8Arra
     if (bg) page.drawRectangle({ x, y: y - h, width: w, height: h, color: bg });
     let ty = y - PAD - FONT_SIZE;
     for (const line of lines) {
-      page.drawText(line, { x: x + PAD, y: ty, size: FONT_SIZE, font, color: textColor });
+      drawText(page, line, x + PAD, ty, FONT_SIZE, textColor, false);
       ty -= LINE_HEIGHT;
     }
     page.drawRectangle({ x, y: y - h, width: w, height: h, borderColor: COLORS.line, borderWidth: 0.5 });
   }
 
   function drawHeader() {
-    const cells = spec.columns.map((c, i) => wrap(c.header, widths[i] - PAD * 2));
+    const cells = spec.columns.map((c, i) => wrap(c.header, widths[i] - PAD * 2, true));
     const h = rowHeight(cells) + 2;
     for (let i = 0; i < cells.length; i++) {
       const x = xs[i];
@@ -138,13 +197,7 @@ export async function buildTablePdf<T>(spec: PdfTableSpec<T>): Promise<Uint8Arra
       const lines = cells[i];
       let ty = y - PAD - HEADER_SIZE;
       for (const line of lines) {
-        page.drawText(line, {
-          x: x + PAD,
-          y: ty,
-          size: HEADER_SIZE,
-          font,
-          color: COLORS.headerText,
-        });
+        drawText(page, line, x + PAD, ty, HEADER_SIZE, COLORS.headerText, true);
         ty -= LINE_HEIGHT;
       }
     }
@@ -160,20 +213,8 @@ export async function buildTablePdf<T>(spec: PdfTableSpec<T>): Promise<Uint8Arra
   }
 
   // ---- Title block ----
-  page.drawText(spec.title, {
-    x: MARGIN,
-    y: PAGE_H - 46,
-    size: 16,
-    font,
-    color: COLORS.text,
-  });
-  page.drawText(spec.subtitle, {
-    x: MARGIN,
-    y: PAGE_H - 64,
-    size: 10.5,
-    font,
-    color: COLORS.muted,
-  });
+  drawText(page, spec.title, MARGIN, PAGE_H - 46, 16, COLORS.text, true);
+  drawText(page, spec.subtitle, MARGIN, PAGE_H - 64, 10.5, COLORS.muted, false);
   page.drawRectangle({
     x: MARGIN,
     y: PAGE_H - 76,
@@ -199,9 +240,14 @@ export async function buildTablePdf<T>(spec: PdfTableSpec<T>): Promise<Uint8Arra
   });
 
   // ---- Footer with row count ----
-  page.drawText(
+  drawText(
+    page,
     `Total: ${rowCount} record${rowCount === 1 ? "" : "s"} · Rajshahi Polytechnic Institute Red Crescent Society`,
-    { x: MARGIN, y: MARGIN - 14, size: 8.5, font, color: COLORS.muted }
+    MARGIN,
+    MARGIN - 14,
+    8.5,
+    COLORS.muted,
+    false
   );
 
   return pdf.save();

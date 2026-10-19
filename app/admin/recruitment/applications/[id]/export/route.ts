@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import { adminGetVolunteerApplication } from "@/lib/queries";
+import { adminGetVolunteerApplication, getFormConfigs } from "@/lib/queries";
 import { buildApplicationDossierPdf } from "@/lib/pdf/build-application-dossier-pdf";
 
 export const dynamic = "force-dynamic";
@@ -15,14 +15,17 @@ export async function GET(
   }
 
   const { id } = await params;
-  const application = await adminGetVolunteerApplication(id);
+  const [application, formConfigs] = await Promise.all([
+    adminGetVolunteerApplication(id),
+    getFormConfigs(),
+  ]);
 
   if (!application) {
     return new NextResponse("Volunteer Application not found", { status: 404 });
   }
 
   try {
-    const pdf = await buildApplicationDossierPdf(application);
+    const pdf = await buildApplicationDossierPdf(application, formConfigs.volunteer_application);
 
     // Clean name for safe filename
     const safeName = application.name

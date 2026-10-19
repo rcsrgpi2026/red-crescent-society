@@ -74,6 +74,7 @@ export function NotificationBell({ userId }: { userId?: string | null }) {
   const [loading, setLoading] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>("default");
+  const [mounted, setMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -101,6 +102,7 @@ export function NotificationBell({ userId }: { userId?: string | null }) {
   }
 
   useEffect(() => {
+    setMounted(true);
     loadData();
 
     // Auto-sync push subscription in the background if browser permission is already granted
@@ -207,7 +209,7 @@ export function NotificationBell({ userId }: { userId?: string | null }) {
           )}
         </div>
 
-        {permission !== "granted" && isPushSupported() && (
+        {mounted && permission !== "granted" && isPushSupported() && (
           <div className="bg-poly-soft/50 dark:bg-poly/15 px-4 py-2.5 border-b flex items-center justify-between gap-2">
             <p className="text-[11px] font-medium text-foreground">
               Enable push alerts on this device

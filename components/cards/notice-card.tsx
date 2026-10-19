@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export function NoticeCard({ notice }: { notice: Notice }) {
   return (
     <Link
-      href={`/notices/${notice.slug}`}
+      href={`/notices/${notice.slug || notice.id}`}
       className={cn(
         "group flex w-full max-w-full min-w-0 box-border flex-col sm:flex-row overflow-hidden rounded-2xl border bg-white shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-md",
         notice.pinned

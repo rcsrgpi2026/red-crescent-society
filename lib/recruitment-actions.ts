@@ -16,10 +16,10 @@ import {
   volunteerApplicationSchema,
   recruitmentCampaignSchema,
 } from "@/lib/validation";
-import { isSemesterEligible } from "@/lib/constants";
+import { isSemesterEligible, normalizeSemester } from "@/lib/constants";
 import { createAndDispatchNotification } from "@/lib/notifications/notification-service";
 import { sendVolunteerApprovalEmail } from "@/lib/email/mailer";
-import { generateNextMemberId } from "@/lib/member-id";
+import { generateNextMemberId, generateNextApplicationSerialNo } from "@/lib/member-id";
 import type { ActionResult } from "@/lib/actions";
 
 function zodErrors(error: import("zod").ZodError): Record<string, string[]> {
@@ -98,31 +98,40 @@ export async function submitVolunteerApplication(
     skills = skillsRaw;
   }
 
-  const rawSemesterInput = formData.get("semester");
+  const rawSemesterInput = formData.get("semester") || formData.get("currentSemester");
   const studentSemester =
     typeof rawSemesterInput === "string" && rawSemesterInput.trim()
-      ? rawSemesterInput.trim()
-      : student.semester || "";
+      ? normalizeSemester(rawSemesterInput.trim()) || rawSemesterInput.trim()
+      : normalizeSemester(student.semester) || student.semester || "";
+
+  const getStr = (val: FormDataEntryValue | null | undefined): string =>
+    val !== null && val !== undefined ? String(val).trim() : "";
 
   const parsed = volunteerApplicationSchema.safeParse({
     campaignId,
-    phone: formData.get("phone") || student.phone,
-    bloodGroup: formData.get("bloodGroup") || student.blood_group || "",
-    emergencyContactName: formData.get("emergencyContactName"),
-    emergencyContactPhone: formData.get("emergencyContactPhone"),
-    previousVolunteerExperience: formData.get("previousVolunteerExperience"),
-    motivation: formData.get("motivation"),
+    phone: getStr(formData.get("phone")) || student.phone,
+    bloodGroup: getStr(formData.get("bloodGroup")) || student.blood_group || "",
+    emergencyContactName: getStr(formData.get("emergencyContactName")),
+    emergencyContactPhone: getStr(formData.get("emergencyContactPhone")),
+    previousVolunteerExperience:
+      getStr(formData.get("previousVolunteerExperience")) ||
+      getStr(formData.get("previousExperience")),
+    motivation: getStr(formData.get("motivation")),
     skills,
-    photoUrl: formData.get("photoUrl") ? String(formData.get("photoUrl")) : "",
-    nidOrBirthCertUrl: formData.get("nidOrBirthCertUrl") ? String(formData.get("nidOrBirthCertUrl")) : "",
-    fatherNidUrl: formData.get("fatherNidUrl") ? String(formData.get("fatherNidUrl")) : "",
-    motherNidUrl: formData.get("motherNidUrl") ? String(formData.get("motherNidUrl")) : "",
-    collegeRegCardUrl: formData.get("collegeRegCardUrl") ? String(formData.get("collegeRegCardUrl")) : "",
+    photoUrl: getStr(formData.get("photoUrl")),
+    nidOrBirthCertUrl: getStr(formData.get("nidOrBirthCertUrl")),
+    fatherNidUrl: getStr(formData.get("fatherNidUrl")),
+    motherNidUrl: getStr(formData.get("motherNidUrl")),
+    collegeRegCardUrl: getStr(formData.get("collegeRegCardUrl")),
     agreement: formData.get("agreement") === "true" || formData.get("agreement") === "on",
   });
 
   if (!parsed.success) {
-    return { success: false, errors: zodErrors(parsed.error) };
+    const errors = zodErrors(parsed.error);
+    const firstErrorMessage =
+      Object.values(errors).flat()[0] ||
+      "অনুগ্রহ করে ফর্মের তথ্যগুলো সঠিকভাবে পূরণ করুন।";
+    return { success: false, errors, message: firstErrorMessage };
   }
 
   const admin = createAdminClient();
@@ -188,59 +197,128 @@ export async function submitVolunteerApplication(
 
   const v = parsed.data;
 
-  // If student updated semester/phone/blood group in this form, sync it back to student table
-  if (
-    studentSemester !== student.semester ||
-    v.phone !== student.phone ||
-    (v.bloodGroup && v.bloodGroup !== student.blood_group)
-  ) {
-    await admin
-      .from("students")
-      .update({
-        semester: studentSemester,
-        phone: v.phone,
-        blood_group: v.bloodGroup || student.blood_group,
-      })
-      .eq("id", student.id);
+  const appliedName = String(formData.get("name") || student.name).trim() || student.name;
+  const appliedRoll = String(formData.get("studentId") || formData.get("roll") || student.roll).trim() || student.roll;
+  const appliedSession = String(formData.get("session") || student.session).trim() || student.session;
+  const appliedDepartment = String(formData.get("department") || student.department).trim() || student.department;
+
+  // If student updated details in this form, sync it back to student table
+  const studentUpdates: Record<string, any> = {};
+  if (studentSemester && studentSemester !== student.semester) studentUpdates.semester = studentSemester;
+  if (v.phone && v.phone !== student.phone) studentUpdates.phone = v.phone;
+  if (v.bloodGroup && v.bloodGroup !== student.blood_group) studentUpdates.blood_group = v.bloodGroup;
+  if (appliedRoll && appliedRoll !== student.roll) studentUpdates.roll = appliedRoll;
+  if (appliedSession && appliedSession !== student.session) studentUpdates.session = appliedSession;
+  if (appliedDepartment && appliedDepartment !== student.department) studentUpdates.department = appliedDepartment;
+  if (appliedName && appliedName !== student.name) studentUpdates.name = appliedName;
+
+  if (Object.keys(studentUpdates).length > 0) {
+    await admin.from("students").update(studentUpdates).eq("id", student.id);
   }
 
-  // Insert application row
-  const { data: createdApp, error: insertErr } = await admin
-    .from("volunteer_applications")
-    .insert({
-      user_id: user.id,
-      campaign_id: campaign.id,
-      student_id: student.id,
-      name: student.name,
-      roll: student.roll,
-      registration_no: (student as any).registration_no || null,
-      session: student.session,
-      department: student.department,
-      semester: studentSemester,
-      email: student.email,
-      phone: v.phone,
-      blood_group: v.bloodGroup,
-      emergency_contact_name: v.emergencyContactName,
-      emergency_contact_phone: v.emergencyContactPhone,
-      previous_volunteer_experience: v.previousVolunteerExperience || null,
-      motivation: v.motivation,
-      skills: v.skills,
-      photo_url: v.photoUrl || null,
-      nid_or_birth_cert_url: v.nidOrBirthCertUrl || null,
-      father_nid_url: v.fatherNidUrl || null,
-      mother_nid_url: v.motherNidUrl || null,
-      college_reg_card_url: v.collegeRegCardUrl || null,
-      status: "PENDING",
-    })
-    .select("id")
-    .single();
+  // Collect any custom or dynamic fields submitted through Form Editor
+  const formDataRecord: Record<string, any> = {};
+  formData.forEach((value, key) => {
+    if (!["pushEndpoint", "pushP256dh", "pushAuth", "pushPlatform", "pushBrowser"].includes(key)) {
+      if (typeof value === "string") {
+        formDataRecord[key] = value;
+      }
+    }
+  });
 
-  if (insertErr || !createdApp) {
-    console.error("submitVolunteerApplication error:", insertErr);
-    return {
-      success: false,
-      message: "Could not submit your application. Please try again.",
-    };
+  const nameBn = String(formData.get("nameBn") || formData.get("name_bn") || "").trim() || null;
+  const fatherName = String(formData.get("fatherName") || formData.get("father_name") || "").trim() || null;
+  const motherName = String(formData.get("motherName") || formData.get("mother_name") || "").trim() || null;
+  const dob = String(formData.get("dob") || "").trim() || null;
+  const nationality = String(formData.get("nationality") || "বাংলাদেশী").trim() || null;
+  const shift = String(formData.get("shift") || "").trim() || null;
+  const groupName = String(formData.get("group") || formData.get("group_name") || "").trim() || null;
+  const maritalStatus = String(formData.get("maritalStatus") || formData.get("marital_status") || "").trim() || null;
+  const permanentAddress = String(formData.get("permanentAddress") || formData.get("permanent_address") || "").trim() || null;
+  const presentAddress = String(formData.get("presentAddress") || formData.get("present_address") || "").trim() || null;
+  const latestGpa = String(formData.get("latestGpa") || formData.get("latest_gpa") || "").trim() || null;
+  const regNo = String(formData.get("registrationNo") || formData.get("registration_no") || (student as any).registration_no || "").trim() || null;
+  const prevExp = String(formData.get("previousExperience") || v.previousVolunteerExperience || "").trim() || null;
+
+  const rejectedApp = existingApps?.find((a) => a.status === "REJECTED");
+
+  const applicationPayload = {
+    user_id: user.id,
+    campaign_id: campaign.id,
+    student_id: student.id,
+    name: appliedName,
+    name_bn: nameBn,
+    father_name: fatherName,
+    mother_name: motherName,
+    dob: dob,
+    nationality: nationality,
+    shift: shift,
+    group_name: groupName,
+    marital_status: maritalStatus,
+    permanent_address: permanentAddress,
+    present_address: presentAddress,
+    latest_gpa: latestGpa,
+    roll: appliedRoll,
+    registration_no: regNo,
+    session: appliedSession,
+    department: appliedDepartment,
+    semester: studentSemester,
+    email: String(formData.get("email") || student.email).trim() || student.email,
+    phone: v.phone,
+    blood_group: v.bloodGroup,
+    emergency_contact_name: v.emergencyContactName || fatherName || "অভিভাবক",
+    emergency_contact_phone: v.emergencyContactPhone || v.phone,
+    previous_volunteer_experience: prevExp,
+    motivation: v.motivation || "রেড ক্রিসেন্ট সোসাইটির মানবিক কার্যক্রমে যুক্ত হয়ে আর্তমানবতার সেবায় নিজেকে নিয়োজিত করতে চাই।",
+    skills: v.skills,
+    photo_url: v.photoUrl || null,
+    nid_or_birth_cert_url: v.nidOrBirthCertUrl || null,
+    father_nid_url: v.fatherNidUrl || null,
+    mother_nid_url: v.motherNidUrl || null,
+    college_reg_card_url: v.collegeRegCardUrl || null,
+    form_data: formDataRecord,
+    status: "PENDING" as const,
+    rejection_reason: null,
+    reviewed_by: null,
+    reviewed_at: null,
+    created_at: new Date().toISOString(),
+  };
+
+  let createdApp: { id: string } | null = null;
+
+  if (rejectedApp) {
+    // Re-applying after previous rejection: update the existing row to PENDING
+    const { data: updatedApp, error: updateErr } = await admin
+      .from("volunteer_applications")
+      .update(applicationPayload)
+      .eq("id", rejectedApp.id)
+      .select("id")
+      .single();
+
+    if (updateErr || !updatedApp) {
+      console.error("submitVolunteerApplication reapply update error:", updateErr);
+      return {
+        success: false,
+        message: "Could not update and re-submit your application. Please try again.",
+      };
+    }
+    createdApp = updatedApp;
+  } else {
+    // Fresh application: insert new application row
+    const { data: newApp, error: insertErr } = await admin
+      .from("volunteer_applications")
+      .insert(applicationPayload)
+      .select("id")
+      .single();
+
+    if (insertErr || !newApp) {
+      console.error("submitVolunteerApplication error:", insertErr);
+      return {
+        success: false,
+        message: "Could not submit your application. Please try again.",
+      };
+    }
+    createdApp = newApp;
   }
 
   // Capture and register push subscription if provided
@@ -471,7 +549,8 @@ export async function adminSaveRecruitmentCampaign(
 // ------------------------------------------------------------
 
 export async function adminApproveVolunteerApplication(
-  applicationId: string
+  applicationId: string,
+  customSerialNo?: string
 ): Promise<ActionResult> {
   const profile = await guardAdmin();
   const admin = createAdminClient();
@@ -494,15 +573,19 @@ export async function adminApproveVolunteerApplication(
     };
   }
 
-  // 2. Generate sequential Member ID: RCR-YYYY-NNNN
-  const memberId = await generateNextMemberId(admin);
+  // 2. Generate sequential Admission Serial No: online-reg-N (or admin custom)
+  const serialNo =
+    customSerialNo?.trim() ||
+    application.serial_no ||
+    (await generateNextApplicationSerialNo(admin));
   const now = new Date().toISOString();
 
-  // 3. Update application status
+  // 3. Update application status with serial number
   const { error: updateAppErr } = await admin
     .from("volunteer_applications")
     .update({
       status: "APPROVED",
+      serial_no: serialNo,
       reviewed_by: profile.id,
       reviewed_at: now,
     })
@@ -513,72 +596,15 @@ export async function adminApproveVolunteerApplication(
     return { success: false, message: "Failed to update application status." };
   }
 
-  // 4. Update Profile Role: STUDENT -> VOLUNTEER
-  const { error: profileErr } = await admin
-    .from("profiles")
-    .update({ role: "VOLUNTEER" })
-    .eq("id", application.user_id);
-
-  if (profileErr) {
-    console.error("adminApproveVolunteerApplication role update error:", profileErr);
-  }
-
-  // 5. Create or Update Team Member Record
-  const { data: existingMember } = await admin
-    .from("team_members")
-    .select("id, member_id")
-    .eq("user_id", application.user_id)
-    .maybeSingle();
-
-  if (existingMember) {
+  // 4. Ensure applicant remains as a STUDENT in profiles (does not become RCY member yet)
+  if (application.user_id) {
     await admin
-      .from("team_members")
-      .update({
-        status: "APPROVED",
-        member_id: existingMember.member_id || memberId,
-        joined_at: now,
-        photo_url: application.photo_url || (existingMember as any).photo_url || null,
-        roll: application.roll,
-        registration_no: application.registration_no,
-        session: application.session,
-        department: application.department,
-        semester: application.semester,
-        phone: application.phone,
-        email: application.email,
-        blood_group: application.blood_group,
-        emergency_contact_name: application.emergency_contact_name,
-        emergency_contact_phone: application.emergency_contact_phone,
-        skills: application.skills,
-        experience: application.previous_volunteer_experience,
-        motivation: application.motivation,
-      })
-      .eq("id", existingMember.id);
-  } else {
-    await admin.from("team_members").insert({
-      user_id: application.user_id,
-      name: application.name,
-      member_id: memberId,
-      photo_url: application.photo_url || null,
-      roll: application.roll,
-      registration_no: application.registration_no,
-      session: application.session,
-      department: application.department,
-      semester: application.semester,
-      phone: application.phone,
-      email: application.email,
-      blood_group: application.blood_group,
-      emergency_contact_name: application.emergency_contact_name,
-      emergency_contact_phone: application.emergency_contact_phone,
-      skills: application.skills,
-      experience: application.previous_volunteer_experience,
-      motivation: application.motivation,
-      position: "General Member",
-      status: "APPROVED",
-      joined_at: now,
-    });
+      .from("profiles")
+      .update({ role: "STUDENT" })
+      .eq("id", application.user_id);
   }
 
-  // Sync verified passport photo with student & profile avatar if available
+  // 5. Sync verified passport photo with student & profile avatar if available
   if (application.photo_url) {
     if (application.student_id) {
       await admin
@@ -586,73 +612,46 @@ export async function adminApproveVolunteerApplication(
         .update({ photo_url: application.photo_url })
         .eq("id", application.student_id);
     }
-    await admin
-      .from("profiles")
-      .update({ avatar_url: application.photo_url })
-      .eq("id", application.user_id);
+    if (application.user_id) {
+      await admin
+        .from("profiles")
+        .update({ avatar_url: application.photo_url })
+        .eq("id", application.user_id);
+    }
   }
 
-  // 6. Dispatch celebration push & in-app notification to approved user
+  // 6. Dispatch notification to applicant to view their Admit Card in the student portal
   try {
     await createAndDispatchNotification(
       {
-        title: "🎉 অভিনন্দন! RCY সদস্যপদ অনুমোদিত হয়েছে",
-        body: `Congratulations ${application.name}! আপনার রেড ক্রিসেন্ট যুব সদস্যপদ অনুমোদিত হয়েছে (Member ID: ${memberId})। সদস্য পোর্টাল থেকে আপনার ডিজিটাল মেম্বার আইডি কার্ড দেখুন।`,
+        title: "🎉 অভিনন্দন! আপনার স্বেচ্ছাসেবক ভর্তি আবেদন অনুমোদিত হয়েছে",
+        body: `Congratulations ${application.name}! আপনার রেড ক্রিসেন্ট সোসাইটি স্বেচ্ছাসেবক আবেদন অনুমোদিত হয়েছে (রোল/ক্রমিক নং: ${serialNo})। স্টুডেন্ট পোর্টাল থেকে আপনার অফিসিয়াল প্রবেশ পত্র (Admit Card) প্রিন্ট বা ডাউনলোড করুন।`,
         type: "system",
         priority: "high",
-        actionUrl: "/volunteer",
+        actionUrl: "/student",
       },
       {
         specificUserIds: [application.user_id],
       }
     );
   } catch (notifErr) {
-    console.warn("Notification error after volunteer approval:", notifErr);
-  }
-
-  // 7. Dispatch official membership approval email to applicant's email address
-  let applicantEmail = application.email;
-  if (!applicantEmail && application.user_id) {
-    const { data: prof } = await admin
-      .from("profiles")
-      .select("email")
-      .eq("id", application.user_id)
-      .maybeSingle();
-    if (prof?.email) applicantEmail = prof.email;
-  }
-
-  if (applicantEmail) {
-    try {
-      await sendVolunteerApprovalEmail({
-        name: application.name,
-        email: applicantEmail,
-        memberId: memberId,
-        department: application.department,
-        position: "General Member",
-      });
-    } catch (emailErr) {
-      console.warn("Could not dispatch volunteer approval email:", emailErr);
-    }
+    console.warn("Notification error after volunteer application approval:", notifErr);
   }
 
   await logAudit("volunteer_application_approved", "volunteer_application", applicationId, {
     user_id: application.user_id,
-    member_id: memberId,
+    serial_no: serialNo,
     approved_by: profile.id,
   });
 
-  updateTag("volunteers");
   revalidatePath("/admin/recruitment/applications");
   revalidatePath(`/admin/recruitment/applications/${applicationId}`);
   revalidatePath("/admin/recruitment");
-  revalidatePath("/admin/team");
-  revalidatePath("/team");
-  revalidatePath("/volunteer");
   revalidatePath("/student");
 
   return {
     success: true,
-    message: `Application approved! ${application.name} is now an official volunteer (${memberId}).`,
+    message: `আবেদন অনুমোদিত হয়েছে! রোল নম্বর (${serialNo}) ইস্যু করা হয়েছে এবং প্রবেশপত্র (Admit Card) আনলক হয়েছে।`,
   };
 }
 
@@ -737,3 +736,64 @@ export async function adminRejectVolunteerApplication(
     message: "Application rejected.",
   };
 }
+
+// ------------------------------------------------------------
+// Admin: Delete Volunteer Application (Frees roll number)
+// ------------------------------------------------------------
+
+export async function adminDeleteVolunteerApplication(
+  applicationId: string
+): Promise<ActionResult> {
+  const profile = await guardAdmin();
+  const admin = createAdminClient();
+
+  const { data: application, error: fetchErr } = await admin
+    .from("volunteer_applications")
+    .select("id, name, serial_no, roll, user_id, student_id")
+    .eq("id", applicationId)
+    .maybeSingle();
+
+  if (fetchErr || !application) {
+    return { success: false, message: "Application not found." };
+  }
+
+  const { error: delErr } = await admin
+    .from("volunteer_applications")
+    .delete()
+    .eq("id", applicationId);
+
+  if (delErr) {
+    console.error("adminDeleteVolunteerApplication error:", delErr);
+    return { success: false, message: "Could not delete application." };
+  }
+
+  // If this application was approved into a team member, remove team membership and revert role
+  if (application.user_id) {
+    await admin.from("team_members").delete().eq("user_id", application.user_id);
+    await admin.from("profiles").update({ role: "STUDENT" }).eq("id", application.user_id);
+  }
+  if (application.student_id) {
+    await admin.from("team_members").delete().eq("student_id", application.student_id);
+  }
+  if (application.serial_no) {
+    await admin.from("team_members").delete().eq("roll", application.serial_no);
+  }
+
+  await logAudit("volunteer_application_deleted", "volunteer_application", applicationId, {
+    name: application.name,
+    roll: application.serial_no || application.roll,
+    deleted_by: profile.id,
+  });
+
+  revalidatePath("/admin/recruitment/applications");
+  revalidatePath(`/admin/recruitment/applications/${applicationId}`);
+  revalidatePath("/admin/recruitment");
+  revalidatePath("/admin/team");
+  revalidatePath("/student");
+
+  return {
+    success: true,
+    message: "আবেদন ও সম্পর্কিত রোল নম্বর ডাটাবেজ থেকে সম্পূর্ণ মুছে ফেলা হয়েছে।",
+  };
+}
+

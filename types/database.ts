@@ -512,6 +512,21 @@ export interface VolunteerApplication {
   mother_nid_url?: string | null;
   /** College registration card or Student ID */
   college_reg_card_url?: string | null;
+  /** Official Physical Admission Form Fields */
+  name_bn?: string | null;
+  father_name?: string | null;
+  mother_name?: string | null;
+  dob?: string | null;
+  nationality?: string | null;
+  shift?: string | null;
+  group_name?: string | null;
+  marital_status?: string | null;
+  permanent_address?: string | null;
+  present_address?: string | null;
+  latest_gpa?: string | null;
+  /** Auto-generated serial number on approval (e.g. reg-online-0001) */
+  serial_no?: string | null;
+  form_data?: Record<string, any> | null;
   status: VolunteerApplicationStatus;
   rejection_reason: string | null;
   reviewed_by: string | null;

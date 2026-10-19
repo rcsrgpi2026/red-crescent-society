@@ -139,7 +139,7 @@ export default async function EventDetailPage({
                       {linkedNotices.map((n) => (
                         <Link
                           key={n.id}
-                          href={`/notices/${n.slug}`}
+                          href={`/notices/${n.slug || n.id}`}
                           className="group flex items-center justify-between gap-3 rounded-xl border border-line bg-white p-3.5 transition-all hover:border-brand/50 hover:shadow-sm"
                         >
                           <div className="min-w-0">

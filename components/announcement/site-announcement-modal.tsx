@@ -439,7 +439,7 @@ export function SiteAnnouncementModal({
                     {notices.slice(0, 2).map((n) => (
                       <Link
                         key={n.id}
-                        href={`/notices/${n.slug}`}
+                        href={`/notices/${n.slug || n.id}`}
                         onClick={handleClose}
                         className="group flex items-start justify-between gap-2.5 sm:gap-3 rounded-2xl border border-line/80 bg-mist/30 p-2.5 sm:p-3 transition-colors hover:border-crescent/40 hover:bg-white"
                       >

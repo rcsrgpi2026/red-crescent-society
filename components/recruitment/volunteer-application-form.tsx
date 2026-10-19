@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -30,6 +30,10 @@ import {
   ClipboardList,
   CalendarDays,
   CalendarCheck,
+  BellRing,
+  ArrowRight,
+  ExternalLink,
+  Ticket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +48,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   BLOOD_GROUPS,
   SEMESTERS,
   SEMESTER_LABELS,
@@ -53,7 +64,10 @@ import {
 import { submitVolunteerApplication } from "@/lib/recruitment-actions";
 import { AddToContactsCard } from "@/components/shared/add-to-contacts-card";
 import { MandatoryContactStep } from "@/components/forms/mandatory-contact-step";
-import { getCurrentPushSubscriptionData } from "@/lib/notifications/client";
+import {
+  getCurrentPushSubscriptionData,
+  subscribeUserToPush,
+} from "@/lib/notifications/client";
 import { uploadImageToStorage } from "@/lib/upload";
 import type { RecruitmentCampaign, Student, VolunteerApplication } from "@/types/database";
 import { DEFAULT_FORM_CONFIGS, type FormConfig, type FormFieldConfig } from "@/types/form-editor";
@@ -252,6 +266,34 @@ export function VolunteerApplicationForm({
     text: string;
   } | null>(null);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [pushState, setPushState] = useState<NotificationPermission | "unsupported">("default");
+  const [enablingPush, setEnablingPush] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setPushState(Notification.permission);
+    } else {
+      setPushState("unsupported");
+    }
+  }, []);
+
+  const handleEnablePush = async () => {
+    setEnablingPush(true);
+    try {
+      const res = await subscribeUserToPush();
+      setPushState(res.permission);
+      if (res.success || res.permission === "granted") {
+        toast.success("নোটিফিকেশন সফলভাবে চালু করা হয়েছে!");
+      } else if (res.permission === "denied") {
+        toast.error("ব্রাউজার থেকে নোটিফিকেশন পারমিশন ব্লক করা আছে। সাইট সেটিংস থেকে Allow করুন।");
+      }
+    } catch (err) {
+      console.warn("Push enabling error:", err);
+    } finally {
+      setEnablingPush(false);
+    }
+  };
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => {
@@ -381,6 +423,8 @@ export function VolunteerApplicationForm({
       const result = await submitVolunteerApplication({ success: false }, fd);
       if (result.success) {
         setSubmittedSuccess(true);
+        setShowSuccessModal(true);
+        toast.success("ভর্তি আবেদন সফলভাবে সম্পন্ন হয়েছে!");
         setMessage({
           type: "success",
           text: result.message || "ভর্তি আবেদন সফলভাবে সম্পন্ন হয়েছে!",
@@ -406,40 +450,222 @@ export function VolunteerApplicationForm({
     }
   }
 
+  const renderSuccessModal = () => (
+    <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 rounded-3xl border-slate-200/80 shadow-2xl [&>[data-slot=dialog-close]]:text-white/80 [&>[data-slot=dialog-close]]:hover:text-white [&>[data-slot=dialog-close]]:top-4 [&>[data-slot=dialog-close]]:right-4 [&>[data-slot=dialog-close]]:bg-black/20 [&>[data-slot=dialog-close]]:hover:bg-black/40 [&>[data-slot=dialog-close]]:rounded-full [&>[data-slot=dialog-close]]:h-8 [&>[data-slot=dialog-close]]:w-8">
+        <DialogHeader className="sr-only">
+          <DialogTitle>ভর্তি আবেদন সফলভাবে দাখিল হয়েছে</DialogTitle>
+          <DialogDescription>
+            আপনার ভর্তি আবেদন সফলভাবে জমা হয়েছে। পরবর্তী করণীয় ও নির্দেশনাবলী জেনে নিন।
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Top celebratory banner */}
+        <div className="relative overflow-hidden rounded-t-3xl bg-gradient-to-br from-brand via-brand-dark to-slate-900 px-6 py-7 text-white text-center">
+          <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-xl pointer-events-none" />
+          <div className="absolute -left-8 -bottom-8 h-32 w-32 rounded-full bg-red-400/20 blur-xl pointer-events-none" />
+
+          <div className="relative z-10">
+            <div className="mx-auto inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md px-3.5 py-1 text-xs font-semibold text-white/95 border border-white/20 mb-3 shadow-xs">
+              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+              <span>আবেদন সফলভাবে গৃহীত হয়েছে</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+              স্বেচ্ছাসেবক ভর্তি আবেদন সফল!
+            </h2>
+            <p className="mt-1.5 text-xs sm:text-sm text-white/85 max-w-md mx-auto leading-relaxed">
+              ধন্যবাদ, <strong className="text-white font-semibold">{student.name}</strong>! আপনার ভর্তি আবেদনটি নেতৃত্বের পর্যালোচনা ও অনুমোদনের জন্য জমা হয়েছে।
+            </p>
+          </div>
+        </div>
+
+        {/* Modal Body: Steps & Guidelines */}
+        <div className="p-5 sm:p-7 space-y-4 bg-slate-50/50">
+          <div className="flex items-center justify-between pb-1">
+            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-brand" />
+              পরবর্তী ধাপ ও গুরুত্বপূর্ণ তথ্যাবলী:
+            </h3>
+            <span className="text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+              🟡 যাচাই-বাছাই চলছে
+            </span>
+          </div>
+
+          <div className="grid gap-3">
+            {/* Step 1: Admin review */}
+            <div className="flex items-start gap-3.5 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs transition-all hover:border-slate-300">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100/80 text-amber-700">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="text-sm font-bold text-slate-900">
+                    ১. অ্যাডমিন কর্তৃক যাচাই ও অনুমোদন
+                  </h4>
+                  <span className="text-[10px] font-bold text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded">
+                    Review Pending
+                  </span>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  আপনার জমা দেওয়া তথ্য ও ভেরিফিকেশন ডকুমেন্টসমূহ যুব রেড ক্রিসেন্ট পরিষদ যাচাই-বাছাই করবে। সবকিছু সঠিক থাকলে আবেদনটি দ্রুত <strong>অনুমোদন (Approve)</strong> করা হবে।
+                </p>
+              </div>
+            </div>
+
+            {/* Step 2: Turn on notification */}
+            <div className="flex items-start gap-3.5 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs transition-all hover:border-slate-300">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100/80 text-blue-700">
+                <BellRing className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="text-sm font-bold text-slate-900">
+                    ২. ডিভাইসে নোটিফিকেশন অন রাখুন
+                  </h4>
+                  {pushState === "granted" ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                      <CheckCircle2 className="h-3 w-3" /> সক্রিয়
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  আবেদন অনুমোদিত হওয়ার সাথে সাথে এবং গুরুত্বপূর্ণ আপডেট তাৎক্ষণিক পেতে ব্রাউজারে নোটিফিকেশন অন রাখার অনুরোধ করা হচ্ছে।
+                </p>
+                {pushState !== "granted" && pushState !== "unsupported" && (
+                  <div className="mt-2.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={enablingPush}
+                      onClick={handleEnablePush}
+                      className="h-8 gap-1.5 text-xs border-blue-200 bg-blue-50/60 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
+                    >
+                      {enablingPush ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <BellRing className="h-3.5 w-3.5" />
+                      )}
+                      <span>ডিভাইস নোটিফিকেশন চালু করুন</span>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Step 3: Notification and Mail on Approval */}
+            <div className="flex items-start gap-3.5 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs transition-all hover:border-slate-300">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-100/80 text-purple-700">
+                <Mail className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-bold text-slate-900">
+                  ৩. অনুমোদন হলে নোটিফিকেশন ও ইমেইল বার্তা
+                </h4>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  আবেদন অনুমোদিত হওয়া মাত্র আপনার <strong>স্টুডেন্ট পোর্টালে সরাসরি ইন-অ্যাপ নোটিফিকেশন</strong> এবং আবেদনপত্রে দেওয়া <strong>ইমেইলে অফিসিয়াল কনফার্মেশন বার্তা</strong> চলে যাবে।
+                </p>
+              </div>
+            </div>
+
+            {/* Step 4: Admit Card download */}
+            <div className="flex items-start gap-3.5 rounded-2xl border border-emerald-200/90 bg-emerald-50/40 p-4 shadow-2xs">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                <Ticket className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="text-sm font-bold text-slate-900">
+                    ৪. প্রবেশপত্র (Admit Card) সংগ্রহ ও ট্রেনিং
+                  </h4>
+                  <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
+                    প্রবেশপত্র বাধ্যতামূলক
+                  </span>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  অনুমোদনের পর স্টুডেন্ট পোর্টাল থেকে রোল নম্বর সম্বলিত <strong>প্রবেশপত্র (Admit Card)</strong> ডাউনলোড করতে পারবেন। আসন্ন <strong>ওরিয়েন্টেশন ও ফার্স্ট এইড (First Aid) ট্রেনিং কর্মশালায়</strong> অংশগ্রহণের সময় প্রবেশপত্রটি প্রিন্ট করে সঙ্গে আনতে হবে।
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 border-t border-slate-200/80 bg-white px-6 py-4 rounded-b-3xl">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowSuccessModal(false)}
+            className="w-full sm:w-auto text-xs sm:text-sm"
+          >
+            ঠিক আছে, বুঝেছি
+          </Button>
+          <Button
+            asChild
+            className="w-full sm:w-auto bg-brand hover:bg-brand-dark text-white font-semibold text-xs sm:text-sm gap-2"
+          >
+            <Link href="/student">
+              <User className="h-4 w-4" />
+              <span>স্টুডেন্ট পোর্টালে যান</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (submittedSuccess) {
     return (
-      <div className="rounded-3xl border border-emerald-200 bg-white p-8 text-center shadow-lg sm:p-12">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-          <CheckCircle2 className="h-9 w-9" />
-        </div>
-        <h2 className="mt-5 text-2xl font-bold text-foreground">
-          ভর্তি আবেদন সফলভাবে দাখিল হয়েছে!
-        </h2>
-        <p className="mx-auto mt-2.5 max-w-lg text-sm leading-relaxed text-muted-foreground">
-          ধন্যবাদ, <strong>{student.name}</strong>! আপনার ভর্তি আবেদনটি নেতৃত্বের যাচাই-বাছাইয়ের জন্য জমা হয়েছে। আবেদন অনুমোদিত হলে আপনি আপনার ডিজিটাল সদস্যপদ ও প্রবেশপত্র পাবেন।
-        </p>
+      <>
+        {renderSuccessModal()}
+        <div className="rounded-3xl border border-emerald-200 bg-white p-8 text-center shadow-lg sm:p-12">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <CheckCircle2 className="h-9 w-9" />
+          </div>
+          <h2 className="mt-5 text-2xl font-bold text-foreground">
+            ভর্তি আবেদন সফলভাবে দাখিল হয়েছে!
+          </h2>
+          <p className="mx-auto mt-2.5 max-w-lg text-sm leading-relaxed text-muted-foreground">
+            ধন্যবাদ, <strong>{student.name}</strong>! আপনার ভর্তি আবেদনটি নেতৃত্বের যাচাই-বাছাইয়ের জন্য জমা হয়েছে। আবেদন অনুমোদিত হলে আপনি আপনার ডিজিটাল সদস্যপদ ও প্রবেশপত্র পাবেন।
+          </p>
 
-        <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5 text-xs font-bold text-amber-800">
-          <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-          স্ট্যাটাস: 🟡 যাচাই-বাছাই চলছে (Under Review)
-        </div>
+          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5 text-xs font-bold text-amber-800">
+            <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+            স্ট্যাটাস: 🟡 যাচাই-বাছাই চলছে (Under Review)
+          </div>
 
-        <AddToContactsCard className="mt-7" />
+          <div className="mt-6 flex justify-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSuccessModal(true)}
+              className="gap-2 text-xs font-semibold text-brand border-brand/20 bg-brand-soft hover:bg-brand hover:text-white"
+            >
+              <ClipboardList className="h-4 w-4" />
+              <span>পরবর্তী নির্দেশনাবলী ও ধাপসমূহ দেখুন</span>
+            </Button>
+          </div>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-          <Button asChild size="lg" className="bg-brand hover:bg-brand-dark">
-            <Link href="/student">স্টুডেন্ট পোর্টালে যান</Link>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <Link href="/">মূল পাতায় ফিরে যান</Link>
-          </Button>
+          <AddToContactsCard className="mt-7" />
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <Button asChild size="lg" className="bg-brand hover:bg-brand-dark">
+              <Link href="/student">স্টুডেন্ট পোর্টালে যান</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/">মূল পাতায় ফিরে যান</Link>
+            </Button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      {renderSuccessModal()}
       {/* Feedback banner */}
       {message && (
         <div

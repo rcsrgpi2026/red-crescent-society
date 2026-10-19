@@ -67,6 +67,7 @@ import { MandatoryContactStep } from "@/components/forms/mandatory-contact-step"
 import {
   getCurrentPushSubscriptionData,
   subscribeUserToPush,
+  syncPushSubscription,
 } from "@/lib/notifications/client";
 import { uploadImageToStorage } from "@/lib/upload";
 import type { RecruitmentCampaign, Student, VolunteerApplication } from "@/types/database";
@@ -273,6 +274,9 @@ export function VolunteerApplicationForm({
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
       setPushState(Notification.permission);
+      if (Notification.permission === "granted") {
+        syncPushSubscription().catch(() => {});
+      }
     } else {
       setPushState("unsupported");
     }
@@ -285,6 +289,7 @@ export function VolunteerApplicationForm({
       setPushState(res.permission);
       if (res.success || res.permission === "granted") {
         toast.success("নোটিফিকেশন সফলভাবে চালু করা হয়েছে!");
+        syncPushSubscription().catch(() => {});
       } else if (res.permission === "denied") {
         toast.error("ব্রাউজার থেকে নোটিফিকেশন পারমিশন ব্লক করা আছে। সাইট সেটিংস থেকে Allow করুন।");
       }
@@ -452,7 +457,10 @@ export function VolunteerApplicationForm({
 
   const renderSuccessModal = () => (
     <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 rounded-3xl border-slate-200/80 shadow-2xl [&>[data-slot=dialog-close]]:text-white/80 [&>[data-slot=dialog-close]]:hover:text-white [&>[data-slot=dialog-close]]:top-4 [&>[data-slot=dialog-close]]:right-4 [&>[data-slot=dialog-close]]:bg-black/20 [&>[data-slot=dialog-close]]:hover:bg-black/40 [&>[data-slot=dialog-close]]:rounded-full [&>[data-slot=dialog-close]]:h-8 [&>[data-slot=dialog-close]]:w-8">
+      <DialogContent
+        onPointerDownOutside={(e) => e.preventDefault()}
+        className="max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 rounded-3xl border-slate-200/80 shadow-2xl [&>[data-slot=dialog-close]]:text-white/80 [&>[data-slot=dialog-close]]:hover:text-white [&>[data-slot=dialog-close]]:top-4 [&>[data-slot=dialog-close]]:right-4 [&>[data-slot=dialog-close]]:bg-black/20 [&>[data-slot=dialog-close]]:hover:bg-black/40 [&>[data-slot=dialog-close]]:rounded-full [&>[data-slot=dialog-close]]:h-8 [&>[data-slot=dialog-close]]:w-8"
+      >
         <DialogHeader className="sr-only">
           <DialogTitle>ভর্তি আবেদন সফলভাবে দাখিল হয়েছে</DialogTitle>
           <DialogDescription>

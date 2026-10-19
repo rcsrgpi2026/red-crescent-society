@@ -113,15 +113,15 @@ export async function updateTeamMemberStatus(formData: FormData): Promise<Action
         );
       }
 
-      // Resolve recipient email (team_members.email or profiles.email fallback)
+      // Resolve recipient email (team_members.email or auth user fallback)
       let recipientEmail = member?.email;
       if (!recipientEmail && member?.user_id) {
-        const { data: prof } = await admin
-          .from("profiles")
-          .select("email")
-          .eq("id", member.user_id)
-          .maybeSingle();
-        if (prof?.email) recipientEmail = prof.email;
+        try {
+          const { data: authUser } = await admin.auth.admin.getUserById(member.user_id);
+          recipientEmail = authUser?.user?.email;
+        } catch (authErr) {
+          console.warn("Could not fetch user email for member:", authErr);
+        }
       }
 
       // Dispatch official membership approval email

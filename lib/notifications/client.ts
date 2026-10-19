@@ -80,9 +80,31 @@ export async function getCurrentPushSubscriptionData(): Promise<{
 } | null> {
   if (!isPushSupported()) return null;
   try {
-    const reg = await navigator.serviceWorker.getRegistration();
-    if (!reg?.pushManager) return null;
-    const sub = await reg.pushManager.getSubscription();
+    let reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) {
+      reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => null as any);
+    }
+    const swReady = await withTimeout(
+      navigator.serviceWorker.ready,
+      4000,
+      "SW ready timeout"
+    ).catch(() => reg);
+    if (!swReady?.pushManager) return null;
+
+    let sub = await swReady.pushManager.getSubscription().catch(() => null);
+
+    // If permission is already granted but subscription is missing, subscribe now
+    if (!sub && typeof Notification !== "undefined" && Notification.permission === "granted") {
+      const vapidKey = await getVapidPublicKey();
+      if (vapidKey) {
+        const appServerKey = urlBase64ToUint8Array(vapidKey);
+        sub = await swReady.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: appServerKey as unknown as BufferSource,
+        }).catch(() => null);
+      }
+    }
+
     const json = sub?.toJSON();
     if (json?.endpoint && json?.keys?.p256dh && json?.keys?.auth) {
       const { platform, browser, userAgent } = detectPlatformAndBrowser();

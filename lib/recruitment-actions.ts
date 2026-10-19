@@ -214,6 +214,10 @@ export async function submitVolunteerApplication(
   if (appliedSession && appliedSession !== student.session) studentUpdates.session = appliedSession;
   if (appliedDepartment && appliedDepartment !== student.department) studentUpdates.department = appliedDepartment;
   if (appliedName && appliedName !== student.name) studentUpdates.name = appliedName;
+  const appliedEmail = String(formData.get("email") || student.email || "").trim();
+  if (appliedEmail && appliedEmail.includes("@") && appliedEmail !== student.email) {
+    studentUpdates.email = appliedEmail;
+  }
 
   if (Object.keys(studentUpdates).length > 0) {
     await admin.from("students").update(studentUpdates).eq("id", student.id);
@@ -394,7 +398,7 @@ export async function submitVolunteerApplication(
   });
 
   revalidatePath("/student");
-  revalidatePath("/apply-volunteer");
+  // Do not revalidate "/apply-volunteer" here so VolunteerApplicationForm and its success modal remain mounted
   revalidatePath("/admin/recruitment/applications");
   revalidatePath("/admin/recruitment");
 
@@ -625,18 +629,30 @@ export async function adminApproveVolunteerApplication(
 
   // 6. Dispatch notification to applicant to view their Admit Card in the student portal
   try {
-    await createAndDispatchNotification(
-      {
-        title: "🎉 অভিনন্দন! আপনার স্বেচ্ছাসেবক ভর্তি আবেদন অনুমোদিত হয়েছে",
-        body: `Congratulations ${application.name}! আপনার রেড ক্রিসেন্ট সোসাইটি স্বেচ্ছাসেবক আবেদন অনুমোদিত হয়েছে (রোল/ক্রমিক নং: ${serialNo})। স্টুডেন্ট পোর্টাল থেকে আপনার অফিসিয়াল প্রবেশ পত্র (Admit Card) প্রিন্ট বা ডাউনলোড করুন।`,
-        type: "system",
-        priority: "high",
-        actionUrl: "/student",
-      },
-      {
-        specificUserIds: [application.user_id],
-      }
-    );
+    let targetUserId = application.user_id;
+    if (!targetUserId && application.student_id) {
+      const { data: st } = await admin
+        .from("students")
+        .select("user_id")
+        .eq("id", application.student_id)
+        .maybeSingle();
+      if (st?.user_id) targetUserId = st.user_id;
+    }
+
+    if (targetUserId) {
+      await createAndDispatchNotification(
+        {
+          title: "🎉 অভিনন্দন! আপনার স্বেচ্ছাসেবক ভর্তি আবেদন অনুমোদিত হয়েছে",
+          body: `Congratulations ${application.name}! আপনার রেড ক্রিসেন্ট সোসাইটি স্বেচ্ছাসেবক আবেদন অনুমোদিত হয়েছে (রোল/ক্রমিক নং: ${serialNo})। স্টুডেন্ট পোর্টাল থেকে আপনার অফিসিয়াল প্রবেশ পত্র (Admit Card) প্রিন্ট বা ডাউনলোড করুন।`,
+          type: "system",
+          priority: "high",
+          actionUrl: "/student",
+        },
+        {
+          specificUserIds: [targetUserId],
+        }
+      );
+    }
   } catch (notifErr) {
     console.warn("Notification error after volunteer application approval:", notifErr);
   }
@@ -644,14 +660,6 @@ export async function adminApproveVolunteerApplication(
   // 7. Send official approval email with issued Admit Card serial number & download link
   try {
     let applicantEmail = application.email?.trim();
-    if (!applicantEmail && application.user_id) {
-      const { data: profileData } = await admin
-        .from("profiles")
-        .select("email")
-        .eq("id", application.user_id)
-        .maybeSingle();
-      applicantEmail = profileData?.email?.trim();
-    }
     if (!applicantEmail && application.student_id) {
       const { data: studentData } = await admin
         .from("students")
@@ -660,13 +668,21 @@ export async function adminApproveVolunteerApplication(
         .maybeSingle();
       applicantEmail = studentData?.email?.trim();
     }
+    if (!applicantEmail && application.user_id) {
+      try {
+        const { data: authUser } = await admin.auth.admin.getUserById(application.user_id);
+        applicantEmail = authUser?.user?.email?.trim();
+      } catch (authErr) {
+        console.warn("Could not get applicant email from auth.users:", authErr);
+      }
+    }
 
     if (applicantEmail && applicantEmail.includes("@")) {
       const campaignTitle = Array.isArray(application.recruitment_campaigns)
         ? application.recruitment_campaigns[0]?.title
         : (application.recruitment_campaigns as { title?: string } | null)?.title;
 
-      await sendVolunteerAdmissionApprovalEmail({
+      const emailResult = await sendVolunteerAdmissionApprovalEmail({
         name: application.name,
         email: applicantEmail,
         serialNo,
@@ -674,6 +690,10 @@ export async function adminApproveVolunteerApplication(
         roll: application.roll,
         campaignTitle,
       });
+
+      console.log(`[Volunteer Approval] Email sent to ${applicantEmail}:`, emailResult);
+    } else {
+      console.warn(`[Volunteer Approval] No valid email address found for application ${applicationId}`);
     }
   } catch (emailErr) {
     console.warn("Failed to send volunteer admission approval email:", emailErr);
@@ -744,19 +764,31 @@ export async function adminRejectVolunteerApplication(
 
   // Send polite notification to student user
   try {
-    const reasonText = reason ? ` Feedback: "${reason}".` : "";
-    await createAndDispatchNotification(
-      {
-        title: "Volunteer Application Update",
-        body: `Your volunteer application for ${application.recruitment_campaigns?.title || "RGPI Red Crescent Youth"} was not approved.${reasonText} You are eligible to submit a fresh application with updated details or documents.`,
-        type: "system",
-        priority: "normal",
-        actionUrl: "/apply-volunteer",
-      },
-      {
-        specificUserIds: [application.user_id],
-      }
-    );
+    let targetUserId = application.user_id;
+    if (!targetUserId && application.student_id) {
+      const { data: st } = await admin
+        .from("students")
+        .select("user_id")
+        .eq("id", application.student_id)
+        .maybeSingle();
+      if (st?.user_id) targetUserId = st.user_id;
+    }
+
+    if (targetUserId) {
+      const reasonText = reason ? ` Feedback: "${reason}".` : "";
+      await createAndDispatchNotification(
+        {
+          title: "Volunteer Application Update",
+          body: `Your volunteer application for ${application.recruitment_campaigns?.title || "RGPI Red Crescent Youth"} was not approved.${reasonText} You are eligible to submit a fresh application with updated details or documents.`,
+          type: "system",
+          priority: "normal",
+          actionUrl: "/apply-volunteer",
+        },
+        {
+          specificUserIds: [targetUserId],
+        }
+      );
+    }
   } catch (notifErr) {
     console.warn("Notification error after application rejection:", notifErr);
   }

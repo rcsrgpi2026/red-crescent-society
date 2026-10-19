@@ -14,6 +14,8 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { StudentProfileEditor } from "@/components/student/student-profile-editor";
 import { DonorContactNotifications } from "@/components/portal/donor-contact-notifications";
 import { NotificationPreferencesForm } from "@/components/notifications/preference-form";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { MemberPushOptInCard } from "@/components/notifications/member-push-opt-in";
 import { VolunteerAdmitCard } from "@/components/recruitment/volunteer-admit-card";
 import { getMyNotificationPreferences } from "@/lib/notifications/actions";
 import { formatDateTime } from "@/lib/constants";
@@ -53,6 +55,7 @@ export default async function StudentPortalPage() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
+            <NotificationBell userId={student.user_id || profile.id} />
             {teamMembership && (
               <Link
                 href="/volunteer"
@@ -146,6 +149,11 @@ export default async function StudentPortalPage() {
                     </p>
                   </div>
                 </div>
+              </div>
+
+              {/* Push Opt-in for instant approval notification */}
+              <div className="mt-4 pt-3 border-t border-amber-200/60">
+                <MemberPushOptInCard applicantName={student.name} userId={student.user_id || profile.id} />
               </div>
             </div>
           )}
@@ -268,6 +276,7 @@ export default async function StudentPortalPage() {
                 Customize which alerts and categories you receive on your account.
               </p>
             </div>
+            <MemberPushOptInCard applicantName={student.name} userId={student.user_id || profile.id} />
             <NotificationPreferencesForm initialPreferences={notifPrefs} />
           </div>
         </div>

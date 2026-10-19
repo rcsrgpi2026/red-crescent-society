@@ -1773,12 +1773,16 @@ ${portalUrl}
 
 বাংলাদেশ রেড ক্রিসেন্ট সোসাইটি, রাজশাহী পলিটেকনিক ইনস্টিটিউট যুব দল`;
 
+  const formattedTo = params.name
+    ? `"${params.name.replace(/["\r\n]/g, "").trim()}" <${params.email.trim()}>`
+    : params.email.trim();
+
   await sendSystemEmail({
-    to: params.email,
+    to: formattedTo,
     subject: `🎉 অভিনন্দন! যুব রেড ক্রিসেন্ট সদস্যপদ অনুমোদিত হয়েছে — Member ID: ${params.memberId}`,
     html,
     text,
-    priority: "high",
+    priority: "normal",
   });
 }
 
@@ -1796,8 +1800,10 @@ export interface VolunteerAdmissionApprovalEmailParams {
  */
 export async function sendVolunteerAdmissionApprovalEmail(
   params: VolunteerAdmissionApprovalEmailParams
-): Promise<void> {
-  if (!params.email || !params.email.includes("@")) return;
+): Promise<EmailResult> {
+  if (!params.email || !params.email.includes("@")) {
+    return { success: false, error: "Invalid recipient email address" };
+  }
 
   const appUrl = getAppUrl();
   const studentPortalUrl = `${appUrl}/student`;
@@ -1888,12 +1894,16 @@ ${studentPortalUrl}
 ধন্যবাদ,
 রেড ক্রিসেন্ট যুব দল, রাজশাহী পলিটেকনিক ইনস্টিটিউট`;
 
-  await sendSystemEmail({
-    to: params.email,
+  const formattedTo = params.name
+    ? `"${params.name.replace(/["\r\n]/g, "").trim()}" <${params.email.trim()}>`
+    : params.email.trim();
+
+  return await sendSystemEmail({
+    to: formattedTo,
     subject: `🎉 অভিনন্দন! আপনার স্বেচ্ছাসেবক ভর্তি আবেদন অনুমোদিত হয়েছে — রোল: ${params.serialNo}`,
     html,
     text,
-    priority: "high",
+    priority: "normal",
   });
 }
 

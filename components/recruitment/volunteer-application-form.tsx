@@ -266,10 +266,17 @@ export function VolunteerApplicationForm({
     type: "success" | "error";
     text: string;
   } | null>(null);
-  const [submittedSuccess, setSubmittedSuccess] = useState(false);
+  const isAlreadyPending = previousApplication?.status === "PENDING";
+  const [submittedSuccess, setSubmittedSuccess] = useState(isAlreadyPending);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [pushState, setPushState] = useState<NotificationPermission | "unsupported">("default");
   const [enablingPush, setEnablingPush] = useState(false);
+
+  useEffect(() => {
+    if (previousApplication?.status === "PENDING") {
+      setSubmittedSuccess(true);
+    }
+  }, [previousApplication?.status]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
@@ -459,6 +466,7 @@ export function VolunteerApplicationForm({
     <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
       <DialogContent
         onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
         className="max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 rounded-3xl border-slate-200/80 shadow-2xl [&>[data-slot=dialog-close]]:text-white/80 [&>[data-slot=dialog-close]]:hover:text-white [&>[data-slot=dialog-close]]:top-4 [&>[data-slot=dialog-close]]:right-4 [&>[data-slot=dialog-close]]:bg-black/20 [&>[data-slot=dialog-close]]:hover:bg-black/40 [&>[data-slot=dialog-close]]:rounded-full [&>[data-slot=dialog-close]]:h-8 [&>[data-slot=dialog-close]]:w-8"
       >
         <DialogHeader className="sr-only">

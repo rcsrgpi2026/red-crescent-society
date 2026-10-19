@@ -130,29 +130,23 @@ export default async function ApplyVolunteerPage() {
   const existingApp = await getMyVolunteerApplication(user.id);
 
   if (existingApp && existingApp.campaign_id === campaign.id) {
-    if (existingApp.status === "PENDING") {
+    if (existingApp.status === "APPROVED") {
       return (
         <div className="container-site min-h-[70vh] py-16 flex items-center justify-center">
-          <div className="mx-auto max-w-lg rounded-3xl border border-amber-200 bg-white p-8 text-center shadow-sm sm:p-12">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-700">
-              <Clock className="h-7 w-7" />
+          <div className="mx-auto max-w-lg rounded-3xl border border-emerald-200 bg-white p-8 text-center shadow-sm sm:p-12">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              <CheckCircle2 className="h-7 w-7" />
             </div>
             <h1 className="mt-4 text-2xl font-bold text-foreground">
-              Application Under Review
+              আবেদন অনুমোদিত হয়েছে
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Your volunteer application for <strong>{campaign.title}</strong> was submitted on{" "}
-              <strong>{formatDateTime(existingApp.created_at)}</strong> and is currently under review by the society leadership.
+              আপনার স্বেচ্ছাসেবক ভর্তি আবেদন অনুমোদিত হয়েছে। স্টুডেন্ট পোর্টাল থেকে আপনার প্রবেশপত্র (Admit Card) প্রিন্ট বা ডাউনলোড করুন।
             </p>
-
-            <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-amber-50 border border-amber-200 px-4 py-1.5 text-xs font-bold text-amber-800">
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              Status: 🟡 Under Review
-            </div>
 
             <div className="mt-8 flex justify-center gap-3">
               <Button asChild size="lg" className="bg-brand hover:bg-brand-dark">
-                <Link href="/student">View in Student Portal</Link>
+                <Link href="/student">স্টুডেন্ট পোর্টালে যান</Link>
               </Button>
               <Button asChild size="lg" variant="outline">
                 <Link href="/">Back to Homepage</Link>
@@ -162,7 +156,8 @@ export default async function ApplyVolunteerPage() {
         </div>
       );
     }
-    // If status === "REJECTED", fall through so the applicant can submit a fresh application!
+    // If status is PENDING or REJECTED, let VolunteerApplicationForm handle it cleanly
+    // so the celebratory guidelines modal remains mounted upon submission without vanishing!
   }
 
   // 5. Check Semester Eligibility
@@ -295,7 +290,7 @@ export default async function ApplyVolunteerPage() {
           campaign={campaign}
           student={student}
           formConfig={formConfigs.volunteer_application}
-          previousApplication={existingApp?.status === "REJECTED" ? existingApp : null}
+          previousApplication={existingApp}
         />
       </div>
     </div>

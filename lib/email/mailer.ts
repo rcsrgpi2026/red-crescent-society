@@ -21,7 +21,7 @@ export function getSmtpConfig() {
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
   const port = Number(process.env.SMTP_PORT) || 465;
   const secure = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === "true" : port === 465;
-  const user = process.env.SMTP_USER || "redcrescentyouthrgpi@gmail.com";
+  const user = process.env.SMTP_USER || "supportrgpircy@gmail.com";
   const pass = process.env.SMTP_PASS?.replace(/\s+/g, "");
   const fromName = (process.env.SMTP_FROM_NAME || "Red Crescent Youth").replace(/^["']|["']$/g, "").trim();
   const defaultFrom = `"${fromName}" <${user}>`;

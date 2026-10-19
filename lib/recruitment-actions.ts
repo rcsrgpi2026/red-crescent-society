@@ -21,6 +21,7 @@ import { createAndDispatchNotification } from "@/lib/notifications/notification-
 import {
   sendVolunteerApprovalEmail,
   sendVolunteerAdmissionApprovalEmail,
+  sendVolunteerApplicationEmails,
 } from "@/lib/email/mailer";
 import { generateNextMemberId, generateNextApplicationSerialNo } from "@/lib/member-id";
 import type { ActionResult } from "@/lib/actions";
@@ -389,6 +390,30 @@ export async function submitVolunteerApplication(
     );
   } catch (adminNotifErr) {
     console.warn("Admin notification error after application submission:", adminNotifErr);
+  }
+
+  // Also dispatch transactional confirmation email to applicant
+  const applicantEmail = (
+    applicationPayload.email ||
+    student.email ||
+    user.email ||
+    ""
+  ).trim();
+
+  if (applicantEmail && applicantEmail.includes("@")) {
+    try {
+      void sendVolunteerApplicationEmails({
+        name: appliedName || student.name,
+        email: applicantEmail,
+        phone: v.phone || student.phone || "",
+        studentId: appliedRoll || student.roll,
+        department: appliedDepartment || student.department,
+        bloodGroup: v.bloodGroup || student.blood_group || null,
+      });
+      console.log(`[Volunteer Application] Confirmation email dispatched to ${applicantEmail}`);
+    } catch (emailErr) {
+      console.warn("Could not dispatch volunteer application confirmation email:", emailErr);
+    }
   }
 
   await logAudit("volunteer_application_submitted", "volunteer_application", createdApp.id, {

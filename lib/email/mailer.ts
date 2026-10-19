@@ -1782,6 +1782,121 @@ ${portalUrl}
   });
 }
 
+export interface VolunteerAdmissionApprovalEmailParams {
+  name: string;
+  email: string;
+  serialNo: string;
+  department?: string | null;
+  roll?: string | null;
+  campaignTitle?: string | null;
+}
+
+/**
+ * Sends official congratulations and Admit Card link to the approved volunteer applicant
+ */
+export async function sendVolunteerAdmissionApprovalEmail(
+  params: VolunteerAdmissionApprovalEmailParams
+): Promise<void> {
+  if (!params.email || !params.email.includes("@")) return;
+
+  const appUrl = getAppUrl();
+  const studentPortalUrl = `${appUrl}/student`;
+
+  const html = buildBrandedEmailShell({
+    preheader: `🎉 অভিনন্দন! আপনার রেড ক্রিসেন্ট যুব স্বেচ্ছাসেবক ভর্তি আবেদন অনুমোদিত হয়েছে — রোল/সিরিয়াল নং: ${params.serialNo}`,
+    badgeText: "ভর্তি আবেদন অনুমোদিত",
+    title: "প্রবেশপত্র (Admit Card) প্রস্তুত — যুব রেড ক্রিসেন্ট",
+    contentHtml: `
+      <h2 style="margin: 0 0 12px 0; font-size: 19px; color: #0f172a; font-weight: 700;">
+        অভিনন্দন ${params.name}! 🎉
+      </h2>
+      <p style="margin: 0 0 16px 0; font-size: 14.5px; line-height: 1.7; color: #334155;">
+        বাংলাদেশ রেড ক্রিসেন্ট সোসাইটি, রাজশাহী পলিটেকনিক ইনস্টিটিউট যুব রেড ক্রিসেন্ট ইউনিট${params.campaignTitle ? ` এর <strong>${params.campaignTitle}</strong> কার্যক্রমে` : ""}-এ আপনার স্বেচ্ছাসেবক ভর্তি আবেদনপত্রটি যাচাই-বাছাই শেষে <strong>অনুমোদিত (Approved)</strong> হয়েছে।
+      </p>
+
+      <!-- Issued Serial / Roll Number Banner -->
+      <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 12px; padding: 22px; margin: 22px 0; text-align: center; color: #ffffff; border: 1px solid #334155; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);">
+        <p style="margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; font-weight: 600;">
+          ইস্যুকৃত রোল / প্রবেশপত্র ক্রমিক নম্বর (Roll / Serial No)
+        </p>
+        <p style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: 2px; color: #ef4444; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">
+          ${params.serialNo}
+        </p>
+      </div>
+
+      <!-- Applicant Details Summary -->
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 20px 0;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+          <tr style="border-bottom: 1px solid #edf2f7;">
+            <td style="padding: 7px 0; color: #64748b; font-weight: 600;">আবেদনকারীর নাম:</td>
+            <td style="padding: 7px 0; color: #0f172a; font-weight: 700; text-align: right;">${params.name}</td>
+          </tr>
+          ${params.department ? `
+          <tr style="border-bottom: 1px solid #edf2f7;">
+            <td style="padding: 7px 0; color: #64748b; font-weight: 600;">বিভাগ (Department):</td>
+            <td style="padding: 7px 0; color: #0f172a; font-weight: 700; text-align: right;">${params.department}</td>
+          </tr>
+          ` : ""}
+          ${params.roll ? `
+          <tr style="border-bottom: 1px solid #edf2f7;">
+            <td style="padding: 7px 0; color: #64748b; font-weight: 600;">শিক্ষার্থী রোল / আইডি:</td>
+            <td style="padding: 7px 0; color: #0f172a; font-weight: 700; text-align: right;">${params.roll}</td>
+          </tr>
+          ` : ""}
+          <tr>
+            <td style="padding: 7px 0; color: #64748b; font-weight: 600;">ভর্তি স্ট্যাটাস:</td>
+            <td style="padding: 7px 0; color: #16a34a; font-weight: 700; text-align: right;">অনুমোদিত (APPROVED)</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Next Steps & Admit Card Notice -->
+      <div style="background-color: #eff6ff; border-left: 4px solid #2563eb; border-radius: 8px; padding: 16px; margin: 20px 0; font-size: 13.5px; color: #1e40af; line-height: 1.6;">
+        <strong style="display: block; margin-bottom: 6px; font-size: 14px;">📌 পরবর্তী করণীয় ও নির্দেশনাবলী:</strong>
+        <ul style="margin: 0; padding-left: 20px;">
+          <li style="margin-bottom: 6px;">আপনার স্টুডেন্ট পোর্টালে লগইন করে <strong>প্রবেশপত্র (Admit Card)</strong> সংগ্রহ করুন।</li>
+          <li style="margin-bottom: 6px;">প্রবেশপত্রটি কালার প্রিন্ট করে পাসপোর্ট সাইজ ছবি যুক্ত করুন।</li>
+          <li style="margin-bottom: 6px;">আসন্ন ওরিয়েন্টেশন ক্লাস এবং প্রাথমিক চিকিৎসা (First Aid) কর্মশালায় প্রবেশের সময় এই প্রবেশপত্র প্রদর্শন বাধ্যতামূলক।</li>
+          <li>কার্যক্রমের নির্দিষ্ট তারিখ ও সময়সূচি পোর্টাল নোটিফিকেশন ও এসএমএস/ইমেইলের মাধ্যমে যথাসময়ে জানিয়ে দেওয়া হবে।</li>
+        </ul>
+      </div>
+
+      <!-- Download CTA Button -->
+      <div style="text-align: center; margin: 28px 0 16px 0;">
+        <a href="${studentPortalUrl}" target="_blank" rel="noopener noreferrer" class="btn">
+          প্রবেশপত্র (Admit Card) ডাউনলোড করুন
+        </a>
+      </div>
+      <p style="text-align: center; font-size: 12px; color: #94a3b8; margin: 0 0 10px 0;">
+        অথবা সরাসরি ব্রাউজ করুন: <a href="${studentPortalUrl}" style="color: #ef4444; text-decoration: underline;">${studentPortalUrl}</a>
+      </p>
+    `,
+    footerNote: "আপনি এই অফিসিয়াল ইমেইলটি পেয়েছেন কারণ আপনি আরজিপিআই যুব রেড ক্রিসেন্ট দলে ভর্তির আবেদন করেছিলেন।",
+  });
+
+  const text = `অভিনন্দন ${params.name}!
+আপনার বাংলাদেশ রেড ক্রিসেন্ট সোসাইটি, রাজশাহী পলিটেকনিক ইনস্টিটিউট যুব রেড ক্রিসেন্ট ইউনিটের স্বেচ্ছাসেবক ভর্তি আবেদন অনুমোদিত হয়েছে।
+
+- ইস্যুকৃত রোল/সিরিয়াল নং: ${params.serialNo}
+${params.department ? `- বিভাগ: ${params.department}\n` : ""}${params.roll ? `- শিক্ষার্থী রোল: ${params.roll}\n` : ""}- স্ট্যাটাস: অনুমোদিত (APPROVED)
+
+আপনার অফিসিয়াল প্রবেশপত্র (Admit Card) সংগ্রহ করতে স্টুডেন্ট পোর্টালে প্রবেশ করুন:
+${studentPortalUrl}
+
+প্রবেশপত্রটি কালার প্রিন্ট করে ওরিয়েন্টেশন ও প্রাথমিক চিকিৎসা প্রশিক্ষণ কর্মশালায় সঙ্গে নিয়ে উপস্থিত হতে হবে।
+
+ধন্যবাদ,
+রেড ক্রিসেন্ট যুব দল, রাজশাহী পলিটেকনিক ইনস্টিটিউট`;
+
+  await sendSystemEmail({
+    to: params.email,
+    subject: `🎉 অভিনন্দন! আপনার স্বেচ্ছাসেবক ভর্তি আবেদন অনুমোদিত হয়েছে — রোল: ${params.serialNo}`,
+    html,
+    text,
+    priority: "high",
+  });
+}
+
 /* -------------------------------------------------------------------------- */
 /*                       4. CONTACT FORM INQUIRY FLOWS                        */
 /* -------------------------------------------------------------------------- */

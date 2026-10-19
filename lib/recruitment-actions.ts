@@ -18,7 +18,10 @@ import {
 } from "@/lib/validation";
 import { isSemesterEligible, normalizeSemester } from "@/lib/constants";
 import { createAndDispatchNotification } from "@/lib/notifications/notification-service";
-import { sendVolunteerApprovalEmail } from "@/lib/email/mailer";
+import {
+  sendVolunteerApprovalEmail,
+  sendVolunteerAdmissionApprovalEmail,
+} from "@/lib/email/mailer";
 import { generateNextMemberId, generateNextApplicationSerialNo } from "@/lib/member-id";
 import type { ActionResult } from "@/lib/actions";
 
@@ -636,6 +639,44 @@ export async function adminApproveVolunteerApplication(
     );
   } catch (notifErr) {
     console.warn("Notification error after volunteer application approval:", notifErr);
+  }
+
+  // 7. Send official approval email with issued Admit Card serial number & download link
+  try {
+    let applicantEmail = application.email?.trim();
+    if (!applicantEmail && application.user_id) {
+      const { data: profileData } = await admin
+        .from("profiles")
+        .select("email")
+        .eq("id", application.user_id)
+        .maybeSingle();
+      applicantEmail = profileData?.email?.trim();
+    }
+    if (!applicantEmail && application.student_id) {
+      const { data: studentData } = await admin
+        .from("students")
+        .select("email")
+        .eq("id", application.student_id)
+        .maybeSingle();
+      applicantEmail = studentData?.email?.trim();
+    }
+
+    if (applicantEmail && applicantEmail.includes("@")) {
+      const campaignTitle = Array.isArray(application.recruitment_campaigns)
+        ? application.recruitment_campaigns[0]?.title
+        : (application.recruitment_campaigns as { title?: string } | null)?.title;
+
+      await sendVolunteerAdmissionApprovalEmail({
+        name: application.name,
+        email: applicantEmail,
+        serialNo,
+        department: application.department,
+        roll: application.roll,
+        campaignTitle,
+      });
+    }
+  } catch (emailErr) {
+    console.warn("Failed to send volunteer admission approval email:", emailErr);
   }
 
   await logAudit("volunteer_application_approved", "volunteer_application", applicationId, {
